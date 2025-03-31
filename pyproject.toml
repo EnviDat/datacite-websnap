@@ -1,0 +1,21 @@
+[project]
+name = "datacite-websnap"
+version = "0.1.0"
+description = "Bulk export DataCite metadata records to an S3 bucket."
+authors = [
+    {name = "Rebecca Buchholz"},
+]
+maintainers = [
+    {name = "EnviDat", email="envidat@wsl.ch"}
+]
+dependencies = []
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
