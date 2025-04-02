@@ -1,14 +1,14 @@
 [project]
 name = "datacite-websnap"
 version = "0.1.0"
-description = "Bulk export DataCite metadata records to an S3 bucket."
+description = "CLI tool that bulk exports DataCite metadata records from a repository to an S3 bucket."
 authors = [
     {name = "Rebecca Buchholz"},
 ]
 maintainers = [
     {name = "EnviDat", email="envidat@wsl.ch"}
 ]
-dependencies = []
+dependencies = ["click>=8.1.8", "requests>=2.32.3"]
 requires-python = ">=3.9"
 readme = "README.md"
 license = {text = "MIT"}
@@ -16,6 +16,9 @@ license = {text = "MIT"}
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+
+[project.scripts]
+datacite-websnap = "datacite_websnap.cli:cli"
 
 [tool.pdm]
 distribution = true
