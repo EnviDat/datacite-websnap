@@ -24,7 +24,7 @@ import click
 
 from .constants import DATACITE_API_URL
 from .validators import validate_url, validate_at_least_one_query_param, validate_bucket
-from .datacite_handler import get_datacite_client
+from .datacite_handler import get_datacite_client, get_datacite_list_dois
 
 
 @click.group()
@@ -109,15 +109,14 @@ def datacite_config_writer(
         get_datacite_client(api_url, client_id)
 
     # TODO remove
-    test = get_datacite_client(api_url, client_id)
-    # Make the world pretty and colorful
-    # click.echo(pprint.pformat(test, indent=2, width=80))
-    click.echo(click.style(pprint.pformat(test, indent=2, width=80), fg="blue"))
-
-    # TODO WIP start here
+    # test = get_datacite_client(api_url, client_id)
+    # # Make the world pretty and colorful
+    # # click.echo(pprint.pformat(test, indent=2, width=80))
+    # click.echo(click.style(pprint.pformat(test, indent=2, width=80), fg="blue"))
 
     # TODO get a list of DOIs for a client using this DataCite API endpoint:
     #  https://support.datacite.org/reference/get_dois
+    dois = get_datacite_list_dois(api_url, client_id, doi_prefix)
 
     # TODO then write config (S3 or local machine)
 
@@ -125,6 +124,5 @@ def datacite_config_writer(
 # TODO write command "export" to write DataCite records to S3 bucket or local machine,
 #  have options to review and pass config
 # TODO have option to use --s3_uploader (consistent with websnap)
-# TODO check that config is valid for action selected (S3 or local usage)
 # TODO implement option for a bucket, add check that it should be mandatory
 #  unless local-config used

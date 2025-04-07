@@ -1,6 +1,7 @@
 """
 Handles interactions with DataCite API.
 """
+import pprint
 
 import click
 import requests
@@ -19,18 +20,20 @@ class APIError(click.ClickException):
         super().__init__(message)
 
 
-def get_url_json(url: str, timeout: int = TIMEOUT):
+def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
     """
     Return the JSON encoded part of a response if it exists as a Python object.
     Only supports GET requests.
 
     Args:
         url: The URL to call return the JSON response from.
+        params: An optional dictionary of query parameters to send to the URL.
         timeout: Timeout of request in seconds.
     """
     try:
-        response = requests.get(url, timeout=timeout)
+        response = requests.get(url, timeout=timeout, params=params or {})
         response.raise_for_status()
+        click.echo(response.url)
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
@@ -70,20 +73,21 @@ def get_datacite_client(
     return get_url_json(f"{api_url}{endpoint}/{client_id}")
 
 
-# TODO implement support for cursor-based pagination,
-#  see https://support.datacite.org/docs/pagination#method-2-cursor
 # TODO WIP start dev here
 def get_datacite_list_dois(
     api_url: str,
-    endpoint: str = DATACITE_API_DOIS_ENDPOINT,
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
+    endpoint: str = DATACITE_API_DOIS_ENDPOINT,
 ):
     """
     Return a list of DOIs from DataCite API.
     Raises error if an unsuccessful response from DataCite API is returned.
+
     For DataCite API documentation used in this call see
     https://support.datacite.org/reference/get_dois
+    https://support.datacite.org/docs/pagination#method-2-cursor
+
     Supports the following query params from DataCite: "prefix", "client-id"
 
     Args:
@@ -92,4 +96,39 @@ def get_datacite_list_dois(
         client_id: The DataCite API client id used to query DataCite DOIs.
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
     """
-    pass
+    url = f"{api_url}{endpoint}"
+    params = {}
+
+    if doi_prefix:
+        params["prefix"] = ",".join(doi_prefix)
+
+    if client_id:
+        params["client-id"] = client_id
+
+    params["page[cursor]"] = 1
+    params["page[size"] = 100  # TODO make a constant probably set at 1000
+
+    count = 0  # TODO remove
+
+    # TODO fix this
+    # while True:
+    #
+    #     data = get_url_json(url, params=params, timeout=TIMEOUT)
+    #
+    #     # TODO extract DOIs (from "id property), add to a list
+    #
+    #     # Get next link using cursor-based pagination
+    #     next_link = data.get("links", {}).get("next")
+    #     if not next_link:
+    #         break
+    #
+    #     url = next_link
+    #
+    #     count += 1
+    #     click.echo(f"{count}: {url}")
+
+
+
+
+
+
