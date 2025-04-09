@@ -77,22 +77,24 @@ def datacite_bulk_download(
     if client_id:
         get_datacite_client(api_url, client_id)
 
-    # Create a list of XML strings that correspond to DOIs for the queried DataCite
-    # repository or DOI prefix
+    # Create a list of dictionaries with DOIs and XML strings that correspond to
+    # the record results for the queried DataCite repository or DOI prefix
     xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix)
 
     # TODO start dev here
     # TODO write XML files for each DOI
     # TODO include error handling in function used to write XML files
-    #  in new module "record_writer.py", implement local_directory to select path
+    #  in new module "xml_writer.py", implement local_directory option to select path
     #  where files will be written
-    for xml_str in xml_list:
+    for item in xml_list:
         pass
+        # click.echo(item.keys())  # TODO remove
 
 
 # TODO WIP finish
 # TODO then write config (websnap S3) in command "config-writer" with new support
 #  for path configuration
+# TODO write supporting functions in module "config_writer.py"
 @cli.command(name="config-writer")
 @click.option(
     "--bucket",

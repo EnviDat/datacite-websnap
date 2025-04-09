@@ -72,9 +72,13 @@ def get_datacite_client(
     return get_url_json(f"{api_url}{endpoint}/{client_id}")
 
 
-def extract_xml(datacite_response: dict) -> list[str]:
+def extract_doi_xml(datacite_response: dict) -> list[dict]:
     """
-    Returns a list of extracted XML strings from a DataCite API data response object.
+    Returns a list of dictionaries with DOIs and extracted XML strings from a
+    DataCite API data response object.
+
+    The format of the dictionary is the values for the response keys:
+        {"doi": "xml"}
 
     For more information about the expected DataCite data response object see
     DataCite API documentation: https://support.datacite.org/reference/get_dois
@@ -83,13 +87,15 @@ def extract_xml(datacite_response: dict) -> list[str]:
         datacite_response: DataCite API data response object.
     """
     data = datacite_response.get("data", [])
-    xml_list = []
+    doi_xml = []
 
     for obj in data:
-        if doi := obj.get("attributes", {}).get("xml"):
-            xml_list.append(doi)
+        if (xml := obj.get("attributes", {}).get("xml")) and (
+            doi := obj.get("attributes", {}).get("doi")
+        ):
+            doi_xml.append({doi: xml})
 
-    return xml_list
+    return doi_xml
 
 
 def get_datacite_list_dois_xml(
@@ -97,7 +103,7 @@ def get_datacite_list_dois_xml(
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
     endpoint: str = DATACITE_API_DOIS_ENDPOINT,
-) -> list[str]:
+) -> list[dict]:
     """
     Return a list of XML strings (that represent a DOI record) from DataCite API that
     correspond to a particular DataCite repository or DOI prefix.
@@ -145,11 +151,11 @@ def get_datacite_list_dois_xml(
         f"Currently processing DataCite API response page {pages}/{total_pages}..."
     )
 
-    # Extract XML strings for first page
-    if resp_xml_lst := extract_xml(resp_obj):
+    # Extract DOIs and XML strings for first page
+    if resp_xml_lst := extract_doi_xml(resp_obj):
         xml_lst.extend(resp_xml_lst)
 
-    # Extract XML strings for subsequent pages
+    # Extract DOIs and XML strings for subsequent pages
     while True:
         # Echo page being currently processed
         if pages < total_pages:
@@ -164,7 +170,7 @@ def get_datacite_list_dois_xml(
             break
 
         resp_obj = get_url_json(next_link, params={"detail": "true"}, timeout=TIMEOUT)
-        if resp_xml_lst := extract_xml(resp_obj):
+        if resp_xml_lst := extract_doi_xml(resp_obj):
             xml_lst.extend(resp_xml_lst)
 
         pages += 1
