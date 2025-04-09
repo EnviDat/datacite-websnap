@@ -72,9 +72,9 @@ def get_datacite_client(
     return get_url_json(f"{api_url}{endpoint}/{client_id}")
 
 
-def extract_dois(datacite_response: dict) -> list:
+def extract_xml(datacite_response: dict) -> list[str]:
     """
-    Extract DOIs from a DataCite API data response object.
+    Returns a list of extracted XML strings from a DataCite API data response object.
 
     For more information about the expected DataCite data response object see
     DataCite API documentation: https://support.datacite.org/reference/get_dois
@@ -83,23 +83,25 @@ def extract_dois(datacite_response: dict) -> list:
         datacite_response: DataCite API data response object.
     """
     data = datacite_response.get("data", [])
-    dois = []
+    xml_list = []
 
     for obj in data:
-        if doi := obj.get("attributes", {}).get("doi"):
-            dois.append(doi)
+        if doi := obj.get("attributes", {}).get("xml"):
+            xml_list.append(doi)
 
-    return dois
+    return xml_list
 
 
-def get_datacite_list_dois(
+def get_datacite_list_dois_xml(
     api_url: str,
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
     endpoint: str = DATACITE_API_DOIS_ENDPOINT,
-) -> []:
+) -> list[str]:
     """
-    Return a list of DOIs from DataCite API.
+    Return a list of XML strings (that represent a DOI record) from DataCite API that
+    correspond to a particular DataCite repository or DOI prefix.
+
     Raises error if an unsuccessful response from DataCite API is returned
      or validation fails.
 
@@ -107,7 +109,7 @@ def get_datacite_list_dois(
     https://support.datacite.org/reference/get_dois
     https://support.datacite.org/docs/pagination#method-2-cursor
 
-    Supports the following query params from DataCite: "prefix", "client-id"
+    Supports the following search query params from DataCite: "prefix", "client-id"
 
     Args:
         api_url: The DataCite base URL to call the API with.
@@ -116,39 +118,59 @@ def get_datacite_list_dois(
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
     """
     url = f"{api_url}{endpoint}"
-
     params = {}
+
+    # Query search params
     if doi_prefix:
         params["prefix"] = ",".join(doi_prefix)
     if client_id:
         params["client-id"] = client_id
+
+    # Set param detail to "true" so that XML strings are included in response
+    params["detail"] = "true"
+
+    # Params needed for cursor-based pagination
     params["page[cursor]"] = 1
     params["page[size"] = 300  # TODO make a constant probably set at 1000
 
     pages = 1
-    dois = []
+    xml_lst = []
 
-    # Extract DOIs for first page
+    # Get response for first page
     resp_obj = get_url_json(url, params=params, timeout=TIMEOUT)
-    if resp_dois := extract_dois(resp_obj):
-        dois.extend(resp_dois)
 
-    # Extract DOIs for subsequent pages
+    # Echo page being currently processed
+    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    click.echo(
+        f"Currently processing DataCite API response page {pages}/{total_pages}..."
+    )
+
+    # Extract XML strings for first page
+    if resp_xml_lst := extract_xml(resp_obj):
+        xml_lst.extend(resp_xml_lst)
+
+    # Extract XML strings for subsequent pages
     while True:
+        # Echo page being currently processed
+        if pages < total_pages:
+            click.echo(
+                f"Currently processing DataCite API response "
+                f"page {pages + 1}/{total_pages}..."
+            )
+
         # Get next link using cursor-based pagination
         next_link = resp_obj.get("links", {}).get("next")
         if not next_link:
             break
 
-        resp_obj = get_url_json(next_link, timeout=TIMEOUT)
-        if resp_dois := extract_dois(resp_obj):
-            dois.extend(resp_dois)
+        resp_obj = get_url_json(next_link, params={"detail": "true"}, timeout=TIMEOUT)
+        if resp_xml_lst := extract_xml(resp_obj):
+            xml_lst.extend(resp_xml_lst)
 
         pages += 1
 
-    # Validate processed output matches number of DOIs and pages
-    # in response "meta" object
-    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    # Validate processed output matches number of records and pages in
+    # response "meta" object
     if total_pages != pages:
         raise APIError(
             f"Pages retrieved ({pages}) does not match the total number of pages "
@@ -156,17 +178,18 @@ def get_datacite_list_dois(
             f"see {next_link}"
         )
 
-    total_dois = resp_obj.get("meta", {}).get("total")
-    dois_length = len(dois)
-    if total_dois != dois_length:
+    total_records = resp_obj.get("meta", {}).get("total")
+    xml_lst_length = len(xml_lst)
+    if total_records != xml_lst_length:
         raise APIError(
-            f"Total DOIs retrieved ({dois_length}) does not match the total number of "
-            f"records expected in 'meta' object: {total_dois}, for DataCite API call"
-            f"see {next_link}"
+            f"Total number of XML records retrieved ({xml_lst_length}) does not match "
+            f"the total number of records expected in 'meta' object: {total_records}, "
+            f"for DataCite API call see {next_link}"
         )
 
     # TODO remove
     click.echo(f"pages: {pages}")
-    click.echo(f"dois_length: {dois_length}")
+    click.echo(f"total_records: {total_records}")
+    click.echo(f"xml_lst_length: {xml_lst_length}")
 
-    return dois
+    return xml_lst

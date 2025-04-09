@@ -21,7 +21,7 @@ import click
 
 from .constants import DATACITE_API_URL
 from .validators import validate_url, validate_at_least_one_query_param
-from .datacite_handler import get_datacite_client, get_datacite_list_dois
+from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 
 
 @click.group()
@@ -77,13 +77,17 @@ def datacite_bulk_download(
     if client_id:
         get_datacite_client(api_url, client_id)
 
-    # Create a list of DOIs that belong to the queried DataCite repository or DOI prefix
-    dois = get_datacite_list_dois(api_url, client_id, doi_prefix)
+    # Create a list of XML strings that correspond to DOIs for the queried DataCite
+    # repository or DOI prefix
+    xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix)
 
     # TODO start dev here
-    # TODO check DataCite API for rate limiting
-    # TODO call DataCite API for each DOI
     # TODO write XML files for each DOI
+    # TODO include error handling in function used to write XML files
+    #  in new module "record_writer.py", implement local_directory to select path
+    #  where files will be written
+    for xml_str in xml_list:
+        pass
 
 
 # TODO WIP finish
