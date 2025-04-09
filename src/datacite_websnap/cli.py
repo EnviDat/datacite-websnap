@@ -14,16 +14,13 @@ Example usage for command 'config-writer' that writes a websnap config file with
 URLs corresponding to DataCite metadata records:
     datacite-websnap config-writer --client-id ethz.wsl --bucket exampledata
 """
-
-import pprint
-
 # TODO implement early exit option for commands (like websnap)
 # TODO implement logging with custom logger (like websnap)
 
 import click
 
 from .constants import DATACITE_API_URL
-from .validators import validate_url, validate_at_least_one_query_param, validate_bucket
+from .validators import validate_url, validate_at_least_one_query_param
 from .datacite_handler import get_datacite_client, get_datacite_list_dois
 
 
@@ -38,12 +35,9 @@ def cli():
 # TODO add support for DOI prefix as well, can be more than one
 # TODO possibly validate that api_url is a URL using pydantic AnyURL
 # TODO implement error handling that wraps all logic
-# TODO implement option for a key prefix in S3 config handling
-# TODO local-config option as a flag so that by default a S3 config is written
-#  instead of a config for a local machine
-# TODO implement option for a directory, use directory in local-config handling
 # TODO determine how XML file names should be formatted
-@cli.command(name="config-writer")
+# TODO in a later version possibly zip files
+@cli.command(name="download")
 @click.option(
     "--doi-prefix",
     multiple=True,
@@ -55,74 +49,60 @@ def cli():
     "DataCite documentation.",
 )
 @click.option(
-    "--bucket",
-    help="Bucket that DataCite XML files (as S3 objects) will be written in.",
-)
-@click.option("--key-prefix", help="Optional key prefix for objects in bucket.")
-@click.option(
-    "--local-config",
-    is_flag=True,
-    default=False,
-    help="Enables writing config that supports exporting DataCite "
-    "records to a local machine.",
-)
-@click.option(
-    "--local-directory",
-    help="Name of the local directory that file will be written in "
-    "if '--local-config' option is enabled",
-)
-@click.option(
     "--api-url",
     default=DATACITE_API_URL,
     help=f"DataCite base API URL (default: {DATACITE_API_URL})",
     callback=validate_url,
 )
-def datacite_config_writer(
+@click.option(
+    "--local-directory",
+    help="Path of the local directory that DataCite XML metadata records will "
+    "be written in",
+)
+def datacite_bulk_download(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
-    bucket: str | None = None,
-    key_prefix: str | None = None,
-    local_config: bool = False,
-    local_directory: str | None = None,
     api_url: str = DATACITE_API_URL,
+    local_directory: str | None = None,
 ):
     """
-    Write a JSON config used by package websnap with API URLs that correspond to the
-    DOIs for a DataCite repository.
-
-    To learn more about how DataCite assigns each repository its own client id please
-    see: https://support.datacite.org/reference/get_clients-id
-
-    To learn more about writing configuration files for the package websnap please see:
-    https://github.com/EnviDat/websnap?tab=readme-ov-file#websnap
+    Bulk download DataCite XML metadata records that correspond to the DOIs for a
+    particular DataCite repository or DOI prefix.
     """
     # Validate that at least one query param value is truthy
     validate_at_least_one_query_param(doi_prefix, client_id)
 
-    # Validate that bucket argument is truthy if not using local_config option
-    validate_bucket(bucket, local_config)
-
-    # Validate client_id argument
-    # Raise error if client id does not return successful response when used to
-    # return a client from the DataCite API
+    # Validate client_id argument, raise error if client_id does not return successful
+    # response when used to return a client from the DataCite API
     if client_id:
         get_datacite_client(api_url, client_id)
 
-    # TODO remove
-    # test = get_datacite_client(api_url, client_id)
-    # # Make the world pretty and colorful
-    # # click.echo(pprint.pformat(test, indent=2, width=80))
-    # click.echo(click.style(pprint.pformat(test, indent=2, width=80), fg="blue"))
-
-    # TODO get a list of DOIs for a client using this DataCite API endpoint:
-    #  https://support.datacite.org/reference/get_dois
+    # Create a list of DOIs that belong to the queried DataCite repository or DOI prefix
     dois = get_datacite_list_dois(api_url, client_id, doi_prefix)
 
-    # TODO then write config (S3 or local machine)
+    # TODO start dev here
+    # TODO check DataCite API for rate limiting
+    # TODO call DataCite API for each DOI
+    # TODO write XML files for each DOI
 
 
-# TODO write command "export" to write DataCite records to S3 bucket or local machine,
-#  have options to review and pass config
-# TODO have option to use --s3_uploader (consistent with websnap)
-# TODO implement option for a bucket, add check that it should be mandatory
-#  unless local-config used
+# TODO WIP finish
+# TODO then write config (websnap S3) in command "config-writer" with new support
+#  for path configuration
+@cli.command(name="config-writer")
+@click.option(
+    "--bucket",
+    required=True,
+    help="Bucket that DataCite XML files (as S3 objects) will be written in.",
+)
+@click.option("--key-prefix", help="Optional key prefix for objects in bucket.")
+def datacite_config_writer(bucket: str, key_prefix: str | None = None):
+    """
+    Write a JSON config used by package websnap with files that correspond to the
+    DOIs for a DataCite repository.
+    """
+    click.echo(f"bucket: {bucket}")
+    click.echo(f"key-prefix: {key_prefix}")
+
+
+# TODO write command "export" to write DataCite records to S3 bucket

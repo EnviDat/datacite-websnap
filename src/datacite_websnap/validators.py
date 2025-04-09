@@ -18,18 +18,6 @@ def validate_at_least_one_query_param(
         )
 
 
-def validate_bucket(bucket: str | None = None, local_config: bool = False):
-    """
-    Validate that bucket is a truthy value unless local_config is True.
-    The bucket argument is required to write a S3 config.
-    Else raises a BadParameter exception.
-    """
-    if not bucket and not local_config:
-        raise click.BadParameter(
-            "'You must provide the --bucket' option if '--local-config' is not enabled'"
-        )
-
-
 def validate_url(ctx, param, url):
     """
     Validate and return url.

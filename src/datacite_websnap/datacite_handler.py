@@ -1,7 +1,6 @@
 """
 Handles interactions with DataCite API.
 """
-import pprint
 
 import click
 import requests
@@ -33,7 +32,6 @@ def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
     try:
         response = requests.get(url, timeout=timeout, params=params or {})
         response.raise_for_status()
-        click.echo(response.url)
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
@@ -62,6 +60,7 @@ def get_datacite_client(
     Return client response from DataCite API.
     Raises error if client id does not return a successful response from the
     DataCite API.
+
     For DataCite API documentation used in this call see
     https://support.datacite.org/reference/get_clients-id
 
@@ -73,16 +72,36 @@ def get_datacite_client(
     return get_url_json(f"{api_url}{endpoint}/{client_id}")
 
 
-# TODO WIP start dev here
+def extract_dois(datacite_response: dict) -> list:
+    """
+    Extract DOIs from a DataCite API data response object.
+
+    For more information about the expected DataCite data response object see
+    DataCite API documentation: https://support.datacite.org/reference/get_dois
+
+    Args:
+        datacite_response: DataCite API data response object.
+    """
+    data = datacite_response.get("data", [])
+    dois = []
+
+    for obj in data:
+        if doi := obj.get("attributes", {}).get("doi"):
+            dois.append(doi)
+
+    return dois
+
+
 def get_datacite_list_dois(
     api_url: str,
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
     endpoint: str = DATACITE_API_DOIS_ENDPOINT,
-):
+) -> []:
     """
     Return a list of DOIs from DataCite API.
-    Raises error if an unsuccessful response from DataCite API is returned.
+    Raises error if an unsuccessful response from DataCite API is returned
+     or validation fails.
 
     For DataCite API documentation used in this call see
     https://support.datacite.org/reference/get_dois
@@ -97,38 +116,57 @@ def get_datacite_list_dois(
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
     """
     url = f"{api_url}{endpoint}"
-    params = {}
 
+    params = {}
     if doi_prefix:
         params["prefix"] = ",".join(doi_prefix)
-
     if client_id:
         params["client-id"] = client_id
-
     params["page[cursor]"] = 1
-    params["page[size"] = 100  # TODO make a constant probably set at 1000
+    params["page[size"] = 300  # TODO make a constant probably set at 1000
 
-    count = 0  # TODO remove
+    pages = 1
+    dois = []
 
-    # TODO fix this
-    # while True:
-    #
-    #     data = get_url_json(url, params=params, timeout=TIMEOUT)
-    #
-    #     # TODO extract DOIs (from "id property), add to a list
-    #
-    #     # Get next link using cursor-based pagination
-    #     next_link = data.get("links", {}).get("next")
-    #     if not next_link:
-    #         break
-    #
-    #     url = next_link
-    #
-    #     count += 1
-    #     click.echo(f"{count}: {url}")
+    # Extract DOIs for first page
+    resp_obj = get_url_json(url, params=params, timeout=TIMEOUT)
+    if resp_dois := extract_dois(resp_obj):
+        dois.extend(resp_dois)
 
+    # Extract DOIs for subsequent pages
+    while True:
+        # Get next link using cursor-based pagination
+        next_link = resp_obj.get("links", {}).get("next")
+        if not next_link:
+            break
 
+        resp_obj = get_url_json(next_link, timeout=TIMEOUT)
+        if resp_dois := extract_dois(resp_obj):
+            dois.extend(resp_dois)
 
+        pages += 1
 
+    # Validate processed output matches number of DOIs and pages
+    # in response "meta" object
+    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    if total_pages != pages:
+        raise APIError(
+            f"Pages retrieved ({pages}) does not match the total number of pages "
+            f"expected in response 'meta' object: {total_pages}, for DataCite API call"
+            f"see {next_link}"
+        )
 
+    total_dois = resp_obj.get("meta", {}).get("total")
+    dois_length = len(dois)
+    if total_dois != dois_length:
+        raise APIError(
+            f"Total DOIs retrieved ({dois_length}) does not match the total number of "
+            f"records expected in 'meta' object: {total_dois}, for DataCite API call"
+            f"see {next_link}"
+        )
 
+    # TODO remove
+    click.echo(f"pages: {pages}")
+    click.echo(f"dois_length: {dois_length}")
+
+    return dois
