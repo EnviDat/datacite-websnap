@@ -19,9 +19,15 @@ URLs corresponding to DataCite metadata records:
 
 import click
 
-from .constants import DATACITE_API_URL
-from .validators import validate_url, validate_at_least_one_query_param
+from .constants import DATACITE_API_URL, DATACITE_PAGE_SIZE
+from .validators import (
+    validate_url,
+    validate_at_least_one_query_param,
+    validate_positive_int,
+    validate_single_string_key_value,
+)
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
+from .writer import decode_base64_xml
 
 
 @click.group()
@@ -34,7 +40,8 @@ def cli():
 
 # TODO add support for DOI prefix as well, can be more than one
 # TODO possibly validate that api_url is a URL using pydantic AnyURL
-# TODO implement error handling that wraps all logic
+# TODO implement error handling that wraps all logic with an
+#  early exit option like websnap
 # TODO determine how XML file names should be formatted
 # TODO in a later version possibly zip files
 @cli.command(name="download")
@@ -55,6 +62,14 @@ def cli():
     callback=validate_url,
 )
 @click.option(
+    "--page-size",
+    type=int,
+    default=DATACITE_PAGE_SIZE,
+    help=f"DataCite page size is the number of records returned per page using "
+    f"pagination (default: {DATACITE_PAGE_SIZE})",
+    callback=validate_positive_int,
+)
+@click.option(
     "--local-directory",
     help="Path of the local directory that DataCite XML metadata records will "
     "be written in",
@@ -63,6 +78,7 @@ def datacite_bulk_download(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
     api_url: str = DATACITE_API_URL,
+    page_size: int = DATACITE_PAGE_SIZE,
     local_directory: str | None = None,
 ):
     """
@@ -79,16 +95,32 @@ def datacite_bulk_download(
 
     # Create a list of dictionaries with DOIs and XML strings that correspond to
     # the record results for the queried DataCite repository or DOI prefix
-    xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix)
+    xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix, page_size)
 
     # TODO start dev here
     # TODO write XML files for each DOI
     # TODO include error handling in function used to write XML files
-    #  in new module "xml_writer.py", implement local_directory option to select path
+    #  in new module "writer.py", implement local_directory option to select path
     #  where files will be written
-    for item in xml_list:
-        pass
-        # click.echo(item.keys())  # TODO remove
+    # TODO XML file name is DOI name that is reformatted (likely replace "/" with "_")
+
+    test = xml_list[0]
+    validate_single_string_key_value(test)
+
+    doi, xml_str = next(iter(test.items()))
+    click.echo(f"doi: {doi}")
+
+    xml_decoded = decode_base64_xml(xml_str)
+
+    # TODO remove
+    click.echo(type(xml_decoded))
+    # click.echo(xml_decoded)
+
+    # TODO write and call a function that formats doi to an xml file name
+
+    # Write XML files for each record
+    # for doi_xml_dict in xml_list:
+    #     pass
 
 
 # TODO WIP finish

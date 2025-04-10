@@ -9,14 +9,8 @@ from .constants import (
     DATACITE_API_CLIENTS_ENDPOINT,
     TIMEOUT,
     DATACITE_API_DOIS_ENDPOINT,
+    DATACITE_PAGE_SIZE,
 )
-
-
-class APIError(click.ClickException):
-    """Custom Click exception for API related errors."""
-
-    def __init__(self, message):
-        super().__init__(message)
 
 
 def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
@@ -35,27 +29,25 @@ def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
-        raise APIError(f"HTTP error: {http_err}")
+        raise click.ClickException(f"HTTP error: {http_err}")
 
     except requests.exceptions.ConnectionError:
-        raise APIError("Network error: Unable to connect to the API.")
+        raise click.ClickException("Network error: Unable to connect to the API.")
 
     except requests.exceptions.Timeout:
-        raise APIError(
+        raise click.ClickException(
             f"Request timeout: The API did not respond in within the timeout of "
             f"{timeout} seconds."
         )
 
     except requests.exceptions.RequestException as req_err:
-        raise APIError(f"API request failed: {req_err}")
+        raise click.ClickException(f"API request failed: {req_err}")
 
     except Exception as err:
-        raise APIError(f"Unexpected error: {err}")
+        raise click.ClickException(f"Unexpected error: {err}")
 
 
-def get_datacite_client(
-    api_url: str, client_id: str, endpoint: str = DATACITE_API_CLIENTS_ENDPOINT
-):
+def get_datacite_client(api_url: str, client_id: str):
     """
     Return client response from DataCite API.
     Raises error if client id does not return a successful response from the
@@ -67,9 +59,8 @@ def get_datacite_client(
     Args:
         api_url: The DataCite base URL to call the API with.
         client_id: The DataCite API client id that will be used to query DataCite DOIs.
-        endpoint: The endpoint to call the API with.
     """
-    return get_url_json(f"{api_url}{endpoint}/{client_id}")
+    return get_url_json(f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}")
 
 
 def extract_doi_xml(datacite_response: dict) -> list[dict]:
@@ -78,7 +69,9 @@ def extract_doi_xml(datacite_response: dict) -> list[dict]:
     DataCite API data response object.
 
     The format of the dictionary is the values for the response keys:
-        {"doi": "xml"}
+      {"doi": "xml"}
+      "doi" is the DataCite DOI "doi" value, for example "10.16904/envidat.27"
+      "xml" is the DataCite DOI as a Base64 encoded XML string
 
     For more information about the expected DataCite data response object see
     DataCite API documentation: https://support.datacite.org/reference/get_dois
@@ -102,11 +95,16 @@ def get_datacite_list_dois_xml(
     api_url: str,
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
-    endpoint: str = DATACITE_API_DOIS_ENDPOINT,
+    page_size: int = DATACITE_PAGE_SIZE,
 ) -> list[dict]:
     """
-    Return a list of XML strings (that represent a DOI record) from DataCite API that
-    correspond to a particular DataCite repository or DOI prefix.
+    Return a list of dictionaries in the following format:
+    {"doi": "xml"}
+      "doi" is the DataCite DOI "doi" value, for example "10.16904/envidat.27"
+      "xml" is the DataCite DOI as a Base64 encoded XML string
+
+    The returned values correspond to the records for
+    a particular DataCite repository or DOI prefix.
 
     Raises error if an unsuccessful response from DataCite API is returned
      or validation fails.
@@ -119,11 +117,12 @@ def get_datacite_list_dois_xml(
 
     Args:
         api_url: The DataCite base URL to call the API with.
-        endpoint: The endpoint to call the API with.
         client_id: The DataCite API client id used to query DataCite DOIs.
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
+        page_size: DataCite page size is the number of records
+                   returned per page using pagination
     """
-    url = f"{api_url}{endpoint}"
+    url = f"{api_url}{DATACITE_API_DOIS_ENDPOINT}"
     params = {}
 
     # Query search params
@@ -137,7 +136,10 @@ def get_datacite_list_dois_xml(
 
     # Params needed for cursor-based pagination
     params["page[cursor]"] = 1
-    params["page[size"] = 300  # TODO make a constant probably set at 1000
+    params["page[size"] = page_size
+    click.echo(
+        f"Number of records returned per page of DataCite API response: {page_size}"
+    )
 
     pages = 1
     xml_lst = []
@@ -178,7 +180,7 @@ def get_datacite_list_dois_xml(
     # Validate processed output matches number of records and pages in
     # response "meta" object
     if total_pages != pages:
-        raise APIError(
+        raise click.ClickException(
             f"Pages retrieved ({pages}) does not match the total number of pages "
             f"expected in response 'meta' object: {total_pages}, for DataCite API call"
             f"see {next_link}"
@@ -187,7 +189,7 @@ def get_datacite_list_dois_xml(
     total_records = resp_obj.get("meta", {}).get("total")
     xml_lst_length = len(xml_lst)
     if total_records != xml_lst_length:
-        raise APIError(
+        raise click.ClickException(
             f"Total number of XML records retrieved ({xml_lst_length}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}, "
             f"for DataCite API call see {next_link}"
