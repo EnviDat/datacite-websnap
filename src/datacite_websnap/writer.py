@@ -3,6 +3,8 @@ Process and write DataCite XML files.
 """
 
 import base64
+import os
+
 import click
 from lxml import etree
 
@@ -20,7 +22,7 @@ def decode_base64_xml(encoded_xml: str) -> str:
         root = etree.fromstring(decoded_bytes)
 
         return etree.tostring(
-            root, pretty_print=True, encoding="utf-8", xml_declaration=True
+            root, pretty_print=True, encoding="UTF-8", xml_declaration=True
         ).decode("utf-8")
 
     except UnicodeDecodeError:
@@ -35,19 +37,38 @@ def decode_base64_xml(encoded_xml: str) -> str:
         raise click.ClickException(f"Unexpected error: {err}")
 
 
-# TODO remove
-def decode_base64_xml_to_bytes(encoded_xml: str) -> bytes:
+def format_xml_file_name(doi: str) -> str:
     """
-    Decodes a Base64-encoded XML string and returns it as bytes.
+    Format "doi" value into an XML filename.
+    "/" replaced with "_" and ".xml" appended to the filename.
+
+    Example input: "10.16904/envidat.31"
+    Example output: "10.16904_envidat.31.xml"
 
     Args:
-        encoded_xml: Base64-encoded XML string.
+        doi: "doi" string, example "10.16904/envidat.31"
+    """
+    doi_format = doi.replace("/", "_")
+    return f"{doi_format}.xml"
+
+
+def write_file(content_str: str, filename: str, directory_path: str | None = None):
+    """
+    Write a string to a file.
     """
     try:
-        return base64.b64decode(encoded_xml)
-    except UnicodeDecodeError:
-        print("Error: Unable to decode XML bytes as UTF-8.")
-    except etree.XMLSyntaxError as e:
-        print(f"XML parse error: {e}")
-    except Exception as e:
-        print(f"Unexpected error during XML processing: {e}")
+        if directory_path:
+            file_path = os.path.join(directory_path, filename)
+        else:
+            file_path = filename
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content_str)
+
+        click.echo(f"Wrote file: {file_path}")
+
+    except IOError as io_err:
+        raise click.ClickException(f"IOError: {io_err}")
+
+    except Exception as err:
+        raise click.ClickException(f"Unexpected error: {err}")

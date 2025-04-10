@@ -27,24 +27,30 @@ from .validators import (
     validate_single_string_key_value,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
-from .writer import decode_base64_xml
+from .writer import decode_base64_xml, format_xml_file_name, write_file
 
 
 @click.group()
 def cli():
     """
-    Tool that bulk exports DataCite metadata records from a repository to an S3 bucket.
+    Tool that bulk exports DataCite metadata records from a repository as XML objects
+    to an S3 bucket.
+
+    Also supports writing DataCite metadata records as XML files to a local machine.
     """
     pass
 
 
+# TODO remove unneeded echo statements here and in other modules
+# TODO add logic to write DataCite records to S3 bucket
 # TODO add support for DOI prefix as well, can be more than one
 # TODO possibly validate that api_url is a URL using pydantic AnyURL
 # TODO implement error handling that wraps all logic with an
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
 # TODO in a later version possibly zip files
-@cli.command(name="download")
+# TODO revise docstring
+@cli.command(name="export")
 @click.option(
     "--doi-prefix",
     multiple=True,
@@ -70,16 +76,17 @@ def cli():
     callback=validate_positive_int,
 )
 @click.option(
-    "--local-directory",
+    "--directory-path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Path of the local directory that DataCite XML metadata records will "
     "be written in",
 )
-def datacite_bulk_download(
+def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
     api_url: str = DATACITE_API_URL,
     page_size: int = DATACITE_PAGE_SIZE,
-    local_directory: str | None = None,
+    directory_path: str | None = None,
 ):
     """
     Bulk download DataCite XML metadata records that correspond to the DOIs for a
@@ -98,36 +105,28 @@ def datacite_bulk_download(
     xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix, page_size)
 
     # TODO start dev here
-    # TODO write XML files for each DOI
-    # TODO include error handling in function used to write XML files
-    #  in new module "writer.py", implement local_directory option to select path
-    #  where files will be written
-    # TODO XML file name is DOI name that is reformatted (likely replace "/" with "_")
-
-    test = xml_list[0]
-    validate_single_string_key_value(test)
-
-    doi, xml_str = next(iter(test.items()))
-    click.echo(f"doi: {doi}")
-
-    xml_decoded = decode_base64_xml(xml_str)
-
-    # TODO remove
-    click.echo(type(xml_decoded))
-    # click.echo(xml_decoded)
-
-    # TODO write and call a function that formats doi to an xml file name
-
+    # TODO FIRST TASK: ****test local output in DataCite Fabrica test!!!!***
     # Write XML files for each record
+
+    # TODO implement and test for all records
     # for doi_xml_dict in xml_list:
-    #     pass
+
+    xml_test_list = xml_list[:5]
+    for doi_xml_dict in xml_test_list:
+        validate_single_string_key_value(doi_xml_dict)
+
+        doi, xml_str = next(iter(doi_xml_dict.items()))
+        xml_filename = format_xml_file_name(doi)
+        xml_decoded = decode_base64_xml(xml_str)
+
+        write_file(xml_decoded, xml_filename, directory_path)
 
 
-# TODO WIP finish
+# TODO remove command
 # TODO then write config (websnap S3) in command "config-writer" with new support
 #  for path configuration
 # TODO write supporting functions in module "config_writer.py"
-@cli.command(name="config-writer")
+@click.command(name="config-writer")
 @click.option(
     "--bucket",
     required=True,
@@ -141,6 +140,3 @@ def datacite_config_writer(bucket: str, key_prefix: str | None = None):
     """
     click.echo(f"bucket: {bucket}")
     click.echo(f"key-prefix: {key_prefix}")
-
-
-# TODO write command "export" to write DataCite records to S3 bucket

@@ -198,6 +198,5 @@ def get_datacite_list_dois_xml(
     # TODO remove
     click.echo(f"pages: {pages}")
     click.echo(f"total_records: {total_records}")
-    click.echo(f"xml_lst_length: {xml_lst_length}")
 
     return xml_lst
