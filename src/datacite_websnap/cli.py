@@ -33,7 +33,12 @@ from .validators import (
     validate_bucket,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
-from .writer import decode_base64_xml, format_xml_file_name, write_local_file
+from .exporter import (
+    decode_base64_xml,
+    format_xml_file_name,
+    write_local_file,
+    create_s3_client,
+)
 
 
 @click.group()
@@ -55,7 +60,7 @@ def cli():
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
 # TODO in a later version possibly zip files
-# TODO write callback validator for bucket option
+# TODO implement key-prefix option
 @cli.command(name="export")
 @click.option(
     "--doi-prefix",
@@ -122,11 +127,12 @@ def datacite_bulk_export(
     # Validate bucket is truthy if destination is "S3"
     validate_bucket(bucket, destination)
 
-    # TODO start dev here
     # TODO test S3 config validation
     # Validate and create S3 config
     if destination == "S3":
         conf_s3 = validate_s3_config()
+        s3_client = create_s3_client(conf_s3)
+        click.echo(f"s3_client: {s3_client}")  # TODO remove
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
@@ -146,8 +152,9 @@ def datacite_bulk_export(
 
         match destination:
             case "S3":
-                click.echo("S3 time!")
-                # TODO finish
+                click.echo("S3 time!")  # TODO remove
+                # TODO start dev here
+                # TODO test s3_client_put_object()
             case "local":
                 write_local_file(xml_decoded, xml_filename, directory_path)
 
