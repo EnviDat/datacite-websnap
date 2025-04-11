@@ -52,7 +52,9 @@ def format_xml_file_name(doi: str) -> str:
     return f"{doi_format}.xml"
 
 
-def write_file(content_str: str, filename: str, directory_path: str | None = None):
+def write_local_file(
+    content_str: str, filename: str, directory_path: str | None = None
+):
     """
     Write a string to a file.
     """

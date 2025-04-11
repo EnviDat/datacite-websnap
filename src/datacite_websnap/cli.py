@@ -14,8 +14,11 @@ Example usage for command 'config-writer' that writes a websnap config file with
 URLs corresponding to DataCite metadata records:
     datacite-websnap config-writer --client-id ethz.wsl --bucket exampledata
 """
+
 # TODO implement early exit option for commands (like websnap)
 # TODO implement logging with custom logger (like websnap)
+# TODO possibly add return (default None) and return types to functions in all modules
+# TODO remove unneeded echo statements here and in other modules
 
 import click
 
@@ -25,9 +28,10 @@ from .validators import (
     validate_at_least_one_query_param,
     validate_positive_int,
     validate_single_string_key_value,
+    validate_s3_config,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
-from .writer import decode_base64_xml, format_xml_file_name, write_file
+from .writer import decode_base64_xml, format_xml_file_name, write_local_file
 
 
 @click.group()
@@ -41,7 +45,7 @@ def cli():
     pass
 
 
-# TODO remove unneeded echo statements here and in other modules
+# TODO test string variables with integers and improve validation if needed
 # TODO add logic to write DataCite records to S3 bucket
 # TODO add support for DOI prefix as well, can be more than one
 # TODO possibly validate that api_url is a URL using pydantic AnyURL
@@ -49,7 +53,7 @@ def cli():
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
 # TODO in a later version possibly zip files
-# TODO revise docstring
+# TODO write callback validator for bucket option
 @cli.command(name="export")
 @click.option(
     "--doi-prefix",
@@ -76,6 +80,17 @@ def cli():
     callback=validate_positive_int,
 )
 @click.option(
+    "--destination",
+    type=click.Choice(["S3", "local"], case_sensitive=False),
+    default="S3",
+    help="Choose where to export the DataCite XML records: "
+    "'S3' (default) for an S3 bucket or 'local' for local file system. ",
+)
+@click.option(
+    "--bucket",
+    help="S3 bucket that DataCite XML records (as S3 objects) will be written in.",
+)
+@click.option(
     "--directory-path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Path of the local directory that DataCite XML metadata records will "
@@ -86,14 +101,27 @@ def datacite_bulk_export(
     client_id: str | None = None,
     api_url: str = DATACITE_API_URL,
     page_size: int = DATACITE_PAGE_SIZE,
+    destination: str = "S3",
+    bucket: str | None = None,
     directory_path: str | None = None,
-):
+) -> None:
     """
-    Bulk download DataCite XML metadata records that correspond to the DOIs for a
+    Bulk export DataCite XML metadata records that correspond to the DOIs for a
     particular DataCite repository or DOI prefix.
+
+    The default behavior is to export DataCite XML records to an S3 bucket but
+    command also supports downloading the records to a local machine.
     """
+    click.echo(f"destination: {destination}")  # TODO remove
+
     # Validate that at least one query param value is truthy
     validate_at_least_one_query_param(doi_prefix, client_id)
+
+    # TODO test S3 config validation
+    # Validate and create S3 config
+    if destination == "S3":
+        conf_s3 = validate_s3_config()
+        click.echo(f"conf_s3: {conf_s3}")  # TODO remove
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
@@ -104,22 +132,25 @@ def datacite_bulk_export(
     # the record results for the queried DataCite repository or DOI prefix
     xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix, page_size)
 
-    # TODO start dev here
-    # TODO FIRST TASK: ****test local output in DataCite Fabrica test!!!!***
-    # Write XML files for each record
-
-    # TODO implement and test for all records
-    # for doi_xml_dict in xml_list:
-
-    xml_test_list = xml_list[:5]
-    for doi_xml_dict in xml_test_list:
+    # Export XML files for each record
+    for doi_xml_dict in xml_list:
         validate_single_string_key_value(doi_xml_dict)
-
         doi, xml_str = next(iter(doi_xml_dict.items()))
         xml_filename = format_xml_file_name(doi)
         xml_decoded = decode_base64_xml(xml_str)
 
-        write_file(xml_decoded, xml_filename, directory_path)
+        match destination:
+            case "S3":
+                click.echo("S3 time!")
+                # TODO finish
+            case "local":
+                write_local_file(xml_decoded, xml_filename, directory_path)
+            case _:
+                raise click.ClickException(
+                    f"Invalid 'destination' argument: '{destination}' is not supported"
+                )
+
+    return
 
 
 # TODO remove command
