@@ -21,6 +21,7 @@ URLs corresponding to DataCite metadata records:
 # TODO remove unneeded echo statements here and in other modules
 
 import click
+from typing import Literal
 
 from .constants import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
@@ -29,6 +30,7 @@ from .validators import (
     validate_positive_int,
     validate_single_string_key_value,
     validate_s3_config,
+    validate_bucket,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 from .writer import decode_base64_xml, format_xml_file_name, write_local_file
@@ -81,7 +83,7 @@ def cli():
 )
 @click.option(
     "--destination",
-    type=click.Choice(["S3", "local"], case_sensitive=False),
+    type=click.Choice(["S3", "local"]),
     default="S3",
     help="Choose where to export the DataCite XML records: "
     "'S3' (default) for an S3 bucket or 'local' for local file system. ",
@@ -101,7 +103,7 @@ def datacite_bulk_export(
     client_id: str | None = None,
     api_url: str = DATACITE_API_URL,
     page_size: int = DATACITE_PAGE_SIZE,
-    destination: str = "S3",
+    destination: Literal["S3", "local"] = "S3",
     bucket: str | None = None,
     directory_path: str | None = None,
 ) -> None:
@@ -117,11 +119,14 @@ def datacite_bulk_export(
     # Validate that at least one query param value is truthy
     validate_at_least_one_query_param(doi_prefix, client_id)
 
+    # Validate bucket is truthy if destination is "S3"
+    validate_bucket(bucket, destination)
+
+    # TODO start dev here
     # TODO test S3 config validation
     # Validate and create S3 config
     if destination == "S3":
         conf_s3 = validate_s3_config()
-        click.echo(f"conf_s3: {conf_s3}")  # TODO remove
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
@@ -145,10 +150,6 @@ def datacite_bulk_export(
                 # TODO finish
             case "local":
                 write_local_file(xml_decoded, xml_filename, directory_path)
-            case _:
-                raise click.ClickException(
-                    f"Invalid 'destination' argument: '{destination}' is not supported"
-                )
 
     return
 

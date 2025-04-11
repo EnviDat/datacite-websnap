@@ -46,6 +46,21 @@ def validate_at_least_one_query_param(
         )
 
 
+def validate_bucket(bucket, destination):
+    """
+    Validate and return bucket.
+    Raises BadParameter exception if bucket is not truthy when
+    option '--destination' is 'S3'.
+    """
+    if destination == "S3" and not bucket:
+        raise click.BadParameter(
+            "'--bucket' option must be provided when the "
+            "'--destination' option is set to 'S3'"
+        )
+
+    return bucket
+
+
 def validate_single_string_key_value(d: dict):
     """
     Validate that dictionary has exactly one key-value pair and both are strings.
