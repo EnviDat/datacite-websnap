@@ -36,7 +36,7 @@ def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
 
     except requests.exceptions.Timeout:
         raise click.ClickException(
-            f"Request timeout: The API did not respond in within the timeout of "
+            f"Request timeout: The API did not respond within the timeout of "
             f"{timeout} seconds."
         )
 
@@ -137,34 +137,31 @@ def get_datacite_list_dois_xml(
     # Params needed for cursor-based pagination
     params["page[cursor]"] = 1
     params["page[size"] = page_size
-    click.echo(
-        f"Number of records returned per page of DataCite API response: {page_size}"
-    )
-
-    pages = 1
-    xml_lst = []
 
     # Get response for first page
     resp_obj = get_url_json(url, params=params, timeout=TIMEOUT)
 
-    # Echo page being currently processed
-    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    # Echo total number of returned DOIs and DOIs per page
+    total_records = resp_obj.get("meta", {}).get("total")
     click.echo(
-        f"Currently processing DataCite API response page {pages}/{total_pages}..."
+        f"Total number of DataCite DOIs returned for search query: {total_records}"
     )
+    click.echo(f"Number of DOIs per page: {page_size}")
+
+    # Echo page being currently processed
+    pages = 1
+    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    click.echo(f"Currently processing page {pages}/{total_pages}...")
 
     # Extract DOIs and XML strings for first page
+    xml_lst = []
     if resp_xml_lst := extract_doi_xml(resp_obj):
         xml_lst.extend(resp_xml_lst)
 
     # Extract DOIs and XML strings for subsequent pages
     while True:
-        # Echo page being currently processed
         if pages < total_pages:
-            click.echo(
-                f"Currently processing DataCite API response "
-                f"page {pages + 1}/{total_pages}..."
-            )
+            click.echo(f"Currently processing page {pages + 1}/{total_pages}...")
 
         # Get next link using cursor-based pagination
         next_link = resp_obj.get("links", {}).get("next")
@@ -186,7 +183,6 @@ def get_datacite_list_dois_xml(
             f"see {next_link}"
         )
 
-    total_records = resp_obj.get("meta", {}).get("total")
     xml_lst_length = len(xml_lst)
     if total_records != xml_lst_length:
         raise click.ClickException(

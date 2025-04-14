@@ -91,10 +91,7 @@ def s3_client_put_object(
     if (
         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
     ) == 200:
-        click.echo(
-            f"Successfully exported to bucket '{bucket}' "
-            f"DataCite XML record with the key: {key}"
-        )
+        click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
     else:
         click.ClickException(
             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"

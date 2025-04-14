@@ -60,7 +60,7 @@ def cli():
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
 # TODO in a later version possibly zip files
-# TODO implement key-prefix option
+# TODO implement key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(
     "--doi-prefix",
@@ -152,7 +152,8 @@ def datacite_bulk_export(
 
         match destination:
             case "S3":
-                click.echo("S3 time!")  # TODO remove
+                pass
+                # click.echo("S3 time!")  # TODO remove
                 # TODO start dev here
                 # TODO test s3_client_put_object()
             case "local":
