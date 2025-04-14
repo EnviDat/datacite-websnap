@@ -3,41 +3,72 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
+import io
 import os
 
 import click
+from botocore.exceptions import ClientError
 from lxml import etree
 import boto3
 
 from datacite_websnap.validators import S3ConfigModel
 
 
-def decode_base64_xml(encoded_xml: str) -> str:
+def decode_base64_xml(encoded_xml: str) -> bytes:
     """
-    Decodes a Base64-encoded XML string and returns it as a
-    pretty-print formatted XML string.
+    Decodes a Base64-encoded XML string and returns it as a bytes object.
 
     Args:
         encoded_xml: Base64-encoded XML string.
     """
     try:
-        decoded_bytes = base64.b64decode(encoded_xml)
-        root = etree.fromstring(decoded_bytes)
+        # decoded_bytes = base64.b64decode(encoded_xml)
+        # root = etree.fromstring(decoded_bytes)
+        #
+        # return etree.tostring(
+        #     root, pretty_print=True, encoding="UTF-8", xml_declaration=True
+        # ).decode("utf-8")
 
-        return etree.tostring(
-            root, pretty_print=True, encoding="UTF-8", xml_declaration=True
-        ).decode("utf-8")
+        return base64.b64decode(encoded_xml)
 
     except UnicodeDecodeError:
         raise click.ClickException("UnicodeDecode Error: Unable to decode XML")
 
-    except etree.XMLSyntaxError as syntax_err:
-        raise click.ClickException(
-            f"XMLSyntax Error: Unable to decode XML: {syntax_err}"
-        )
+    # except etree.XMLSyntaxError as syntax_err:
+    #     raise click.ClickException(
+    #         f"XMLSyntax Error: Unable to decode XML: {syntax_err}"
+    #     )
 
     except Exception as err:
         raise click.ClickException(f"Unexpected error: {err}")
+
+
+# def decode_base64_xml(encoded_xml: str) -> str:
+#     """
+#     Decodes a Base64-encoded XML string and returns it as a
+#     pretty-print formatted XML string.
+#
+#     Args:
+#         encoded_xml: Base64-encoded XML string.
+#     """
+#     try:
+#         decoded_bytes = base64.b64decode(encoded_xml)
+#         root = etree.fromstring(decoded_bytes)
+#
+#         return etree.tostring(
+#             root, pretty_print=True, encoding="UTF-8", xml_declaration=True
+#         ).decode("utf-8")
+#
+#     except UnicodeDecodeError:
+#         raise click.ClickException("UnicodeDecode Error: Unable to decode XML")
+#
+#     except etree.XMLSyntaxError as syntax_err:
+#         raise click.ClickException(
+#             f"XMLSyntax Error: Unable to decode XML: {syntax_err}"
+#         )
+#
+#     except Exception as err:
+#         raise click.ClickException(f"Unexpected error: {err}")
 
 
 def format_xml_file_name(doi: str) -> str:
@@ -73,7 +104,10 @@ def create_s3_client(conf_s3: S3ConfigModel):
 # TODO add error handling
 # TODO test
 def s3_client_put_object(
-    client: boto3.Session.client, body: str, bucket: str, key: str
+    client: boto3.Session.client,
+    body: bytes,
+    bucket: str,
+    key: str
 ):
     """
     Copy string as an S3 object to a S3 bucket.
@@ -82,11 +116,23 @@ def s3_client_put_object(
 
     Args:
         client: boto3.Session.client
-        body: string that will be written as an S3 object's data
+        body: bytes object that will be written as an S3 object's data
         bucket: name of bucket that object should be written in
         key: name (or path) of the object in the S3 bucket
     """
-    response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
+    try:
+        file_body = io.BytesIO(body)
+        click.echo(type(file_body))
+        click.echo(len(file_body))
+
+        response_s3 = client.put_object(
+            Body=file_body,
+            Bucket=bucket,
+            Key=key,
+
+        )
+    except ClientError as err:
+        raise click.ClickException(f"boto3 ClientError: {err}")
 
     if (
         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
@@ -98,11 +144,84 @@ def s3_client_put_object(
         )
 
 
+# def s3_client_put_object(
+#     client: boto3.Session.client,
+#     body: bytes,
+#     bucket: str,
+#     key: str
+# ):
+#     """
+#     Copy string as an S3 object to a S3 bucket.
+#
+#     NOTE: This function will overwrite objects with the same key names!
+#
+#     Args:
+#         client: boto3.Session.client
+#         body: bytes object that will be written as an S3 object's data
+#         bucket: name of bucket that object should be written in
+#         key: name (or path) of the object in the S3 bucket
+#     """
+#     try:
+#         content_length = len(body)
+#         click.echo(content_length)
+#         response_s3 = client.put_object(
+#             Body=body,
+#             Bucket=bucket,
+#             Key=key,
+#             ContentLength=content_length
+#         )
+#     except ClientError as err:
+#         raise click.ClickException(f"boto3 ClientError: {err}")
+#
+#     if (
+#         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+#     ) == 200:
+#         click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
+#     else:
+#         click.ClickException(
+#             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
+#         )
+
+
+# def s3_client_put_object(
+#     client: boto3.Session.client, body: str, bucket: str, key: str
+# ):
+#     """
+#     Copy string as an S3 object to a S3 bucket.
+#
+#     NOTE: This function will overwrite objects with the same key names!
+#
+#     Args:
+#         client: boto3.Session.client
+#         body: string that will be written as an S3 object's data
+#         bucket: name of bucket that object should be written in
+#         key: name (or path) of the object in the S3 bucket
+#     """
+#     try:
+#         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
+#     except ClientError as err:
+#         raise click.ClickException(f"boto3 ClientError: {err}")
+#
+#     if (
+#         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+#     ) == 200:
+#         click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
+#     else:
+#         click.ClickException(
+#             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
+#         )
+
+
 def write_local_file(
-    content_str: str, filename: str, directory_path: str | None = None
+    content_bytes: bytes, filename: str, directory_path: str | None = None
 ):
     """
-    Write a string to a file.
+    Write a bytes object to a local file.
+
+    Args:
+        content_bytes: bytes object that will be written to a local file
+        filename: name of file to write, be sure to include desired extension
+        directory_path: path to directory to write the file in
     """
     try:
         if directory_path:
@@ -110,8 +229,8 @@ def write_local_file(
         else:
             file_path = filename
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content_str)
+        with open(file_path, "wb") as f:
+            f.write(content_bytes)
 
         click.echo(f"Wrote file: {file_path}")
 
