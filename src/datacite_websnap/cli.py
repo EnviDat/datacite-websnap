@@ -23,7 +23,7 @@ URLs corresponding to DataCite metadata records:
 import click
 from typing import Literal
 
-from .logger import setup_logging
+from .logger import setup_logging, CustomEcho
 from .constants import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
@@ -155,12 +155,11 @@ def datacite_bulk_export(
         validate_single_string_key_value(doi_xml_dict)
         doi, xml_str = next(iter(doi_xml_dict.items()))
         xml_filename = format_xml_file_name(doi)
-        click.echo(xml_filename)  # TODO remove
+        CustomEcho(xml_filename, enable_logs=True)  # TODO remove
         xml_decoded = decode_base64_xml(xml_str)
 
         match destination:
             case "S3":
-                pass
                 # TODO start dev here
                 # TODO test s3_client_put_object()
                 s3_client_put_object(
