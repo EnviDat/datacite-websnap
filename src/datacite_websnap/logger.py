@@ -6,15 +6,13 @@ import logging
 from .constants import LOG_FORMAT, LOG_DATE_FORMAT, LOG_NAME
 
 
-# TODO implement CustomClickEcho
 # TODO have functions call customized logging functions
 
 
-# TODO possibly configure level, see websnap get_log_level()
-def setup_logging():
+def setup_logging(log_level: str = "INFO"):
     """Set up the logging configuration."""
     logging.basicConfig(
-        level=logging.INFO,
+        level=getattr(logging, log_level, logging.INFO),
         format=LOG_FORMAT,
         datefmt=LOG_DATE_FORMAT,
         handlers=[logging.FileHandler(LOG_NAME)],
@@ -87,5 +85,5 @@ class CustomEcho:
 
     @staticmethod
     def _log_info(message):
-        """Log the message to the log file."""
+        """Log the 'INFO' message to the log file."""
         logging.info(message, stacklevel=3)
