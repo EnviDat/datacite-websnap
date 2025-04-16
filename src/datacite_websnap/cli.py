@@ -38,7 +38,8 @@ from .exporter import (
     decode_base64_xml,
     format_xml_file_name,
     write_local_file,
-    create_s3_client, s3_client_put_object,
+    create_s3_client,
+    s3_client_put_object,
 )
 
 
@@ -71,7 +72,7 @@ def cli():
 @click.option(
     "--client-id",
     help="DataCite repository account id, referred to as the client id in the "
-         "DataCite documentation.",
+    "DataCite documentation.",
 )
 @click.option(
     "--api-url",
@@ -84,7 +85,7 @@ def cli():
     type=int,
     default=DATACITE_PAGE_SIZE,
     help=f"DataCite page size is the number of records returned per page using "
-         f"pagination (default: {DATACITE_PAGE_SIZE})",
+    f"pagination (default: {DATACITE_PAGE_SIZE})",
     callback=validate_positive_int,
 )
 @click.option(
@@ -92,26 +93,32 @@ def cli():
     type=click.Choice(["S3", "local"]),
     default="S3",
     help="Choose where to export the DataCite XML records: "
-         "'S3' (default) for an S3 bucket or 'local' for local file system. ",
+    "'S3' (default) for an S3 bucket or 'local' for local file system. ",
 )
 @click.option(
     "--bucket",
     help="S3 bucket that DataCite XML records (as S3 objects) will be written in.",
 )
 @click.option(
+    "--key-prefix",
+    help="Optional key prefix for objects in S3 bucket. If omitted then objects are "
+    "written in S3 bucket without a prefix.",
+)
+@click.option(
     "--directory-path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Path of the local directory that DataCite XML metadata records will "
-         "be written in",
+    "be written in",
 )
 def datacite_bulk_export(
-        doi_prefix: tuple[str, ...] = (),
-        client_id: str | None = None,
-        api_url: str = DATACITE_API_URL,
-        page_size: int = DATACITE_PAGE_SIZE,
-        destination: Literal["S3", "local"] = "S3",
-        bucket: str | None = None,
-        directory_path: str | None = None,
+    doi_prefix: tuple[str, ...] = (),
+    client_id: str | None = None,
+    api_url: str = DATACITE_API_URL,
+    page_size: int = DATACITE_PAGE_SIZE,
+    destination: Literal["S3", "local"] = "S3",
+    bucket: str | None = None,
+    key_prefix: str | None = None,
+    directory_path: str | None = None,
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the DOIs for a
@@ -127,7 +134,6 @@ def datacite_bulk_export(
     validate_bucket(bucket, destination)
     click.echo(f"Export destination: {destination}")
 
-    # TODO test S3 config validation
     # Validate and create S3 config
     s3_client = None
     if destination == "S3":
@@ -149,23 +155,17 @@ def datacite_bulk_export(
         validate_single_string_key_value(doi_xml_dict)
         doi, xml_str = next(iter(doi_xml_dict.items()))
         xml_filename = format_xml_file_name(doi)
+        click.echo(xml_filename)  # TODO remove
         xml_decoded = decode_base64_xml(xml_str)
-
-        # TODO start here
-        click.echo(type(xml_decoded))
-        click.echo(xml_decoded)
 
         match destination:
             case "S3":
                 pass
                 # TODO start dev here
                 # TODO test s3_client_put_object()
-                # s3_client_put_object(
-                #     client=s3_client,
-                #     body=xml_decoded,
-                #     bucket=bucket,
-                #     key=xml_filename
-                # )
+                s3_client_put_object(
+                    client=s3_client, body=xml_decoded, bucket=bucket, key=xml_filename
+                )
             case "local":
                 write_local_file(xml_decoded, xml_filename, directory_path)
 

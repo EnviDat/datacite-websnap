@@ -3,12 +3,11 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
-import io
 import os
 
 import click
+from botocore.config import Config
 from botocore.exceptions import ClientError
-from lxml import etree
 import boto3
 
 from datacite_websnap.validators import S3ConfigModel
@@ -22,53 +21,11 @@ def decode_base64_xml(encoded_xml: str) -> bytes:
         encoded_xml: Base64-encoded XML string.
     """
     try:
-        # decoded_bytes = base64.b64decode(encoded_xml)
-        # root = etree.fromstring(decoded_bytes)
-        #
-        # return etree.tostring(
-        #     root, pretty_print=True, encoding="UTF-8", xml_declaration=True
-        # ).decode("utf-8")
-
         return base64.b64decode(encoded_xml)
-
     except UnicodeDecodeError:
         raise click.ClickException("UnicodeDecode Error: Unable to decode XML")
-
-    # except etree.XMLSyntaxError as syntax_err:
-    #     raise click.ClickException(
-    #         f"XMLSyntax Error: Unable to decode XML: {syntax_err}"
-    #     )
-
     except Exception as err:
         raise click.ClickException(f"Unexpected error: {err}")
-
-
-# def decode_base64_xml(encoded_xml: str) -> str:
-#     """
-#     Decodes a Base64-encoded XML string and returns it as a
-#     pretty-print formatted XML string.
-#
-#     Args:
-#         encoded_xml: Base64-encoded XML string.
-#     """
-#     try:
-#         decoded_bytes = base64.b64decode(encoded_xml)
-#         root = etree.fromstring(decoded_bytes)
-#
-#         return etree.tostring(
-#             root, pretty_print=True, encoding="UTF-8", xml_declaration=True
-#         ).decode("utf-8")
-#
-#     except UnicodeDecodeError:
-#         raise click.ClickException("UnicodeDecode Error: Unable to decode XML")
-#
-#     except etree.XMLSyntaxError as syntax_err:
-#         raise click.ClickException(
-#             f"XMLSyntax Error: Unable to decode XML: {syntax_err}"
-#         )
-#
-#     except Exception as err:
-#         raise click.ClickException(f"Unexpected error: {err}")
 
 
 def format_xml_file_name(doi: str) -> str:
@@ -98,16 +55,18 @@ def create_s3_client(conf_s3: S3ConfigModel):
         aws_access_key_id=conf_s3.aws_access_key_id,
         aws_secret_access_key=conf_s3.aws_secret_access_key,
     )
-    return session.client(service_name="s3", endpoint_url=str(conf_s3.endpoint_url))
+    return session.client(
+        service_name="s3",
+        endpoint_url=str(conf_s3.endpoint_url),
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+        ),
+    )
 
 
-# TODO add error handling
-# TODO test
 def s3_client_put_object(
-    client: boto3.Session.client,
-    body: bytes,
-    bucket: str,
-    key: str
+    client: boto3.Session.client, body: bytes, bucket: str, key: str
 ):
     """
     Copy string as an S3 object to a S3 bucket.
@@ -121,95 +80,22 @@ def s3_client_put_object(
         key: name (or path) of the object in the S3 bucket
     """
     try:
-        file_body = io.BytesIO(body)
-        click.echo(type(file_body))
-        click.echo(len(file_body))
-
-        response_s3 = client.put_object(
-            Body=file_body,
-            Bucket=bucket,
-            Key=key,
-
-        )
+        response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
     except ClientError as err:
         raise click.ClickException(f"boto3 ClientError: {err}")
+    except Exception as err:
+        raise click.ClickException(f"Unexpected error: {err}")
 
     if (
         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
     ) == 200:
-        click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
+        click.echo(
+            f"Successfully exported DataCite DOI record to bucket '{bucket}': {key}"
+        )
     else:
         click.ClickException(
             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
         )
-
-
-# def s3_client_put_object(
-#     client: boto3.Session.client,
-#     body: bytes,
-#     bucket: str,
-#     key: str
-# ):
-#     """
-#     Copy string as an S3 object to a S3 bucket.
-#
-#     NOTE: This function will overwrite objects with the same key names!
-#
-#     Args:
-#         client: boto3.Session.client
-#         body: bytes object that will be written as an S3 object's data
-#         bucket: name of bucket that object should be written in
-#         key: name (or path) of the object in the S3 bucket
-#     """
-#     try:
-#         content_length = len(body)
-#         click.echo(content_length)
-#         response_s3 = client.put_object(
-#             Body=body,
-#             Bucket=bucket,
-#             Key=key,
-#             ContentLength=content_length
-#         )
-#     except ClientError as err:
-#         raise click.ClickException(f"boto3 ClientError: {err}")
-#
-#     if (
-#         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
-#     ) == 200:
-#         click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
-#     else:
-#         click.ClickException(
-#             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
-#         )
-
-
-# def s3_client_put_object(
-#     client: boto3.Session.client, body: str, bucket: str, key: str
-# ):
-#     """
-#     Copy string as an S3 object to a S3 bucket.
-#
-#     NOTE: This function will overwrite objects with the same key names!
-#
-#     Args:
-#         client: boto3.Session.client
-#         body: string that will be written as an S3 object's data
-#         bucket: name of bucket that object should be written in
-#         key: name (or path) of the object in the S3 bucket
-#     """
-#     try:
-#         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
-#     except ClientError as err:
-#         raise click.ClickException(f"boto3 ClientError: {err}")
-#
-#     if (
-#         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
-#     ) == 200:
-#         click.echo(f"Successfully exported DataCite DOI to bucket '{bucket}': {key}")
-#     else:
-#         click.ClickException(
-#             f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
-#         )
 
 
 def write_local_file(
