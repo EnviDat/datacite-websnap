@@ -32,6 +32,7 @@ from .validators import (
     validate_single_string_key_value,
     validate_s3_config,
     validate_bucket,
+    validate_key_prefix,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 from .exporter import (
@@ -110,6 +111,12 @@ def cli():
     help="Path of the local directory that DataCite XML metadata records will "
     "be written in",
 )
+@click.option(
+    "--enable-logs",
+    is_flag=True,
+    default=False,
+    help="Enables logging messages to a file log.",
+)
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
@@ -119,6 +126,7 @@ def datacite_bulk_export(
     bucket: str | None = None,
     key_prefix: str | None = None,
     directory_path: str | None = None,
+    enable_logs: bool = False,
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the DOIs for a
@@ -127,10 +135,9 @@ def datacite_bulk_export(
     The default behavior is to export DataCite XML records to an S3 bucket but
     command also supports downloading the records to a local machine.
     """
-    # Validate that at least one query param value is truthy
+    # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id)
-
-    # Validate bucket is truthy if destination is "S3"
+    validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
     click.echo(f"Export destination: {destination}")
 
@@ -154,7 +161,7 @@ def datacite_bulk_export(
     for doi_xml_dict in xml_list[:1]:  # TODO remove
         validate_single_string_key_value(doi_xml_dict)
         doi, xml_str = next(iter(doi_xml_dict.items()))
-        xml_filename = format_xml_file_name(doi)
+        xml_filename = format_xml_file_name(doi, key_prefix)
         CustomEcho(xml_filename, enable_logs=True)  # TODO remove
         xml_decoded = decode_base64_xml(xml_str)
 

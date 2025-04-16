@@ -61,6 +61,19 @@ def validate_bucket(bucket, destination):
     return bucket
 
 
+def validate_key_prefix(key_prefix, destination):
+    """
+    Validate and return key_prefix.
+    Raises BadParameter exception it key_prefix is truthy when option '--destination'
+    is 'local'.
+    """
+    if destination == "local" and key_prefix:
+        raise click.BadParameter(
+            "'--key_prefix' cannot be used when the"
+            " '--destination' option is set to 'local'"
+        )
+
+
 def validate_single_string_key_value(d: dict):
     """
     Validate that dictionary has exactly one key-value pair and both are strings.
