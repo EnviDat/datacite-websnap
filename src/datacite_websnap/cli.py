@@ -23,6 +23,7 @@ URLs corresponding to DataCite metadata records:
 import click
 from typing import Literal
 
+from .logger import setup_logging
 from .constants import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
@@ -53,18 +54,14 @@ def cli():
 
     datacite-websnap export --help
     """
-    pass
+    # Set up the logging configuration
+    setup_logging()
 
 
-# TODO test string variables with integers and improve validation if needed
-# TODO add logic to write DataCite records to S3 bucket
-# TODO add support for DOI prefix as well, can be more than one
-# TODO possibly validate that api_url is a URL using pydantic AnyURL
 # TODO implement error handling that wraps all logic with an
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
-# TODO in a later version possibly zip files
-# TODO implement key-prefix option, possibly default to the prefix of the DOI
+# TODO review --key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(
     "--doi-prefix",
