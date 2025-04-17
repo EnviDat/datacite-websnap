@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from datacite_websnap.logger import CustomBadParameter, CustomClickException
 
 
-# TODO investigate if file_logs can be used here
 def validate_url(ctx, param, url):
     """
     Validate and return url.
@@ -23,7 +22,6 @@ def validate_url(ctx, param, url):
     return url
 
 
-# TODO investigate if file_logs can be used here
 def validate_positive_int(ctx, param, value):
     """
     Validate and return integer.
@@ -94,7 +92,8 @@ def validate_single_string_key_value(d: dict, file_logs: bool = False):
             )
     else:
         raise CustomClickException(
-            f"Dictionary must have only one key-value pair: {d}", file_logs
+            f"Dictionary must have only 1 key-value pair, currently has {len(d)} pairs",
+            file_logs,
         )
 
 

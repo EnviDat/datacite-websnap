@@ -16,7 +16,7 @@ Tool uses the PyPI package websnap, see https://pypi.org/project/websnap
 import click
 from typing import Literal
 
-from .logger import setup_logging, CustomEcho
+from .logger import setup_logging, CustomEcho, CustomClickException
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
@@ -52,7 +52,6 @@ def cli():
     pass
 
 
-# TODO implement custom logging functions in logger.py with file_logs arg
 # TODO add return (default None) and return types to functions in all modules
 # TODO implement error handling that wraps all logic with an
 #  early exit option like websnap
@@ -117,6 +116,15 @@ def cli():
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     help="Set the logging level.",
 )
+@click.option(
+    "--early-exit",
+    is_flag=True,
+    default=False,
+    help="If true then terminates program immediately after export error occurs. "
+    "Default value is False. "
+    "If False then only logs export error and continues to try to export other "
+    "records to S3 or local destination.",
+)
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
@@ -128,6 +136,7 @@ def datacite_bulk_export(
     directory_path: str | None = None,
     file_logs: bool = False,
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+    early_exit: bool = False,
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the DOIs for a
@@ -148,8 +157,8 @@ def datacite_bulk_export(
     validate_bucket(bucket, destination, file_logs)
     CustomEcho(f"Export destination: {destination}", file_logs)
     CustomEcho(
-        f"Querying DataCite API for repository account ID: '{client_id}' and/or "
-        f"DOI prefix(es): {doi_prefix}",
+        f"Querying DataCite API for DOIs with repository account ID: '{client_id}' "
+        f"and/or prefix(es): {doi_prefix}",
         file_logs,
     )
 
@@ -157,16 +166,15 @@ def datacite_bulk_export(
     s3_client = None
     if destination == "S3":
         conf_s3 = validate_s3_config(file_logs)
-        # TODO add file_logs after error handling added
-        s3_client = create_s3_client(conf_s3)
+        s3_client = create_s3_client(conf_s3, file_logs)
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
     if client_id:
         get_datacite_client(api_url, client_id, file_logs)
 
-    # Create a list of dictionaries with DOIs and XML strings that correspond to
-    # the record results for the queried DataCite repository or DOI prefix
+    # Create a list of dictionaries with DOIs and Base64 encoded XML strings that
+    # correspond to the record results for the queried DataCite repository or DOI prefix
     xml_list = get_datacite_list_dois_xml(
         api_url, client_id, doi_prefix, page_size, file_logs
     )
@@ -174,23 +182,36 @@ def datacite_bulk_export(
     # TODO WIP start here
     # TODO implement early exit option here to continue loop
     # Export XML files for each record
-    for doi_xml_dict in xml_list:
-        validate_single_string_key_value(doi_xml_dict, file_logs)
-        doi, xml_str = next(iter(doi_xml_dict.items()))
-        xml_filename = format_xml_file_name(doi, key_prefix)
-        xml_decoded = decode_base64_xml(xml_str, file_logs)
+    for doi_xml_dict in xml_list[:5]:  # TODO reimplement full list iteration
+        try:
+            validate_single_string_key_value(doi_xml_dict, file_logs)
+            doi, xml_str = next(iter(doi_xml_dict.items()))
+            xml_filename = format_xml_file_name(doi, key_prefix)
+            xml_decoded = decode_base64_xml(xml_str, file_logs)
 
-        match destination:
-            case "S3":
-                s3_client_put_object(
-                    client=s3_client,
-                    body=xml_decoded,
-                    bucket=bucket,
-                    key=xml_filename,
-                    file_logs=file_logs,
-                )
-            case "local":
-                write_local_file(xml_decoded, xml_filename, directory_path, file_logs)
+            match destination:
+                case "S3":
+                    s3_client_put_object(
+                        client=s3_client,
+                        body=xml_decoded,
+                        bucket=bucket,
+                        key=xml_filename,
+                        file_logs=file_logs,
+                    )
+                case "local":
+                    write_local_file(
+                        content_bytes=xml_decoded,
+                        filename=xml_filename,
+                        directory_path=directory_path,
+                        file_logs=file_logs,
+                    )
+
+        except CustomClickException as err:
+            if early_exit:
+                raise CustomClickException(err.message, file_logs)
+            else:
+                click.echo("CONTINUE")
+                continue
 
     CustomEcho("**** Finished DataCite bulk export ****", file_logs)
 
