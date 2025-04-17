@@ -2,7 +2,6 @@
 Handles interactions with DataCite API.
 """
 
-import click
 import requests
 
 from .config import (
@@ -11,9 +10,15 @@ from .config import (
     DATACITE_API_DOIS_ENDPOINT,
     DATACITE_PAGE_SIZE,
 )
+from .logger import CustomClickException, CustomEcho
 
 
-def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
+def get_url_json(
+    url: str,
+    params: dict | None = None,
+    timeout: int = TIMEOUT,
+    file_logs: bool = False,
+):
     """
     Return the JSON encoded part of a response if it exists as a Python object.
     Only supports GET requests.
@@ -22,6 +27,7 @@ def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
         url: The URL to call return the JSON response from.
         params: An optional dictionary of query parameters to send to the URL.
         timeout: Timeout of request in seconds.
+        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         response = requests.get(url, timeout=timeout, params=params or {})
@@ -29,25 +35,28 @@ def get_url_json(url: str, params: dict | None = None, timeout: int = TIMEOUT):
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
-        raise click.ClickException(f"HTTP error: {http_err}")
+        raise CustomClickException(f"HTTP error: {http_err}", file_logs)
 
     except requests.exceptions.ConnectionError:
-        raise click.ClickException("Network error: Unable to connect to the API.")
+        raise CustomClickException(
+            "Network error: Unable to connect to the API.", file_logs
+        )
 
     except requests.exceptions.Timeout:
-        raise click.ClickException(
+        raise CustomClickException(
             f"Request timeout: The API did not respond within the timeout of "
-            f"{timeout} seconds."
+            f"{timeout} seconds.",
+            file_logs,
         )
 
     except requests.exceptions.RequestException as req_err:
-        raise click.ClickException(f"API request failed: {req_err}")
+        raise CustomClickException(f"API request failed: {req_err}", file_logs)
 
     except Exception as err:
-        raise click.ClickException(f"Unexpected error: {err}")
+        raise CustomClickException(f"Unexpected error: {err}", file_logs)
 
 
-def get_datacite_client(api_url: str, client_id: str):
+def get_datacite_client(api_url: str, client_id: str, file_logs: bool = False):
     """
     Return client response from DataCite API.
     Raises error if client id does not return a successful response from the
@@ -59,8 +68,11 @@ def get_datacite_client(api_url: str, client_id: str):
     Args:
         api_url: The DataCite base URL to call the API with.
         client_id: The DataCite API client id that will be used to query DataCite DOIs.
+        file_logs: If True enables logging info messages and errors to a file log.
     """
-    return get_url_json(f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}")
+    return get_url_json(
+        url=f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}", file_logs=file_logs
+    )
 
 
 def extract_doi_xml(datacite_response: dict) -> list[dict]:
@@ -96,6 +108,7 @@ def get_datacite_list_dois_xml(
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
     page_size: int = DATACITE_PAGE_SIZE,
+    file_logs: bool = False,
 ) -> list[dict]:
     """
     Return a list of dictionaries in the following format:
@@ -120,7 +133,8 @@ def get_datacite_list_dois_xml(
         client_id: The DataCite API client id used to query DataCite DOIs.
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
         page_size: DataCite page size is the number of records
-                   returned per page using pagination
+                   returned per page using pagination.
+        file_logs: If True enables logging info messages and errors to a file log.
     """
     url = f"{api_url}{DATACITE_API_DOIS_ENDPOINT}"
     params = {}
@@ -139,19 +153,20 @@ def get_datacite_list_dois_xml(
     params["page[size"] = page_size
 
     # Get response for first page
-    resp_obj = get_url_json(url, params=params, timeout=TIMEOUT)
+    resp_obj = get_url_json(url, params=params, timeout=TIMEOUT, file_logs=file_logs)
 
     # Echo total number of returned DOIs and DOIs per page
     total_records = resp_obj.get("meta", {}).get("total")
-    click.echo(
-        f"Total number of DataCite DOIs returned for search query: {total_records}"
+    CustomEcho(
+        f"Total number of DataCite DOIs returned for search query: {total_records}",
+        file_logs,
     )
-    click.echo(f"Number of DOIs per page: {page_size}")
+    CustomEcho(f"Number of DOIs per page: {page_size}", file_logs)
 
     # Echo page being currently processed
     pages = 1
     total_pages = resp_obj.get("meta", {}).get("totalPages")
-    click.echo(f"Currently processing page {pages}/{total_pages}...")
+    CustomEcho(f"Currently processing page {pages}/{total_pages}...", file_logs)
 
     # Extract DOIs and XML strings for first page
     xml_lst = []
@@ -161,7 +176,9 @@ def get_datacite_list_dois_xml(
     # Extract DOIs and XML strings for subsequent pages
     while True:
         if pages < total_pages:
-            click.echo(f"Currently processing page {pages + 1}/{total_pages}...")
+            CustomEcho(
+                f"Currently processing page {pages + 1}/{total_pages}...", file_logs
+            )
 
         # Get next link using cursor-based pagination
         next_link = resp_obj.get("links", {}).get("next")
@@ -174,21 +191,24 @@ def get_datacite_list_dois_xml(
 
         pages += 1
 
+    # TODO refactor to handle if DOI search query returned 0 valid results
     # Validate processed output matches number of records and pages in
     # response "meta" object
     if total_pages != pages:
-        raise click.ClickException(
+        raise CustomClickException(
             f"Pages retrieved ({pages}) does not match the total number of pages "
             f"expected in response 'meta' object: {total_pages}, for DataCite API call"
-            f"see {next_link}"
+            f"see {next_link}",
+            file_logs,
         )
 
     xml_lst_length = len(xml_lst)
     if total_records != xml_lst_length:
-        raise click.ClickException(
+        raise CustomClickException(
             f"Total number of XML records retrieved ({xml_lst_length}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}, "
-            f"for DataCite API call see {next_link}"
+            f"for DataCite API call see {next_link}",
+            file_logs,
         )
 
     return xml_lst

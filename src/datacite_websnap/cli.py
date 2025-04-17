@@ -52,7 +52,7 @@ def cli():
     pass
 
 
-# TODO implement custom logging functions in logger.py with enable_logs arg
+# TODO implement custom logging functions in logger.py with file_logs arg
 # TODO add return (default None) and return types to functions in all modules
 # TODO implement error handling that wraps all logic with an
 #  early exit option like websnap
@@ -106,7 +106,7 @@ def cli():
     "be written in",
 )
 @click.option(
-    "--enable-logs",
+    "--file-logs",
     is_flag=True,
     default=False,
     help="Enables logging info messages and errors to a file log.",
@@ -126,7 +126,7 @@ def datacite_bulk_export(
     bucket: str | None = None,
     key_prefix: str | None = None,
     directory_path: str | None = None,
-    enable_logs: bool = False,
+    file_logs: bool = False,
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
 ) -> None:
     """
@@ -137,45 +137,61 @@ def datacite_bulk_export(
     command also supports downloading the records to a local machine.
     """
     # Set up logging
-    if enable_logs:
+    if file_logs:
         setup_logging(log_level)
 
+    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
+
     # Validate arguments
-    validate_at_least_one_query_param(doi_prefix, client_id)
-    validate_key_prefix(key_prefix, destination)
-    validate_bucket(bucket, destination)
-    CustomEcho(f"Export destination: {destination}", enable_logs)
+    validate_at_least_one_query_param(doi_prefix, client_id, file_logs)
+    validate_key_prefix(key_prefix, destination, file_logs)
+    validate_bucket(bucket, destination, file_logs)
+    CustomEcho(f"Export destination: {destination}", file_logs)
+    CustomEcho(
+        f"Querying DataCite API for repository account ID: '{client_id}' and/or "
+        f"DOI prefix(es): {doi_prefix}",
+        file_logs,
+    )
 
     # Validate and create S3 config
     s3_client = None
     if destination == "S3":
-        conf_s3 = validate_s3_config()
+        conf_s3 = validate_s3_config(file_logs)
+        # TODO add file_logs after error handling added
         s3_client = create_s3_client(conf_s3)
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
     if client_id:
-        get_datacite_client(api_url, client_id)
+        get_datacite_client(api_url, client_id, file_logs)
 
     # Create a list of dictionaries with DOIs and XML strings that correspond to
     # the record results for the queried DataCite repository or DOI prefix
-    xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix, page_size)
+    xml_list = get_datacite_list_dois_xml(
+        api_url, client_id, doi_prefix, page_size, file_logs
+    )
 
     # TODO WIP start here
     # TODO implement early exit option here to continue loop
     # Export XML files for each record
     for doi_xml_dict in xml_list:
-        validate_single_string_key_value(doi_xml_dict)
+        validate_single_string_key_value(doi_xml_dict, file_logs)
         doi, xml_str = next(iter(doi_xml_dict.items()))
         xml_filename = format_xml_file_name(doi, key_prefix)
-        xml_decoded = decode_base64_xml(xml_str)
+        xml_decoded = decode_base64_xml(xml_str, file_logs)
 
         match destination:
             case "S3":
                 s3_client_put_object(
-                    client=s3_client, body=xml_decoded, bucket=bucket, key=xml_filename
+                    client=s3_client,
+                    body=xml_decoded,
+                    bucket=bucket,
+                    key=xml_filename,
+                    file_logs=file_logs,
                 )
             case "local":
-                write_local_file(xml_decoded, xml_filename, directory_path)
+                write_local_file(xml_decoded, xml_filename, directory_path, file_logs)
+
+    CustomEcho("**** Finished DataCite bulk export ****", file_logs)
 
     return

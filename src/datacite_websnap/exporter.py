@@ -5,27 +5,30 @@ Process and export DataCite XML metadata records.
 import base64
 import os
 
-import click
 from botocore.config import Config
 from botocore.exceptions import ClientError
 import boto3
 
+from datacite_websnap.logger import CustomClickException, CustomEcho
 from datacite_websnap.validators import S3ConfigModel
 
 
-def decode_base64_xml(encoded_xml: str) -> bytes:
+def decode_base64_xml(encoded_xml: str, file_logs: bool = False) -> bytes:
     """
     Decodes a Base64-encoded XML string and returns it as a bytes object.
 
     Args:
         encoded_xml: Base64-encoded XML string.
+        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         return base64.b64decode(encoded_xml)
     except UnicodeDecodeError:
-        raise click.ClickException("UnicodeDecode Error: Unable to decode XML")
+        raise CustomClickException(
+            "UnicodeDecode Error: Unable to decode XML", file_logs
+        )
     except Exception as err:
-        raise click.ClickException(f"Unexpected error: {err}")
+        raise CustomClickException(f"Unexpected error: {err}", file_logs)
 
 
 def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
@@ -53,7 +56,8 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         return f"{key_prefix}/{doi_format}.xml"
 
 
-# TODO add error handling
+# TODO review closing session and/or client
+# TODO add error handling with CustomClickException
 def create_s3_client(conf_s3: S3ConfigModel):
     """
     Return a Boto3 S3 client.
@@ -76,7 +80,11 @@ def create_s3_client(conf_s3: S3ConfigModel):
 
 
 def s3_client_put_object(
-    client: boto3.Session.client, body: bytes, bucket: str, key: str
+    client: boto3.Session.client,
+    body: bytes,
+    bucket: str,
+    key: str,
+    file_logs: bool = False,
 ):
     """
     Copy string as an S3 object to a S3 bucket.
@@ -88,28 +96,34 @@ def s3_client_put_object(
         body: bytes object that will be written as an S3 object's data
         bucket: name of bucket that object should be written in
         key: name (or path) of the object in the S3 bucket
+        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
     except ClientError as err:
-        raise click.ClickException(f"boto3 ClientError: {err}")
+        raise CustomClickException(f"boto3 ClientError: {err}", file_logs)
     except Exception as err:
-        raise click.ClickException(f"Unexpected error: {err}")
+        raise CustomClickException(f"Unexpected error: {err}", file_logs)
 
     if (
         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
     ) == 200:
-        click.echo(
-            f"Successfully exported DataCite DOI record to bucket '{bucket}': {key}"
+        CustomEcho(
+            f"Successfully exported DataCite DOI record to bucket '{bucket}': {key}",
+            file_logs,
         )
     else:
-        click.ClickException(
-            f"S3 client returned unexpected HTTP response {status_code} for key '{key}'"
+        CustomClickException(
+            f"S3 client returned unexpected HTTP response {status_code} for key '{key}'",
+            file_logs,
         )
 
 
 def write_local_file(
-    content_bytes: bytes, filename: str, directory_path: str | None = None
+    content_bytes: bytes,
+    filename: str,
+    directory_path: str | None = None,
+    file_logs: bool = False,
 ):
     """
     Write a bytes object to a local file.
@@ -118,6 +132,7 @@ def write_local_file(
         content_bytes: bytes object that will be written to a local file
         filename: name of file to write, be sure to include desired extension
         directory_path: path to directory to write the file in
+        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         if directory_path:
@@ -128,10 +143,10 @@ def write_local_file(
         with open(file_path, "wb") as f:
             f.write(content_bytes)
 
-        click.echo(f"Wrote file: {file_path}")
+        CustomEcho(f"Wrote file: {file_path}", file_logs)
 
     except IOError as io_err:
-        raise click.ClickException(f"IOError: {io_err}")
+        raise CustomClickException(f"IOError: {io_err}", file_logs)
 
     except Exception as err:
-        raise click.ClickException(f"Unexpected error: {err}")
+        raise CustomClickException(f"Unexpected error: {err}", file_logs)

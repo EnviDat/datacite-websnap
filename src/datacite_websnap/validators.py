@@ -6,7 +6,10 @@ import click
 from pydantic import BaseModel, AnyHttpUrl, ValidationError
 from dotenv import load_dotenv
 
+from datacite_websnap.logger import CustomBadParameter, CustomClickException
 
+
+# TODO investigate if file_logs can be used here
 def validate_url(ctx, param, url):
     """
     Validate and return url.
@@ -20,6 +23,7 @@ def validate_url(ctx, param, url):
     return url
 
 
+# TODO investigate if file_logs can be used here
 def validate_positive_int(ctx, param, value):
     """
     Validate and return integer.
@@ -32,7 +36,7 @@ def validate_positive_int(ctx, param, value):
 
 
 def validate_at_least_one_query_param(
-    doi_prefix: tuple[str, ...] | None, client_id: str | None
+    doi_prefix: tuple[str, ...] | None, client_id: str | None, file_logs: bool = False
 ):
     """
     Validate that there is at least one query param value that is truthy.
@@ -40,56 +44,58 @@ def validate_at_least_one_query_param(
     (truthy) arguments are provided.
     """
     if not doi_prefix and not client_id:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             "You must provide at least one of the following options: "
-            "'--doi-prefix' or '--client-id'"
+            "'--doi-prefix' or '--client-id'",
+            file_logs,
         )
 
 
-def validate_bucket(bucket, destination):
+def validate_bucket(bucket, destination, file_logs: bool = False):
     """
     Validate and return bucket.
     Raises BadParameter exception if bucket is not truthy when
     option '--destination' is 'S3'.
     """
     if destination == "S3" and not bucket:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             "'--bucket' option must be provided when the "
-            "'--destination' option is set to 'S3'"
+            "'--destination' option is set to 'S3'",
+            file_logs,
         )
 
     return bucket
 
 
-def validate_key_prefix(key_prefix, destination):
+def validate_key_prefix(key_prefix, destination, file_logs: bool = False):
     """
     Validate and return key_prefix.
     Raises BadParameter exception it key_prefix is truthy when option '--destination'
     is 'local'.
     """
     if destination == "local" and key_prefix:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             "'--key_prefix' cannot be used when the"
-            " '--destination' option is set to 'local'"
+            " '--destination' option is set to 'local'",
+            file_logs,
         )
 
 
-def validate_single_string_key_value(d: dict):
+def validate_single_string_key_value(d: dict, file_logs: bool = False):
     """
     Validate that dictionary has exactly one key-value pair and both are strings.
     Raises ClickException if validation fails.
-
-    Args:
-        d: The dictionary to validate.
     """
     if len(d) == 1:
         key, value = list(d.items())[0]
         if not isinstance(key, str) or not isinstance(value, str):
-            raise click.ClickException(
-                f"Both key and value must be strings in dictionary: {d}"
+            raise CustomClickException(
+                f"Both key and value must be strings in dictionary: {d}", file_logs
             )
     else:
-        raise click.ClickException(f"Dictionary must have only one key-value pair: {d}")
+        raise CustomClickException(
+            f"Dictionary must have only one key-value pair: {d}", file_logs
+        )
 
 
 class S3ConfigModel(BaseModel):
@@ -102,7 +108,7 @@ class S3ConfigModel(BaseModel):
     aws_secret_access_key: str
 
 
-def validate_s3_config() -> S3ConfigModel:
+def validate_s3_config(file_logs: bool = False) -> S3ConfigModel:
     """
     Return S3ConfigModel object after validating required environment variables.
     """
@@ -115,8 +121,9 @@ def validate_s3_config() -> S3ConfigModel:
         }
         return S3ConfigModel(**s3_conf)
     except ValidationError as e:
-        raise click.ClickException(
-            f"Failed to validate S3 config environment variables, error(s): {e}"
+        raise CustomClickException(
+            f"Failed to validate S3 config environment variables, error(s): {e}",
+            file_logs,
         )
     except Exception as e:
-        raise click.ClickException(f"Unexpected error: {e}")
+        raise CustomClickException(f"Unexpected error: {e}", file_logs)
