@@ -5,7 +5,7 @@ Handles interactions with DataCite API.
 import click
 import requests
 
-from .constants import (
+from .config import (
     DATACITE_API_CLIENTS_ENDPOINT,
     TIMEOUT,
     DATACITE_API_DOIS_ENDPOINT,
@@ -190,9 +190,5 @@ def get_datacite_list_dois_xml(
             f"the total number of records expected in 'meta' object: {total_records}, "
             f"for DataCite API call see {next_link}"
         )
-
-    # TODO remove
-    click.echo(f"pages: {pages}")
-    click.echo(f"total_records: {total_records}")
 
     return xml_lst

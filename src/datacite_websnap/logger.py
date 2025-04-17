@@ -3,7 +3,7 @@
 import click
 import logging
 
-from .constants import LOG_FORMAT, LOG_DATE_FORMAT, LOG_NAME
+from .config import LOG_FORMAT, LOG_DATE_FORMAT, LOG_NAME
 
 
 # TODO have functions call customized logging functions

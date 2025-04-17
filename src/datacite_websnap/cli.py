@@ -16,8 +16,8 @@ Tool uses the PyPI package websnap, see https://pypi.org/project/websnap
 import click
 from typing import Literal
 
-from .logger import setup_logging
-from .constants import DATACITE_API_URL, DATACITE_PAGE_SIZE
+from .logger import setup_logging, CustomEcho
+from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
     validate_at_least_one_query_param,
@@ -52,9 +52,8 @@ def cli():
     pass
 
 
-# TODO implement custom logging functions in logger.py with enable_logs parameter
+# TODO implement custom logging functions in logger.py with enable_logs arg
 # TODO add return (default None) and return types to functions in all modules
-# TODO remove unneeded echo statements here and in other modules
 # TODO implement error handling that wraps all logic with an
 #  early exit option like websnap
 # TODO determine how XML file names should be formatted
@@ -145,7 +144,7 @@ def datacite_bulk_export(
     validate_at_least_one_query_param(doi_prefix, client_id)
     validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
-    click.echo(f"Export destination: {destination}")
+    CustomEcho(f"Export destination: {destination}", enable_logs)
 
     # Validate and create S3 config
     s3_client = None
