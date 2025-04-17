@@ -6,7 +6,12 @@ import base64
 import os
 
 from botocore.config import Config
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    BotoCoreError,
+    NoCredentialsError,
+    EndpointConnectionError,
+)
 import boto3
 
 from datacite_websnap.logger import CustomClickException, CustomEcho
@@ -56,27 +61,36 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         return f"{key_prefix}/{doi_format}.xml"
 
 
-# TODO review closing session and/or client
-# TODO add error handling with CustomClickException
-def create_s3_client(conf_s3: S3ConfigModel):
+def create_s3_client(conf_s3: S3ConfigModel, file_logs: bool = False):
     """
     Return a Boto3 S3 client.
 
     Args:
         conf_s3: S3ConfigModel
+        file_logs: If True enables logging info messages and errors to a file log.
+
+    Raises:
+        CustomClickException: If the client could not be created.
+
+    Returns:
+        boto3.client: Configured S3 client
     """
-    session = boto3.Session(
-        aws_access_key_id=conf_s3.aws_access_key_id,
-        aws_secret_access_key=conf_s3.aws_secret_access_key,
-    )
-    return session.client(
-        service_name="s3",
-        endpoint_url=str(conf_s3.endpoint_url),
-        config=Config(
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required",
-        ),
-    )
+    try:
+        session = boto3.Session(
+            aws_access_key_id=conf_s3.aws_access_key_id,
+            aws_secret_access_key=conf_s3.aws_secret_access_key,
+        )
+        return session.client(
+            service_name="s3",
+            endpoint_url=str(conf_s3.endpoint_url),
+            config=Config(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+        )
+
+    except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
+        raise CustomClickException(f"Failed to create S3 client: {e}", file_logs)
 
 
 def s3_client_put_object(
@@ -114,7 +128,8 @@ def s3_client_put_object(
         )
     else:
         CustomClickException(
-            f"S3 client returned unexpected HTTP response {status_code} for key '{key}'",
+            f"S3 client returned unexpected HTTP response "
+            f"status code {status_code} for key '{key}'",
             file_logs,
         )
 
