@@ -43,6 +43,9 @@ class CustomClickException(click.ClickException):
         if self.file_logs:
             _log_error(message)
 
+    def format_message(self) -> str:
+        return click.style(super().format_message(), fg="red")
+
 
 class CustomBadParameter(click.BadParameter):
     """Custom BadParameter exception that conditionally logs BadParameter exceptions."""
@@ -62,6 +65,9 @@ class CustomBadParameter(click.BadParameter):
 
         if self.file_logs:
             _log_error(message)
+
+    def format_message(self) -> str:
+        return click.style(super().format_message(), fg="red")
 
 
 class CustomEcho:
@@ -87,3 +93,25 @@ class CustomEcho:
     def _log_info(message):
         """Log the 'INFO' message to the log file."""
         logging.info(message, stacklevel=3)
+
+
+class CustomWarning:
+    """Custom stylized echo class that conditionally logs warning statements."""
+
+    def __init__(self, message: str, file_logs: bool = False):
+        """
+        Custom stylized echo class that conditionally logs warning statements to a log
+        if file_logs is True.
+
+        Args:
+            message: Message to display.
+            file_logs: Flag to that enables logging warning statements to a file log.
+                       Default is False (logs are not enabled.)
+        """
+        click.secho(f"WARNING: {message}", fg="yellow", err=True)
+        self.file_logs = file_logs
+
+    @staticmethod
+    def _log_warning(message):
+        """Log the 'WARNING' message to the log file."""
+        logging.warning(message, stacklevel=3)

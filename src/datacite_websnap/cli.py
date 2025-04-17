@@ -16,7 +16,7 @@ Tool uses the PyPI package websnap, see https://pypi.org/project/websnap
 import click
 from typing import Literal
 
-from .logger import setup_logging, CustomEcho, CustomClickException
+from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
@@ -52,10 +52,9 @@ def cli():
     pass
 
 
+# TODO write tests
+# TODO write README
 # TODO add return (default None) and return types to functions in all modules
-# TODO implement error handling that wraps all logic with an
-#  early exit option like websnap
-# TODO determine how XML file names should be formatted
 # TODO review --key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(
@@ -178,11 +177,10 @@ def datacite_bulk_export(
     xml_list = get_datacite_list_dois_xml(
         api_url, client_id, doi_prefix, page_size, file_logs
     )
+    doi = None
 
-    # TODO WIP start here
-    # TODO implement early exit option here to continue loop
     # Export XML files for each record
-    for doi_xml_dict in xml_list[:5]:  # TODO reimplement full list iteration
+    for doi_xml_dict in xml_list:
         try:
             validate_single_string_key_value(doi_xml_dict, file_logs)
             doi, xml_str = next(iter(doi_xml_dict.items()))
@@ -210,7 +208,12 @@ def datacite_bulk_export(
             if early_exit:
                 raise CustomClickException(err.message, file_logs)
             else:
-                click.echo("CONTINUE")
+                msg = (
+                    f"{err.message}, failed to export DOI '{doi}'"
+                    if doi
+                    else err.message
+                )
+                CustomWarning(msg, file_logs)
                 continue
 
     CustomEcho("**** Finished DataCite bulk export ****", file_logs)
