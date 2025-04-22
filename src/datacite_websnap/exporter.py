@@ -3,6 +3,7 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
+import binascii
 import os
 
 from botocore.config import Config
@@ -28,10 +29,8 @@ def decode_base64_xml(encoded_xml: str, file_logs: bool = False) -> bytes:
     """
     try:
         return base64.b64decode(encoded_xml)
-    except UnicodeDecodeError:
-        raise CustomClickException(
-            "UnicodeDecode Error: Unable to decode XML", file_logs
-        )
+    except binascii.Error:
+        raise CustomClickException("binascii Error: Unable to decode XML", file_logs)
     except Exception as err:
         raise CustomClickException(f"Unexpected error: {err}", file_logs)
 
@@ -128,7 +127,7 @@ def s3_client_put_object(
             file_logs,
         )
     else:
-        CustomClickException(
+        raise CustomClickException(
             f"{err_msg}S3 client returned unexpected HTTP response "
             f"status code {status_code} for key '{key}'",
             file_logs,
