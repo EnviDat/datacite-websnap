@@ -14,8 +14,8 @@ from botocore.exceptions import (
 )
 import boto3
 
-from datacite_websnap.logger import CustomClickException, CustomEcho
-from datacite_websnap.validators import S3ConfigModel
+from .logger import CustomClickException, CustomEcho
+from .validators import S3ConfigModel
 
 
 def decode_base64_xml(encoded_xml: str, file_logs: bool = False) -> bytes:
@@ -112,12 +112,13 @@ def s3_client_put_object(
         key: name (or path) of the object in the S3 bucket
         file_logs: If True enables logging info messages and errors to a file log.
     """
+    err_msg = f"Failed to export key {key}: "
     try:
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
     except ClientError as err:
-        raise CustomClickException(f"boto3 ClientError: {err}", file_logs)
+        raise CustomClickException(f"{err_msg}boto3 ClientError: {err}", file_logs)
     except Exception as err:
-        raise CustomClickException(f"Unexpected error: {err}", file_logs)
+        raise CustomClickException(f"{err_msg}Unexpected error: {err}", file_logs)
 
     if (
         status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
@@ -128,7 +129,7 @@ def s3_client_put_object(
         )
     else:
         CustomClickException(
-            f"S3 client returned unexpected HTTP response "
+            f"{err_msg}S3 client returned unexpected HTTP response "
             f"status code {status_code} for key '{key}'",
             file_logs,
         )

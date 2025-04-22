@@ -1,5 +1,6 @@
 """
 # TODO review description
+# TODO check for all TODOs in project
 
 CLI tool that bulk exports DataCite metadata records from a repository to an S3 bucket.
 
@@ -54,7 +55,7 @@ def cli():
 
 # TODO write tests
 # TODO write README
-# TODO add return (default None) and return types to functions in all modules
+# TODO possibly add return (default None) and return types to functions in all modules
 # TODO review --key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(
@@ -122,7 +123,8 @@ def cli():
     help="If true then terminates program immediately after export error occurs. "
     "Default value is False. "
     "If False then only logs export error and continues to try to export other "
-    "records to S3 or local destination.",
+    "DataCite XML records returned by search query "
+    "to an S3 bucket or local destination.",
 )
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
@@ -208,12 +210,7 @@ def datacite_bulk_export(
             if early_exit:
                 raise CustomClickException(err.message, file_logs)
             else:
-                msg = (
-                    f"{err.message}, failed to export DOI '{doi}'"
-                    if doi
-                    else err.message
-                )
-                CustomWarning(msg, file_logs)
+                CustomWarning(err.message, file_logs)
                 continue
 
     CustomEcho("**** Finished DataCite bulk export ****", file_logs)

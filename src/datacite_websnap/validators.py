@@ -6,7 +6,7 @@ import click
 from pydantic import BaseModel, AnyHttpUrl, ValidationError
 from dotenv import load_dotenv
 
-from datacite_websnap.logger import CustomBadParameter, CustomClickException
+from .logger import CustomBadParameter, CustomClickException
 
 
 def validate_url(ctx, param, url):
