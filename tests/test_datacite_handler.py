@@ -103,3 +103,84 @@ def test_get_datacite_list_dois_xml_single_page():
             )
             assert len(results) == 2
             assert {"10.123/abc": "<xml1>"} in results
+
+
+def test_get_datacite_list_dois_xml_zero_records():
+    mock_response = {
+        "meta": {"total": 0, "totalPages": 1},
+        "links": {},
+        "data": [],
+    }
+
+    with patch(
+        "datacite_websnap.datacite_handler.get_datacite_dois",
+        return_value=mock_response,
+    ):
+        with pytest.raises(CustomClickException):
+            get_datacite_list_dois_xml(
+                api_url="https://api.example.org",
+                client_id="test-client",
+                file_logs=False,
+            )
+
+
+def test_get_datacite_list_dois_xml_multiple_pages():
+    first_page = {
+        "meta": {"total": 4, "totalPages": 2},
+        "links": {"next": "https://next.page"},
+        "data": [
+            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
+            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+        ],
+    }
+
+    second_page = {
+        "meta": {"total": 4, "totalPages": 2},
+        "links": {},
+        "data": [
+            {"attributes": {"doi": "10.123/ghi", "xml": "<xml3>"}},
+            {"attributes": {"doi": "10.123/jkl", "xml": "<xml4>"}},
+        ],
+    }
+
+    with patch(
+        "datacite_websnap.datacite_handler.get_datacite_dois", return_value=first_page
+    ):
+        with patch(
+            "datacite_websnap.datacite_handler.get_url_json", return_value=second_page
+        ):
+            result = get_datacite_list_dois_xml(
+                api_url="https://api.example.org",
+                client_id="test-client",
+                file_logs=False,
+            )
+
+    expected = [
+        {"10.123/abc": "<xml1>"},
+        {"10.123/def": "<xml2>"},
+        {"10.123/ghi": "<xml3>"},
+        {"10.123/jkl": "<xml4>"},
+    ]
+
+    assert result == expected
+
+
+def test_get_datacite_list_dois_xml_mismatched_total_records():
+    first_page = {
+        "meta": {"total": 3, "totalPages": 1},
+        "links": {},
+        "data": [
+            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
+            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+        ],
+    }
+
+    with patch(
+        "datacite_websnap.datacite_handler.get_datacite_dois", return_value=first_page
+    ):
+        with pytest.raises(CustomClickException):
+            get_datacite_list_dois_xml(
+                api_url="https://api.example.org",
+                client_id="test-client",
+                file_logs=False,
+            )
