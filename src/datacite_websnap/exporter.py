@@ -60,7 +60,9 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         return f"{key_prefix}/{doi_format}.xml"
 
 
-def create_s3_client(conf_s3: S3ConfigModel, file_logs: bool = False):
+def create_s3_client(
+    conf_s3: S3ConfigModel, file_logs: bool = False
+) -> boto3.Session.client:
     """
     Return a Boto3 S3 client.
 
@@ -98,7 +100,7 @@ def s3_client_put_object(
     bucket: str,
     key: str,
     file_logs: bool = False,
-):
+) -> None:
     """
     Copy string as an S3 object to a S3 bucket.
 
@@ -133,13 +135,15 @@ def s3_client_put_object(
             file_logs,
         )
 
+    return
+
 
 def write_local_file(
     content_bytes: bytes,
     filename: str,
     directory_path: str | None = None,
     file_logs: bool = False,
-):
+) -> None:
     """
     Write a bytes object to a local file.
 

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from .logger import CustomBadParameter, CustomClickException
 
 
-def validate_url(ctx, param, url):
+def validate_url(ctx, param, url) -> str:
     """
     Validate and return url.
     Raises BadParameter exception if url does not start with 'https://.
@@ -22,7 +22,7 @@ def validate_url(ctx, param, url):
     return url
 
 
-def validate_positive_int(ctx, param, value):
+def validate_positive_int(ctx, param, value) -> int:
     """
     Validate and return integer.
     Raises BadParameter exception if value is not positive.
@@ -35,7 +35,7 @@ def validate_positive_int(ctx, param, value):
 
 def validate_at_least_one_query_param(
     doi_prefix: tuple[str, ...] | None, client_id: str | None, file_logs: bool = False
-):
+) -> None:
     """
     Validate that there is at least one query param value that is truthy.
     Raises BadParameter exception if neither "doi_prefix" "client_id"
@@ -48,8 +48,10 @@ def validate_at_least_one_query_param(
             file_logs,
         )
 
+    return
 
-def validate_bucket(bucket, destination, file_logs: bool = False):
+
+def validate_bucket(bucket, destination, file_logs: bool = False) -> str:
     """
     Validate and return bucket.
     Raises BadParameter exception if bucket is not truthy when
@@ -65,7 +67,7 @@ def validate_bucket(bucket, destination, file_logs: bool = False):
     return bucket
 
 
-def validate_key_prefix(key_prefix, destination, file_logs: bool = False):
+def validate_key_prefix(key_prefix, destination, file_logs: bool = False) -> str:
     """
     Validate and return key_prefix.
     Raises BadParameter exception it key_prefix is truthy when option '--destination'
@@ -78,8 +80,10 @@ def validate_key_prefix(key_prefix, destination, file_logs: bool = False):
             file_logs,
         )
 
+    return key_prefix
 
-def validate_single_string_key_value(d: dict, file_logs: bool = False):
+
+def validate_single_string_key_value(d: dict, file_logs: bool = False) -> None:
     """
     Validate that dictionary has exactly one key-value pair and both are strings.
     Raises ClickException if validation fails.
@@ -95,6 +99,8 @@ def validate_single_string_key_value(d: dict, file_logs: bool = False):
             f"Dictionary must have only 1 key-value pair, currently has {len(d)} pairs",
             file_logs,
         )
+
+    return
 
 
 class S3ConfigModel(BaseModel):

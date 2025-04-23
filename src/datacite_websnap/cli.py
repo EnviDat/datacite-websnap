@@ -1,17 +1,19 @@
 """
-# TODO review description
-# TODO check for all TODOs in project
-
 CLI tool that bulk exports DataCite metadata records from a repository to an S3 bucket.
 
 Can also be used to export repository records to a local machine.
 
-Tool uses the PyPI package websnap, see https://pypi.org/project/websnap
-
 *NOTE*: To use CLI in development run (installs dependencies and scripts in development mode):
     pdm install -d
 
-# TODO add example commands
+To access general CLI help in terminal execute:
+    datacite-websnap --help
+
+To access more detailed export command help in terminal execute:
+    datacite-websnap export --help
+
+Example command:
+    datacite-websnap export --file-logs --destination S3 --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
 """
 
 import click
@@ -54,7 +56,6 @@ def cli():
 
 
 # TODO write README
-# TODO possibly add return (default None) and return types to functions in all modules
 # TODO review --key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(

@@ -6,9 +6,6 @@ import logging
 from .config import LOG_FORMAT, LOG_DATE_FORMAT, LOG_NAME
 
 
-# TODO check which functions should call customized logging functions
-
-
 def setup_logging(log_level: str = "INFO"):
     """Set up the logging configuration."""
     logging.basicConfig(

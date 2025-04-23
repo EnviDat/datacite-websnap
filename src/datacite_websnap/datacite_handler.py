@@ -2,6 +2,8 @@
 Handles interactions with DataCite API.
 """
 
+from typing import Any
+
 import requests
 
 from .config import (
@@ -18,7 +20,7 @@ def get_url_json(
     params: dict | None = None,
     timeout: int = TIMEOUT,
     file_logs: bool = False,
-):
+) -> Any:
     """
     Return the JSON encoded part of a response if it exists as a Python object.
     Only supports GET requests.
@@ -56,7 +58,9 @@ def get_url_json(
         raise CustomClickException(f"Unexpected error: {err}", file_logs)
 
 
-def get_datacite_client(api_url: str, client_id: str, file_logs: bool = False):
+def get_datacite_client(
+    api_url: str, client_id: str, file_logs: bool = False
+) -> dict[str, Any]:
     """
     Return client response from DataCite API.
     Raises error if client id does not return a successful response from the
@@ -81,7 +85,7 @@ def get_datacite_dois(
     doi_prefix: tuple[str, ...] = (),
     page_size: int = DATACITE_PAGE_SIZE,
     file_logs: bool = False,
-):
+) -> dict[str, Any]:
     """
     Returns a list of DOIs as a response from DataCite API.
     Uses cursor pages pagination to return the first page of the response.
