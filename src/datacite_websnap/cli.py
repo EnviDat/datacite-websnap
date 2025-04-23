@@ -53,7 +53,6 @@ def cli():
     pass
 
 
-# TODO write tests
 # TODO write README
 # TODO possibly add return (default None) and return types to functions in all modules
 # TODO review --key-prefix option, possibly default to the prefix of the DOI
@@ -179,7 +178,6 @@ def datacite_bulk_export(
     xml_list = get_datacite_list_dois_xml(
         api_url, client_id, doi_prefix, page_size, file_logs
     )
-    doi = None
 
     # Export XML files for each record
     for doi_xml_dict in xml_list:

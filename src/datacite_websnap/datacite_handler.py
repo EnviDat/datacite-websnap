@@ -225,16 +225,7 @@ def get_datacite_list_dois_xml(
 
         pages += 1
 
-    # Validate processed output matches number of records and pages in
-    # response "meta" object
-    if total_pages != pages:
-        raise CustomClickException(
-            f"Pages retrieved ({pages}) does not match the total number of pages "
-            f"expected in response 'meta' object: {total_pages}, for DataCite API call"
-            f"see {next_link}",
-            file_logs,
-        )
-
+    # Validate processed output matches number of records in response "meta" object
     xml_lst_length = len(xml_lst)
     if total_records != xml_lst_length:
         raise CustomClickException(
