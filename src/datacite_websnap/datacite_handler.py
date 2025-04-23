@@ -155,12 +155,22 @@ def get_datacite_list_dois_xml(
     # Get response for first page
     resp_obj = get_url_json(url, params=params, timeout=TIMEOUT, file_logs=file_logs)
 
-    # Echo total number of returned DOIs and DOIs per page
+    # Echo total number of returned DOIs
     total_records = resp_obj.get("meta", {}).get("total")
     CustomEcho(
         f"Total number of DataCite DOIs returned for search query: {total_records}",
         file_logs,
     )
+
+    # Handle 0 records returned
+    if total_records == 0:
+        raise CustomClickException(
+            "0 records returned for search query, review '--client-id' and/or "
+            "'--doi-prefix' arguments",
+            file_logs,
+        )
+    
+    # Echo DOIs per page
     CustomEcho(f"Number of DOIs per page: {page_size}", file_logs)
 
     # Echo page being currently processed
@@ -191,7 +201,6 @@ def get_datacite_list_dois_xml(
 
         pages += 1
 
-    # TODO refactor to handle if DOI search query returned 0 valid results
     # Validate processed output matches number of records and pages in
     # response "meta" object
     if total_pages != pages:
