@@ -75,6 +75,50 @@ def get_datacite_client(api_url: str, client_id: str, file_logs: bool = False):
     )
 
 
+def get_datacite_dois(
+    api_url: str,
+    client_id: str,
+    doi_prefix: tuple[str, ...] = (),
+    page_size: int = DATACITE_PAGE_SIZE,
+    file_logs: bool = False,
+):
+    """
+    Returns a list of DOIs as a response from DataCite API.
+    Uses cursor pages pagination to return the first page of the response.
+    Raises error if response is not successful.
+
+    For DataCite API documentation used in this call see
+    https://support.datacite.org/reference/get_dois
+    https://support.datacite.org/docs/pagination#method-2-cursor
+
+    Args:
+        api_url: The DataCite base URL to call the API with.
+        client_id: The DataCite API client id used to query DataCite DOIs.
+        doi_prefix: The DOI prefixes used to query DataCite DOIs.
+        page_size: DataCite page size is the number of records
+                   returned per page using pagination.
+        file_logs: If True enables logging info messages and errors to a file log.
+    """
+    url = f"{api_url}{DATACITE_API_DOIS_ENDPOINT}"
+    params = {}
+
+    # Query search params
+    if doi_prefix:
+        params["prefix"] = ",".join(doi_prefix)
+    if client_id:
+        params["client-id"] = client_id
+
+    # Set param detail to "true" so that XML strings are included in response
+    params["detail"] = "true"
+
+    # Params needed for cursor-based pagination
+    params["page[cursor]"] = 1
+    params["page[size"] = page_size
+
+    # Get response for first page
+    return get_url_json(url, params=params, timeout=TIMEOUT, file_logs=file_logs)
+
+
 def extract_doi_xml(datacite_response: dict) -> list[dict]:
     """
     Returns a list of dictionaries with DOIs and extracted XML strings from a
@@ -122,10 +166,6 @@ def get_datacite_list_dois_xml(
     Raises error if an unsuccessful response from DataCite API is returned
      or validation fails.
 
-    For DataCite API documentation used in this call see
-    https://support.datacite.org/reference/get_dois
-    https://support.datacite.org/docs/pagination#method-2-cursor
-
     Supports the following search query params from DataCite: "prefix", "client-id"
 
     Args:
@@ -136,24 +176,8 @@ def get_datacite_list_dois_xml(
                    returned per page using pagination.
         file_logs: If True enables logging info messages and errors to a file log.
     """
-    url = f"{api_url}{DATACITE_API_DOIS_ENDPOINT}"
-    params = {}
-
-    # Query search params
-    if doi_prefix:
-        params["prefix"] = ",".join(doi_prefix)
-    if client_id:
-        params["client-id"] = client_id
-
-    # Set param detail to "true" so that XML strings are included in response
-    params["detail"] = "true"
-
-    # Params needed for cursor-based pagination
-    params["page[cursor]"] = 1
-    params["page[size"] = page_size
-
     # Get response for first page
-    resp_obj = get_url_json(url, params=params, timeout=TIMEOUT, file_logs=file_logs)
+    resp_obj = get_datacite_dois(api_url, client_id, doi_prefix, page_size, file_logs)
 
     # Echo total number of returned DOIs
     total_records = resp_obj.get("meta", {}).get("total")
@@ -169,7 +193,7 @@ def get_datacite_list_dois_xml(
             "'--doi-prefix' arguments",
             file_logs,
         )
-    
+
     # Echo DOIs per page
     CustomEcho(f"Number of DOIs per page: {page_size}", file_logs)
 
