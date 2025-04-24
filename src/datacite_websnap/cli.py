@@ -55,8 +55,6 @@ def cli():
     pass
 
 
-# TODO write README
-# TODO review --key-prefix option, possibly default to the prefix of the DOI
 @cli.command(name="export")
 @click.option(
     "--doi-prefix",
