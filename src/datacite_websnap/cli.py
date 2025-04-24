@@ -1,10 +1,10 @@
 """
-CLI tool that bulk exports DataCite metadata records from a repository to an S3 bucket.
+CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket.
 
-Can also be used to export repository records to a local machine.
+Also supports exporting repository records to a local machine.
 
 *NOTE*: To use CLI in development run (installs dependencies and scripts in development mode):
-    pdm install -d
+    pdm install --dev
 
 To access general CLI help in terminal execute:
     datacite-websnap --help
@@ -13,7 +13,7 @@ To access more detailed export command help in terminal execute:
     datacite-websnap export --help
 
 Example command:
-    datacite-websnap export --file-logs --destination S3 --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
+    datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
 """
 
 import click
@@ -59,24 +59,25 @@ def cli():
 @click.option(
     "--doi-prefix",
     multiple=True,
-    help="DataCite DOI prefix. Accepts multiple prefix arguments.",
+    help="DataCite DOI prefix used to filter results. "
+    "Accepts single or multiple prefix arguments.",
 )
 @click.option(
     "--client-id",
-    help="DataCite repository account id, referred to as the client id in the "
-    "DataCite documentation.",
+    help="DataCite repository account id used to filter results, "
+    "referred to as the 'client-id' in the DataCite documentation.",
 )
 @click.option(
     "--api-url",
     default=DATACITE_API_URL,
-    help=f"DataCite base API URL (default: {DATACITE_API_URL})",
+    help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
     callback=validate_url,
 )
 @click.option(
     "--page-size",
     type=int,
     default=DATACITE_PAGE_SIZE,
-    help=f"DataCite page size is the number of records returned per page using "
+    help=f"Number of records returned per page of DataCite API response using "
     f"pagination (default: {DATACITE_PAGE_SIZE})",
     callback=validate_positive_int,
 )
@@ -85,11 +86,12 @@ def cli():
     type=click.Choice(["S3", "local"]),
     default="S3",
     help="Choose where to export the DataCite XML records: "
-    "'S3' (default) for an S3 bucket or 'local' for local file system. ",
+    "'S3' (default) for an S3 bucket or 'local' for local file system.",
 )
 @click.option(
     "--bucket",
-    help="S3 bucket that DataCite XML records (as S3 objects) will be written in.",
+    help="Name of S3 bucket that DataCite XML records (as S3 objects) "
+    "will be written in.",
 )
 @click.option(
     "--key-prefix",
@@ -99,8 +101,8 @@ def cli():
 @click.option(
     "--directory-path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="Path of the local directory that DataCite XML metadata records will "
-    "be written in",
+    help="Only used if exporting to local destination. Path of the local directory "
+    "that DataCite XML metadata records will be written in",
 )
 @click.option(
     "--file-logs",
@@ -118,8 +120,8 @@ def cli():
     "--early-exit",
     is_flag=True,
     default=False,
-    help="If true then terminates program immediately after export error occurs. "
-    "Default value is False. "
+    help="If enabled then terminates program immediately after export error occurs. "
+    "Default value is False (not enabled). "
     "If False then only logs export error and continues to try to export other "
     "DataCite XML records returned by search query "
     "to an S3 bucket or local destination.",
@@ -138,7 +140,7 @@ def datacite_bulk_export(
     early_exit: bool = False,
 ) -> None:
     """
-    Bulk export DataCite XML metadata records that correspond to the DOIs for a
+    Bulk export DataCite XML metadata records that correspond to the records for a
     particular DataCite repository or DOI prefix.
 
     The default behavior is to export DataCite XML records to an S3 bucket but

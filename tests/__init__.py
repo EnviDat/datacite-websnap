@@ -2,5 +2,8 @@
 Test suite for datacite-websnap.
 
 Example command that prints test coverage to terminal:
-pdm run pytest --cov=datacite_websnap --cov-report=term
+    pdm run pytest --cov=datacite_websnap --cov-report=term
+
+To run the test suite using tox:
+    pdm run tox
 """
