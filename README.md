@@ -180,6 +180,13 @@ TODO include both pytest and tox commands
 TODO add Beta release notes
 
 
+## Purpose
+
+`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
+
+`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
+
+
 ## Author
 
 <a href="http://www.linkedin.com/in/rebeccabuchholz" target="_blank">Rebecca Buchholz,</a> 
@@ -188,11 +195,6 @@ EnviDat Software Engineer
 <a href="https://www.envidat.ch" target="_blank">EnviDat</a> is the environmental data 
 portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WSL. 
 
-## Purpose
-
-`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
-
-`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
 ## Inspiration
 
