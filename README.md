@@ -116,14 +116,32 @@ datacite-websnap export --client-id ethz.wsl --bucket opendataswiss
 datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix wsl --file-logs
 ```
 
-
 </details>
+
 
 
 ## Usage: Local Machine
 
-TODO
+<details>
+  <summary>
+  Click to unfold
+  </summary>
 
+Export DataCite XML metadata records for a specific repository and/or DOI prefix to a local machine. 
+
+To write the records locally the `--destination` option **must** be assigned to `local`. 
+
+### Example
+
+- Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
+- Write XML records locally
+- Write XML records to a directory called "samples/test"
+
+```bash
+datacite-websnap export --client-id ethz.wsl --destination local --directory-path "samples/test"
+```
+
+</details>
 
 ## Record Name Formatting
 
