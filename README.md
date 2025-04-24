@@ -24,7 +24,7 @@ To install with dev dependencies execute:
 
 ## Terminal Documentation
 
-To access CLI documentation in terminal execute:
+To access CLI documentation execute:
 ```bash
   datacite-websnap --help
 ```
@@ -120,10 +120,6 @@ datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix
 </details>
 
 
-
-
-
-
 ## Usage: Local Machine
 
 TODO
@@ -176,9 +172,9 @@ portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WS
 
 ## Purpose
 
-This CLI tool was developed to facilitate interoperability between ETH research institutions in Switzerland. 
+`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
 
-`datacite-websnap` will allow research institutions to easily and quickly share metadata records registered with DataCite in publicly accessible S3 cloud storage.  
+`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
 ## Inspiration
 
@@ -188,4 +184,4 @@ An EnviDat PyPI package that copies files retrieved from an API to an S3 bucket 
 
 ## License
 
-MIT License (TODO link)
+MIT License 
