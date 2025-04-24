@@ -68,20 +68,6 @@ def cli():
     "referred to as the 'client-id' in the DataCite documentation.",
 )
 @click.option(
-    "--api-url",
-    default=DATACITE_API_URL,
-    help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
-    callback=validate_url,
-)
-@click.option(
-    "--page-size",
-    type=int,
-    default=DATACITE_PAGE_SIZE,
-    help=f"Number of records returned per page of DataCite API response using "
-    f"pagination (default: {DATACITE_PAGE_SIZE})",
-    callback=validate_positive_int,
-)
-@click.option(
     "--destination",
     type=click.Choice(["S3", "local"]),
     default="S3",
@@ -126,11 +112,23 @@ def cli():
     "DataCite XML records returned by search query "
     "to an S3 bucket or local destination.",
 )
+@click.option(
+    "--api-url",
+    default=DATACITE_API_URL,
+    help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
+    callback=validate_url,
+)
+@click.option(
+    "--page-size",
+    type=int,
+    default=DATACITE_PAGE_SIZE,
+    help=f"Number of records returned per page of DataCite API response using "
+    f"pagination (default: {DATACITE_PAGE_SIZE})",
+    callback=validate_positive_int,
+)
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
-    api_url: str = DATACITE_API_URL,
-    page_size: int = DATACITE_PAGE_SIZE,
     destination: Literal["S3", "local"] = "S3",
     bucket: str | None = None,
     key_prefix: str | None = None,
@@ -138,6 +136,8 @@ def datacite_bulk_export(
     file_logs: bool = False,
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
     early_exit: bool = False,
+    api_url: str = DATACITE_API_URL,
+    page_size: int = DATACITE_PAGE_SIZE,
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the records for a

@@ -134,6 +134,11 @@ TODO
 TODO
 
 
+## Logs
+
+TODO
+
+
 ## DataCite API
 
 TODO include relevant links from DataCite API documentation
@@ -146,13 +151,19 @@ TODO include a table with default values
 
 ## Tests
 
-TODO include pytests and tox
+TODO include both pytest and tox commands
 
 
 
 ## Future Development
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
+- Set up GitLab pipeline to automatically run pytest and manually run tox tests
+
+
+## Status
+
+TODO add Beta release notes
 
 
 ## Author
