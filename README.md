@@ -237,6 +237,12 @@ To override the default environment variables related to DataCite the variables 
 
 ## Tests
 
+<details>
+  <summary>
+  Click to unfold
+  </summary>
+
+
 Both `pytest` and `tox` can be used to run the test suite for `datacite-websnap`.
 
 To run pytest and print coverage to terminal:
@@ -248,6 +254,8 @@ To test `datacite-websnap` using the Python versions configured in `tox.ini` (se
 ```bash
 pdm run tox
 ```
+
+</details>
 
 
 ## Future Development
