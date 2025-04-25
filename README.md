@@ -151,7 +151,7 @@ datacite-websnap export --client-id ethz.wsl --destination local --directory-pat
   Click to unfold
   </summary>
 
-Exported DataCite XML records are assigned file names using the DOI that corresponds to the record.
+Exported DataCite XML records are assigned file names (or S3 keys) using the DOI that corresponds to the record.
 
 - The "/" slash character that divides the DOI prefix and suffix are replaced with a "_" underscore character
 - ".xml" is appended to the DOI as a file extension 
@@ -160,7 +160,7 @@ Exported DataCite XML records are assigned file names using the DOI that corresp
 
 Record DOI: `10.16904/envidat.31`
 
-File name for exported record: `10.16904_envidat.31.xml`
+File name (or S3 key) for exported record: `10.16904_envidat.31.xml`
 
 </details>
 
