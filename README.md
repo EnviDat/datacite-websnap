@@ -143,24 +143,85 @@ datacite-websnap export --client-id ethz.wsl --destination local --directory-pat
 
 </details>
 
+
 ## Record Name Formatting
 
-TODO
+<details>
+  <summary>
+  Click to unfold
+  </summary>
+
+Exported DataCite XML records are assigned file names using the DOI that corresponds to the record.
+
+- The "/" slash character that divides the DOI prefix and suffix are replaced with a "_" underscore character
+- ".xml" is appended to the DOI as a file extension 
+
+### Example
+
+Record DOI: `10.16904/envidat.31`
+
+File name for exported record: `10.16904_envidat.31.xml`
+
+</details>
 
 
 ## Logs
 
-TODO
+<details>
+  <summary>
+  Click to unfold
+  </summary>
+
+Info messages and errors are logged to the console.
+
+Optionally log messages errors can be written to a file log called by default `"datacite-websnap.log"`.
+
+To enable file logs the following option **must** be enabled: `--file-logs`
+
+### Example   
+```bash
+datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --file-logs            
+```
+
+### Logging Environment Variables
+
+Default environment variables are assigned in `config.py` for logging configuration.
+
+To override the default environment variables related to logging the variables in the table below can be set in a `.env` file. 
+
+`LOG_NAME` is the name of the file log (used if the `--file-logs` option is enabled).
+
+<a href="https://docs.python.org/3/library/logging.html#logging.basicConfig" target="_blank">Python logging basic configuration documentation.</a>
+
+| Environment Variable | Default                                                                               |
+|----------------------|---------------------------------------------------------------------------------------|
+| `LOG_NAME`           | `"datacite-websnap.log"`                                                              |
+| `LOG_FORMAT`         | `"%(asctime)s \| %(levelname)s \| %(module)s.%(funcName)s:%(lineno)d \| %(message)s"` |
+| `LOG_DATE_FORMAT`    | `"%Y-%m-%d %H:%M:%S"`                                                                 |
+
+
+</details>
 
 
 ## DataCite API
 
-TODO include relevant links from DataCite API documentation
+<details>
+  <summary>
+  Click to unfold
+  </summary>
 
+`datacite-websnap` retrieves XML metadata records from the DataCite API.
 
-## Configuration
+Documentation for the DataCite API endpoints and pagination used in `datacite-websnap`:
+- <a href="https://support.datacite.org/reference/get_dois" target="_blank">Return a list of DOIS</a>
+- <a href="https://support.datacite.org/docs/pagination#method-2-cursor" target="_blank">Cursor-based pagination</a>
+- <a href="https://support.datacite.org/reference/get_clients-id" target="_blank">Return a client (DataCite repository)</a>
 
-TODO include a table with default values
+### DataCite Environment Variables
+
+TODO
+
+</details>
 
 
 ## Tests
