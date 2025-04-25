@@ -183,7 +183,7 @@ To enable file logs the following option **must** be enabled: `--file-logs`
 datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --file-logs            
 ```
 
-### Logging Environment Variables
+### Environment Variables: Logs
 
 Default environment variables are assigned in `config.py` for logging configuration.
 
@@ -213,32 +213,54 @@ To override the default environment variables related to logging the variables i
 `datacite-websnap` retrieves XML metadata records from the DataCite API.
 
 Documentation for the DataCite API endpoints and pagination used in `datacite-websnap`:
-- <a href="https://support.datacite.org/reference/get_dois" target="_blank">Return a list of DOIS</a>
+- <a href="https://support.datacite.org/reference/get_dois" target="_blank">Return a list of DOIs</a>
 - <a href="https://support.datacite.org/docs/pagination#method-2-cursor" target="_blank">Cursor-based pagination</a>
 - <a href="https://support.datacite.org/reference/get_clients-id" target="_blank">Return a client (DataCite repository)</a>
 
-### DataCite Environment Variables
+### Environment Variables: DataCite API 
 
-TODO
+Default environment variables are assigned in `config.py` for DataCite API base URL, endpoints, page size and timeout.
+
+To override the default environment variables related to DataCite the variables in the table below can be set in a `.env` file. 
+
+| Environment Variable            | Default                    | Description                                         |
+|---------------------------------|----------------------------|-----------------------------------------------------|
+| `TIMEOUT`                       | `32`                       | Timeout of API requests in seconds.                 |
+| `DATACITE_API_URL`              | `https://api.datacite.org` | DataCite base URL used for API requests.            |
+| `DATACITE_API_CLIENTS_ENDPOINT` | `/clients`                 | Endpoint used to retrieve client.                   |
+| `DATACITE_API_DOIS_ENDPOINT`    | `/dois`                    | Endpoint used to retrieve list of DOIs.             |
+| `DATACITE_PAGE_SIZE`            | `250`                      | Number of DOIs retrieved per page using pagination. |
+
 
 </details>
 
 
 ## Tests
 
-TODO include both pytest and tox commands
+Both `pytest` and `tox` can be used to run the test suite for `datacite-websnap`.
 
+To run pytest and print coverage to terminal:
+```bash
+pdm run pytest --cov=datacite_websnap --cov-report=term
+```
+
+To test `datacite-websnap` using the Python versions configured in `tox.ini` (see the `envlist` setting):
+```bash
+pdm run tox
+```
 
 
 ## Future Development
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
-- Set up GitLab pipeline to automatically run pytest and manually run tox tests
+- Set up GitLab CI/CD pipeline:
+  - automatically run pytest and manually run tox tests
+  - manually build and deploy package to GitLab package registry 
 
 
 ## Status
 
-TODO add Beta release notes
+Currently `datacite-websnap` is in alpha testing. 
 
 
 ## Purpose
