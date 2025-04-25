@@ -92,7 +92,6 @@ def test_validate_s3_config_valid(monkeypatch):
 
 def test_validate_s3_config_validation_error():
     with (
-        patch("datacite_websnap.validators.load_dotenv"),
         patch("datacite_websnap.validators.os.getenv", side_effect=lambda k: None),
     ):
         with pytest.raises(CustomClickException):
@@ -101,7 +100,6 @@ def test_validate_s3_config_validation_error():
 
 def test_validate_s3_config_unexpected_error():
     with (
-        patch("datacite_websnap.validators.load_dotenv"),
         patch(
             "datacite_websnap.validators.os.getenv", side_effect=Exception("unexpected")
         ),

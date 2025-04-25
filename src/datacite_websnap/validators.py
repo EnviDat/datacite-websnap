@@ -4,7 +4,6 @@ import os
 
 import click
 from pydantic import BaseModel, AnyHttpUrl, ValidationError
-from dotenv import load_dotenv
 
 from .logger import CustomBadParameter, CustomClickException
 
@@ -118,7 +117,6 @@ def validate_s3_config(file_logs: bool = False) -> S3ConfigModel:
     Return S3ConfigModel object after validating required environment variables.
     """
     try:
-        load_dotenv()
         s3_conf = {
             "endpoint_url": os.getenv("ENDPOINT_URL"),
             "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
