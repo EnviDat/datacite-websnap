@@ -62,17 +62,12 @@ build:
 deploy:
   stage: deploy
   variables:
-    PACKAGES_URL: "https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_ID/packages"
-  before_script:
-    - pip install pdm
-    - pdm sync
-    - pdm config repository.gitlab.url "$PACKAGES_URL"
-    - pdm config repository.gitlab.username "__token__"
-    - pdm config repository.gitlab.password "$DEPLOY_TOKEN"
+    TWINE_USERNAME: gitlab-ci-token
+    TWINE_PASSWORD: $CI_JOB_TOKEN
   script:
-    - pdm publish --repository gitlab
-  dependencies:
-    - build
+    - pip install build twine
+    - python -m build
+    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   when: manual
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
