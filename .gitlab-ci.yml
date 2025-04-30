@@ -1,5 +1,8 @@
 image: python:3.13-slim-bookworm  # Default image
 
+before_script:
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN" 
+
 stages:
   - test
 
