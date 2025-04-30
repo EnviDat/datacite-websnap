@@ -2,6 +2,7 @@ image: python:3.13-slim-bookworm  # Default image
 
 before_script:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
+  - pip install pdm
 
 stages:
   - test
@@ -22,7 +23,6 @@ cache:
 test:
   stage: test
   before_script:
-    - pip install pdm
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
@@ -34,7 +34,6 @@ test-tox:
   image: python:${PYTHON_VERSION}-slim-bookworm
   before_script:
     - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
-    - pip install pdm
     - pdm sync --dev
   script:
     - pdm run tox -e py${PYTHON_VERSION}
@@ -46,7 +45,6 @@ test-tox:
 build:
   stage: build
   before_script:
-    - pip install pdm
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync
   script:
