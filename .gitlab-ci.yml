@@ -1,8 +1,10 @@
 image: python:3.13-slim-bookworm  # Default image
 
-# TODO investigate logging into Docker Hub
-#before_script:
-#  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
+# Global before_script to install pdm once and use it across all jobs
+before_script:
+  - pip install pdm  # Install pdm globally for all jobs
+  - pdm config cache_dir "$CI_PROJECT_DIR/.cache/pdm"  # Set the cache location
+#  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"  # TODO investigate logging into Docker Hub
 
 stages:
   - test
@@ -23,7 +25,6 @@ cache:
 test:
   stage: test
   before_script:
-    - pip install pdm
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
