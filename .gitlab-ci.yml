@@ -6,6 +6,7 @@ before_script:
 stages:
   - test
   - build
+  - deploy
 
 variables:
   PDM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pdm"
@@ -54,4 +55,18 @@ build:
   artifacts:
     paths:
       - dist/*
+  when: manual
+
+deploy:
+  stage: deploy
+  before_script:
+    - pip install pdm
+    - pdm sync
+  script:
+    - pdm publish --repository gitlab
+  environment:
+    name: production
+    url: https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_ID/packages/pypi  # GitLab Package Registry URL
+  dependencies:
+    - build  # Ensure that the build job runs before deploy
   when: manual

@@ -262,7 +262,6 @@ pdm run tox
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
 - Set up GitLab CI/CD pipeline:
-  - automatically run pytest
   - manually run tox tests
   - manually build and deploy package to GitLab package registry 
 
