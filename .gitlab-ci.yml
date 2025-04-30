@@ -65,7 +65,7 @@ deploy:
   before_script:
     - pip install pdm
     - pdm sync
-    - pdm config repository.gitlab.url "https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_NAME/packages/pypi/simple"
+    - pdm config repository.gitlab.url "https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_ID/packages/pypi/simple"
     - pdm config repository.gitlab.username "__token__"
     - pdm config repository.gitlab.password "$CI_DEPLOY_TOKEN"
   script:
