@@ -6,7 +6,6 @@ image: python:3.13-slim-bookworm  # Default image
 
 stages:
   - test
-  - build
   - deploy
 
 variables:
@@ -43,23 +42,6 @@ test-tox:
     matrix:
       - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]
   when: manual
-
-# TODO possibly remove build job
-build:
-  stage: build
-  before_script:
-    - pip install pdm
-    - pdm config cache_dir "$PDM_CACHE_DIR"
-    - pdm sync
-  script:
-    - pdm build
-  artifacts:
-    paths:
-      - dist/*
-  when: manual
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-    - when: manual
 
 deploy:
   stage: deploy

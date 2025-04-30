@@ -270,9 +270,8 @@ pdm run tox
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
 - GitLab CI/CD pipeline:
-  - possibly log into Docker Hub
+  - possibly log in to Docker Hub
   - fix manual tox tests
-  - fix manual deploy job 
 
 
 ## Project Status
