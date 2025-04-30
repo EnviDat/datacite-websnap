@@ -1,7 +1,8 @@
 image: python:3.13-slim-bookworm  # Default image
 
-before_script:
-  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
+# TODO investigate logging into Docker Hub
+#before_script:
+#  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
 
 stages:
   - test
@@ -43,6 +44,7 @@ test-tox:
       - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]
   when: manual
 
+# TODO possibly remove build job
 build:
   stage: build
   before_script:

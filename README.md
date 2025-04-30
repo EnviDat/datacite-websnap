@@ -269,9 +269,10 @@ pdm run tox
 ## Future Development
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
-- Set up GitLab CI/CD pipeline:
-  - manually run tox tests
-  - manually build and deploy package to GitLab package registry 
+- GitLab CI/CD pipeline:
+  - possibly log into Docker Hub
+  - fix manual tox tests
+  - fix manual deploy job 
 
 
 ## Project Status
@@ -296,4 +297,4 @@ An EnviDat PyPI package that copies files retrieved from an API to an S3 bucket 
 
 ## License
 
-MIT License 
+<a href="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE" target="_blank">MIT License</a>
