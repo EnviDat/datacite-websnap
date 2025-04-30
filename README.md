@@ -29,7 +29,7 @@
 <details>
   <summary>Click to unfold</summary>
 
-_To run the test suite the repository must be cloned rather than installed as a package._ 
+_To run the test suite the GitLab project must be cloned rather than installed as a package._ 
 
 ### Package
 
@@ -39,11 +39,11 @@ Install the package:
 pip install datacite-websnap --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
 ```
 
-### Clone Repository
+### Clone GitLab Project
 
-Install the repository including the development dependencies used for the test suite:
+Install the GitLab project including the development dependencies used for the test suite:
 
-1. Clone the repository
+1. Clone the project
     ```bash
     git clone https://gitlabext.wsl.ch/EnviDat/datacite-websnap.git
     ```
@@ -53,7 +53,7 @@ Install the repository including the development dependencies used for the test 
     cd datacite-websnap 
     ```
 
-3. Install PDM if needed
+3. Install PDM 
     ```bash
     pip install pdm 
     ```
