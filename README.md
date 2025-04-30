@@ -3,6 +3,9 @@
 <div>
     <img alt="Tested Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue"> 
     <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
+    <a href="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE" target="_blank">
+      <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
+    </a>
     <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
     <img alt="Coverage" src="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/badges/main/coverage.svg">
 </div>
@@ -12,12 +15,21 @@
 
 ---
 
+
+## Purpose
+
+`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
+
+`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
+
+
+
 ## Installation
 
 <details>
   <summary>Click to unfold</summary>
 
-_To use the test suite the repository must be cloned rather than installed as a package._ 
+_To run the test suite the repository must be cloned rather than installed as a package._ 
 
 ### Package
 
@@ -57,22 +69,14 @@ Install the repository including the development dependencies used for the test 
 ## Terminal Documentation
 
 To access CLI documentation:
-```bash
-  datacite-websnap --help
-```
+   ```bash
+    datacite-websnap --help
+   ```
 
 To access more detailed documentation for the `export` command:
-```bash
-  datacite-websnap export --help
-```
-
-
-## Purpose
-
-`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
-
-`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
-
+   ```bash
+      datacite-websnap export --help
+   ```
 
 ## CLI Options
 
@@ -307,7 +311,7 @@ pdm run tox
 
 ## Project Status
 
-April 30, 2025: `datacite-websnap` is in alpha testing 
+May 2, 2025: `datacite-websnap` is in alpha testing 
 
 
 ## Author
