@@ -303,6 +303,7 @@ pdm run tox
 
 ## Future Development
 
+- Add validator that checks that `--directory-path` is passed if using `local` value for `--destination` option
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
 - GitLab CI/CD pipeline:
   - possibly log in to Docker Hub
