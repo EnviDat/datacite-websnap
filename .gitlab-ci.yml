@@ -1,7 +1,7 @@
 image: python:3.13-slim-bookworm  # Default image
 
 before_script:
-  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN" 
+  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
 
 stages:
   - test
@@ -32,6 +32,7 @@ test-tox:
   stage: test
   image: python:${PYTHON_VERSION}-slim-bookworm  # Using dynamic Python version
   before_script:
+    - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
     - pip install pdm
     - pdm sync --dev
   script:
