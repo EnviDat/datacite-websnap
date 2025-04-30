@@ -14,23 +14,54 @@
 
 ## Installation
 
-Clone GitLab project repository. 
+<details>
+  <summary>Click to unfold</summary>
 
-To install with dev dependencies execute:
+_To use the test suite the repository must be cloned rather than installed as a package._ 
+
+### Package
+
+Install the package:
 
 ```bash
-  pdm install --dev
+pip install datacite-websnap --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
 ```
+
+### Clone Repository
+
+Install the repository including the development dependencies used for the test suite:
+
+1. Clone the repository
+    ```bash
+    git clone https://gitlabext.wsl.ch/EnviDat/datacite-websnap.git
+    ```
+
+2. Navigate to the `datacite-websnap` directory
+    ```bash
+    cd datacite-websnap 
+    ```
+
+3. Install PDM if needed
+    ```bash
+    pip install pdm 
+    ```
+
+4. Install all dependencies including dev dependencies
+    ```bash
+    pdm install --dev
+    ```
+
+</details>
 
 
 ## Terminal Documentation
 
-To access CLI documentation execute:
+To access CLI documentation:
 ```bash
   datacite-websnap --help
 ```
 
-To access more detailed documentation for the `export` command execute:
+To access more detailed documentation for the `export` command:
 ```bash
   datacite-websnap export --help
 ```
@@ -40,7 +71,7 @@ To access more detailed documentation for the `export` command execute:
 
 `datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
 
-`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
+`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
 
 ## CLI Options
