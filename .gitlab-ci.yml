@@ -49,7 +49,7 @@ deploy:
     TWINE_USERNAME: gitlab-ci-token
     TWINE_PASSWORD: $CI_JOB_TOKEN
   script:
-    - pip install build twine pdm
+    - pip install build twine
 
     # Extract original version from pyproject.toml using sed (the first match for version)
     - ORIGINAL_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
