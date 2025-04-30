@@ -4,6 +4,7 @@
     <img alt="Tested Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue"> 
     <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
     <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
+    <img alt="Coverage" src="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/badges/main/coverage.svg">
 </div>
 
 ### CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket. 
@@ -33,6 +34,13 @@ To access more detailed documentation for the `export` command execute:
 ```bash
   datacite-websnap export --help
 ```
+
+
+## Purpose
+
+`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
+
+`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
 
 ## CLI Options
@@ -268,14 +276,7 @@ pdm run tox
 
 ## Project Status
 
-Currently `datacite-websnap` is in alpha testing. 
-
-
-## Purpose
-
-`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
-
-`datacite-websnap` empowers research institutions to share DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
+April 30, 2025: `datacite-websnap` is in alpha testing 
 
 
 ## Author
