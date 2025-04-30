@@ -69,14 +69,14 @@ Install the repository including the development dependencies used for the test 
 ## Terminal Documentation
 
 To access CLI documentation:
-   ```bash
-    datacite-websnap --help
-   ```
+```bash
+datacite-websnap --help
+```
 
 To access more detailed documentation for the `export` command:
-   ```bash
-      datacite-websnap export --help
-   ```
+```bash
+datacite-websnap export --help
+```
 
 ## CLI Options
 
