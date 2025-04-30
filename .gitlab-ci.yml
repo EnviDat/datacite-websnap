@@ -68,11 +68,9 @@ deploy:
     - pdm sync
     - pdm config repository.gitlab.url "$PACKAGES_URL"
     - pdm config repository.gitlab.username "__token__"
-    - pdm config repository.gitlab.password "$CI_DEPLOY_TOKEN"
+    - pdm config repository.gitlab.password "$DEPLOY_TOKEN"
   script:
     - pdm publish --repository gitlab
-  environment:
-    name: production
   dependencies:
     - build
   when: manual
