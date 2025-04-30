@@ -35,6 +35,7 @@ test-tox:
   image: python:${PYTHON_VERSION}-slim-bookworm
   before_script:
     - pip install pdm
+    - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
     - pdm run tox -e py${PYTHON_VERSION}
