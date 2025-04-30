@@ -1,20 +1,22 @@
-image: python:3.13-slim-bookworm
+image: python:3.13-slim-bookworm  # Default image
 
 stages:
   - test
 
+variables:
+  PDM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pdm"
+  PIP_NO_CACHE_DIR: "off"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_PROGRESS_BAR: "off"
+
+cache:
+  key: "$CI_JOB_NAME"
+  paths:
+    - .cache/pdm
+    - __pypackages__
+
 test:
   stage: test
-  variables:
-    PDM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pdm"
-    PIP_NO_CACHE_DIR: "off"
-    PIP_DISABLE_PIP_VERSION_CHECK: "1"
-    PIP_PROGRESS_BAR: "off"
-  cache:
-    key: "$CI_JOB_NAME"
-    paths:
-      - .cache/pdm
-      - __pypackages__
   before_script:
     - pip install pdm
     - pdm config cache_dir "$PDM_CACHE_DIR"
@@ -22,3 +24,16 @@ test:
   script:
     - pdm run pytest --cov=datacite_websnap --cov-report=term --no-cov-on-fail
   coverage: '/TOTAL.*\s+(\d+)%/'
+
+test-tox:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim-bookworm  # Using dynamic Python version
+  before_script:
+    - pip install pdm
+    - pdm sync --dev
+  script:
+    - pdm run tox -e py${PYTHON_VERSION}  # Run tox for different versions
+  parallel:
+    matrix:
+      - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]  # Testing different Python versions
+  when: manual
