@@ -5,6 +5,7 @@ before_script:
 
 stages:
   - test
+  - build
 
 variables:
   PDM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pdm"
@@ -30,14 +31,27 @@ test:
 
 test-tox:
   stage: test
-  image: python:${PYTHON_VERSION}-slim-bookworm  # Using dynamic Python version
+  image: python:${PYTHON_VERSION}-slim-bookworm
   before_script:
     - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
     - pip install pdm
     - pdm sync --dev
   script:
-    - pdm run tox -e py${PYTHON_VERSION}  # Run tox for different versions
+    - pdm run tox -e py${PYTHON_VERSION}
   parallel:
     matrix:
-      - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]  # Testing different Python versions
+      - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]
+  when: manual
+
+build:
+  stage: build
+  before_script:
+    - pip install pdm
+    - pdm config cache_dir "$PDM_CACHE_DIR"
+    - pdm sync
+  script:
+    - pdm build
+  artifacts:
+    paths:
+      - dist/*
   when: manual
