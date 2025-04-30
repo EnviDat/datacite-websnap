@@ -50,22 +50,7 @@ deploy:
     TWINE_PASSWORD: $CI_JOB_TOKEN
   script:
     - pip install build twine
-
-    # Extract original version from pyproject.toml using sed (the first match for version)
-    - ORIGINAL_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
-
-    # Build package with dev dependencies:
-    # Modify the version to include '.dev'
-    - sed -i "s/^version = \".*\"/version = \"${ORIGINAL_VERSION}.dev\"/" pyproject.toml
-    - python -m build --wheel --sdist --no-isolation
-    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-
-    # Build package without dev dependencies:
-    # Revert the version to the original version (without .dev)
-    - sed -i "s/^version = \".*\"/version = \"${ORIGINAL_VERSION}\"/" pyproject.toml
-    - pip install pdm
-    - pdm install --without dev  # Install without dev dependencies
-    - python -m build --wheel --sdist --no-isolation
+    - python -m build
     - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   when: manual
   rules:
