@@ -56,6 +56,9 @@ build:
     paths:
       - dist/*
   when: manual
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - when: manual
 
 deploy:
   stage: deploy
@@ -63,10 +66,13 @@ deploy:
     - pip install pdm
     - pdm sync
   script:
-    - pdm publish --repository gitlab
+    - pdm publish --repository gitlab --token "$CI_DEPLOY_TOKEN"
   environment:
     name: production
-    url: https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_ID/packages/pypi  # GitLab Package Registry URL
+    url: https://gitlabext.wsl.ch/api/v4/projects/$CI_PROJECT_ID/packages/pypi  
   dependencies:
-    - build  # Ensure that the build job runs before deploy
+    - build
   when: manual
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - when: manual
