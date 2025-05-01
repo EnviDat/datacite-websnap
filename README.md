@@ -1,8 +1,7 @@
 # datacite-websnap
 
 <div>
-    <img alt="Tested Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue"> 
-    <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
+    <img alt="Tested Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue">
     <a href="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE" target="_blank">
       <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
     </a>
