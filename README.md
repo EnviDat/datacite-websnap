@@ -315,14 +315,12 @@ pdm run tox
 ## Future Development
 
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
-- GitLab CI/CD pipeline:
-  - possibly log in to Docker Hub
-  - fix manual tox tests
+- CI/CD pipeline: manual tox tests
 
 
 ## Project Status
 
-May 2, 2025: `datacite-websnap` is in alpha testing 
+`datacite-websnap` is in alpha testing 
 
 
 ## Author
