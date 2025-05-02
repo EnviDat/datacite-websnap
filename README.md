@@ -106,8 +106,8 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | `--file-logs`      | `False`                    | <ul><li>Enables logging info messages and errors to a file log</li></ul>                                                                                                                                                                                                                                                                              |
 | `--log-level`      | `INFO`                     | <ul><li>Level to use for logging if using `--file-logs` option</li><li>Default value is `INFO`</li><li>Valid logging levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`</li><li><a href="https://docs.python.org/3/library/logging.html#logging-levels" target="_blank">Click here to learn more about Python logging levels</a></li></ul> |
 | `--early-exit`     | `False`                    | <ul><li>If enabled then terminates program immediately after export error occurs</li><li>Default value is `False` (not enabled)</li><li>If `False` then only logs export error and continues to try to export other DataCite XML records returned by search query</li></ul>                                                                           |
-| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li></ul>                                                                                                                                                                                                                                                                                              |
-| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li></ul>                                                                                                                                                                                                                                                       |
+| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>[Can also be set using a DataCite API environment variable](#datacite-api)</li></ul>                                                                                                                                                                                                           |
+| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>[Can also be set using a DataCite API environment variable](#datacite-api)</li></ul>                                                                                                                                                                    |
 
 </details>
 
@@ -277,13 +277,13 @@ Default environment variables are assigned in `config.py` for DataCite API base 
 
 To override the default environment variables related to DataCite the variables in the table below can be set in a `.env` file. 
 
-| Environment Variable            | Default                    | Description                                         |
-|---------------------------------|----------------------------|-----------------------------------------------------|
-| `TIMEOUT`                       | `32`                       | Timeout of API requests in seconds.                 |
-| `DATACITE_API_URL`              | `https://api.datacite.org` | DataCite base URL used for API requests.            |
-| `DATACITE_API_CLIENTS_ENDPOINT` | `/clients`                 | Endpoint used to retrieve client.                   |
-| `DATACITE_API_DOIS_ENDPOINT`    | `/dois`                    | Endpoint used to retrieve list of DOIs.             |
-| `DATACITE_PAGE_SIZE`            | `250`                      | Number of DOIs retrieved per page using pagination. |
+| Environment Variable            | Default                    | Description                                                                                                      |
+|---------------------------------|----------------------------|------------------------------------------------------------------------------------------------------------------|
+| `TIMEOUT`                       | `32`                       | Timeout of API requests in seconds.                                                                              |
+| `DATACITE_API_URL`              | `https://api.datacite.org` | DataCite base URL used for API requests.<br>Value is assigned as default to `--api-url` CLI option.              |
+| `DATACITE_API_CLIENTS_ENDPOINT` | `/clients`                 | Endpoint used to retrieve client.                                                                                |
+| `DATACITE_API_DOIS_ENDPOINT`    | `/dois`                    | Endpoint used to retrieve list of DOIs.                                                                          |
+| `DATACITE_PAGE_SIZE`            | `250`                      | Number of DOIs retrieved per page using pagination.<br>Value is assigned as default to `--page-size` CLI option. |
 
 
 </details>
