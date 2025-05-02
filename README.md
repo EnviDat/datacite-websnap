@@ -182,7 +182,7 @@ To write the records locally:
 - Write XML records to a directory called "samples/test"
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --destination local --directory-path "samples/test"
+datacite-websnap export --client-id ethz.wsl --destination local --directory-path "opendata/wsl"
 ```
 
 </details>
