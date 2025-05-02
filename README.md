@@ -173,7 +173,7 @@ Export DataCite XML metadata records for a specific repository and/or DOI prefix
 
 To write the records locally:
 - `--destination` option **must** be assigned to `local`
-- A value **must** be provided for `--directory-path` option
+- `--directory-path` option **must** be assigned to a local existing directory 
 
 ### Example
 
