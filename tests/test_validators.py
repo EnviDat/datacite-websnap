@@ -9,6 +9,7 @@ from datacite_websnap.validators import (
     validate_positive_int,
     validate_at_least_one_query_param,
     validate_bucket,
+    validate_directory_path,
     validate_key_prefix,
     validate_single_string_key_value,
     validate_s3_config,
@@ -54,6 +55,16 @@ def test_validate_bucket_valid():
 def test_validate_bucket_invalid():
     with pytest.raises(CustomBadParameter):
         validate_bucket(None, "S3")
+
+
+def test_validate_directory_path_valid():
+    assert validate_directory_path("samples/abc", "local") == "samples/abc"
+    assert validate_directory_path(None, "S3") is None
+
+
+def test_validate_directory_path_invalid():
+    with pytest.raises(CustomBadParameter):
+        validate_directory_path(None, "local")
 
 
 def test_validate_key_prefix_valid():
