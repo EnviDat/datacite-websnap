@@ -95,7 +95,7 @@ def cli():
     "--file-logs",
     is_flag=True,
     default=False,
-    help="Enables logging info messages and errors to a file log.",
+    help="Flag that enables logging info messages and errors to a file log.",
 )
 @click.option(
     "--log-level",
@@ -107,7 +107,8 @@ def cli():
     "--early-exit",
     is_flag=True,
     default=False,
-    help="If enabled then terminates program immediately after export error occurs. "
+    help="If flag enabled then terminates program immediately after "
+    "export error occurs. "
     "Default value is False (not enabled). "
     "If False then only logs export error and continues to try to export other "
     "DataCite XML records returned by search query "

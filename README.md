@@ -38,6 +38,13 @@ Install the package:
 pip install datacite-websnap --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
 ```
 
+To upgrade and install the newest available version of the package use the `--upgrade` flag:
+
+```bash
+pip install datacite-websnap --upgrade --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
+```
+
+
 ### Clone GitLab Project
 
 Install the GitLab project including the development dependencies used for the test suite:
