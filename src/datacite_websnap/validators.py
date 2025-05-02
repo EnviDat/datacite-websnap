@@ -50,7 +50,7 @@ def validate_at_least_one_query_param(
     return
 
 
-def validate_bucket(bucket, destination, file_logs: bool = False) -> str:
+def validate_bucket(bucket, destination, file_logs: bool = False) -> str | None:
     """
     Validate and return bucket.
     Raises BadParameter exception if bucket is not truthy when
@@ -64,6 +64,24 @@ def validate_bucket(bucket, destination, file_logs: bool = False) -> str:
         )
 
     return bucket
+
+
+def validate_directory_path(
+    directory_path, destination, file_logs: bool = False
+) -> str | None:
+    """
+    Validate and return directory_path.
+    Raises BadParameter exception if directory_path is not truthy when
+    option '--destination' is 'local'.
+    """
+    if destination == "local" and not directory_path:
+        raise CustomBadParameter(
+            "'--directory-path' option must be provided when the "
+            "'--destination' option is set to 'local'",
+            file_logs,
+        )
+
+    return directory_path
 
 
 def validate_key_prefix(key_prefix, destination, file_logs: bool = False) -> str:

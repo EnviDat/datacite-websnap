@@ -3,8 +3,8 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
+from pathlib import Path
 import binascii
-import os
 
 from botocore.config import Config
 from botocore.exceptions import (
@@ -155,14 +155,15 @@ def write_local_file(
     """
     try:
         if directory_path:
-            file_path = os.path.join(directory_path, filename)
+            file_path = Path(directory_path) / filename
         else:
-            file_path = filename
+            file_path = Path(filename)
 
         with open(file_path, "wb") as f:
             f.write(content_bytes)
 
-        CustomEcho(f"Wrote file: {file_path}", file_logs)
+        posix_file_path = file_path.as_posix()
+        CustomEcho(f"Wrote file: {posix_file_path}", file_logs)
 
     except IOError as io_err:
         raise CustomClickException(f"IOError: {io_err}", file_logs)

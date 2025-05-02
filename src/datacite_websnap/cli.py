@@ -29,6 +29,7 @@ from .validators import (
     validate_s3_config,
     validate_bucket,
     validate_key_prefix,
+    validate_directory_path,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 from .exporter import (
@@ -155,7 +156,12 @@ def datacite_bulk_export(
     # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id, file_logs)
     validate_key_prefix(key_prefix, destination, file_logs)
-    validate_bucket(bucket, destination, file_logs)
+
+    if destination == "S3":
+        validate_bucket(bucket, destination, file_logs)
+    else:
+        validate_directory_path(directory_path, destination, file_logs)
+
     CustomEcho(f"Export destination: {destination}", file_logs)
     CustomEcho(
         f"Querying DataCite API for DOIs with repository account ID: '{client_id}' "
@@ -163,7 +169,7 @@ def datacite_bulk_export(
         file_logs,
     )
 
-    # Validate and create S3 config
+    # Validate S3 config and return S3 client
     s3_client = None
     if destination == "S3":
         conf_s3 = validate_s3_config(file_logs)
