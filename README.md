@@ -171,7 +171,9 @@ datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix
 
 Export DataCite XML metadata records for a specific repository and/or DOI prefix to a local machine. 
 
-To write the records locally the `--destination` option **must** be assigned to `local`. 
+To write the records locally:
+- `--destination` option **must** be assigned to `local`
+- A value **must** be provided for `--directory-path` option
 
 ### Example
 
@@ -302,7 +304,6 @@ pdm run tox
 
 ## Future Development
 
-- Add validator that checks that `--directory-path` is passed if using `local` value for `--destination` option
 - Review `--key-prefix` option, possibly default to the prefix of the DOI
 - GitLab CI/CD pipeline:
   - possibly log in to Docker Hub
