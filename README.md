@@ -145,6 +145,9 @@ AWS_SECRET_ACCESS_KEY=hijklmn1234567
 
 ### Examples
 
+To export the records to an S3 bucket:
+- `--bucket` option **must** be assigned to an existing S3 bucket
+
 #### Basic Usage
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
@@ -186,7 +189,7 @@ To write the records locally:
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
 - Write XML records locally
-- Write XML records to a directory called "samples/test"
+- Write XML records to a directory called "opendata/wsl"
 
 ```bash
 datacite-websnap export --client-id ethz.wsl --destination local --directory-path "opendata/wsl"
