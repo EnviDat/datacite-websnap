@@ -27,7 +27,8 @@ test:
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
-    - pdm run pytest --cov=datacite_websnap --cov-report=term --cov-precision=0 --no-cov-on-fail
+    - export COV_CORE_PRECISION=0
+    - pdm run pytest --cov=datacite_websnap --cov-report=term --no-cov-on-fail
   coverage: '/TOTAL.*\s+(\d+)%/'
 
 test-tox:
