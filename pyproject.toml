@@ -1,6 +1,6 @@
 [project]
 name = "datacite-websnap"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 description = "CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket."
 authors = [
     {name = "Rebecca Buchholz"},

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.0-alpha.4 (2025-05-21)
+### Refactor 
+- add timeout settings to S3 client config
+
 ## 1.0.0-alpha.3 (2025-05-21)
 ### Fix
 - load env vars for validation
