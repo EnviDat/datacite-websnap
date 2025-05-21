@@ -133,7 +133,11 @@ The environment variables listed below are **required** to export records to an 
 | `AWS_SECRET_ACCESS_KEY` | AWS secret access key                    |
 
 
-Supports setting environment variables in a `.env` file.
+Supports setting environment variables in a `.env` file. 
+
+The `.env` file **must** be located in the directory where the CLI is being executed.
+
+For example, if you are running the program from `my-drive/cli-tools/datacite-websnap` then the `.env` file **must** be in that directory.
 
 Example `.env` file:
 
@@ -310,12 +314,6 @@ pdm run tox
 ```
 
 </details>
-
-
-## Future Development
-
-- Review `--key-prefix` option, possibly default to the prefix of the DOI
-- CI/CD pipeline: manual tox tests
 
 
 ## Project Status
