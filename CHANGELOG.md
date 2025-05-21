@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.0.0-alpha.3 (2025-05-21)
+### Fix
+- load env vars for validation
+
+### Docs
+- update README installation, usage, future development, and CLI options
+
 ## 1.0.0-alpha.2 (2025-05-02)
 ### Feat
 - add validator that ensures that a directory path is provided if exporting records locally
