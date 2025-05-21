@@ -17,6 +17,7 @@ import boto3
 
 from .logger import CustomClickException, CustomEcho
 from .validators import S3ConfigModel
+from .config import TIMEOUT
 
 
 def decode_base64_xml(encoded_xml: str, file_logs: bool = False) -> bytes:
@@ -87,6 +88,9 @@ def create_s3_client(
             config=Config(
                 request_checksum_calculation="when_required",
                 response_checksum_validation="when_required",
+                connect_timeout=5,
+                read_timeout=TIMEOUT,
+                retries={"max_attempts": 3},
             ),
         )
 
