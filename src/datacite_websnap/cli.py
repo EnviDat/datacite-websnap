@@ -16,8 +16,10 @@ Example command:
     datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
 """
 
+import os
 import click
 from typing import Literal
+from dotenv import load_dotenv
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
@@ -148,6 +150,11 @@ def datacite_bulk_export(
     The default behavior is to export DataCite XML records to an S3 bucket but
     command also supports downloading the records to a local machine.
     """
+    # Load variables in .env from current working directory
+    cwd = os.getcwd()
+    dotenv_path = os.path.join(cwd, ".env")
+    load_dotenv(dotenv_path)
+
     # Set up logging
     if file_logs:
         setup_logging(log_level)

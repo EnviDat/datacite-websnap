@@ -2,11 +2,6 @@
 
 import os
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env
-load_dotenv()
-
 # Timeout used for DataCite API and AWS requests
 TIMEOUT: int = int(os.getenv("TIMEOUT", 32))
 
