@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.0.0-alpha.5 (2025-05-21)
+### Refactor
+- allow env vars to be loaded without virtual environment
+
+### Docs
+- update README S3 usage
+
 ## 1.0.0-alpha.4 (2025-05-21)
 ### Refactor 
 - add timeout settings to S3 client config
