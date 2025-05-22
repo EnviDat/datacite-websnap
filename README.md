@@ -109,15 +109,16 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 
 </details>
 
-
-## Usage: S3 Bucket
+## DataCite Filters
 
 <details>
   <summary>
   Click to unfold
   </summary>
 
-Utilizes the AWS SDK for Python (Boto3) to export DataCite XML metadata records for a specific repository and/or DOI prefix as objects in an S3 bucket. 
+Repository account ID and DOI prefix are the supported filters used to select DataCite records that will be exported. 
+
+The filters can be applied for both S3 bucket and local machine usage.  
 
 ### Repository Account ID
 
@@ -137,11 +138,23 @@ Example usage as a command line argument: `--client-id ethz.wsl`
 
 Records can also be exported by their DOI prefix. 
 
-The `--doi-prefix` argument accepts multiple prefix arguments.
+The `--doi-prefix` argument accepts single or multiple prefix arguments.
 
 Example usage as a command line argument: `--doi-prefix 10.16904 --doi-prefix 10.25678`
 
 It can also combined with the `--client-id` argument.
+
+</details>
+
+
+## Usage: S3 Bucket
+
+<details>
+  <summary>
+  Click to unfold
+  </summary>
+
+Utilizes the AWS SDK for Python (Boto3) to export DataCite XML metadata records for a specific repository and/or DOI prefix as objects in an S3 bucket. 
 
 ### Environment Variables 
 
