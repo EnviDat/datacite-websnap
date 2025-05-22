@@ -122,7 +122,7 @@ The filters can be applied for both S3 bucket and local machine usage.
 
 ### Repository Account ID
 
-_Please note applying this filter will bulk export ALL records for the specified repository account ID!_
+_Please note that applying this filter will bulk export ALL records for the specified repository account ID!_
 
 Repositories with records on DataCite each have their own DataCite repository account ID.
 
@@ -138,7 +138,7 @@ Example usage as a command line argument: `--client-id ethz.wsl`
 
 ### DOI Prefix
 
-_Please note applying this filter will bulk export ALL records for the specified DOI prefix!_
+_Please note that applying this filter will bulk export ALL records for the specified DOI prefix!_
 
 Records can also be exported by their DOI prefix. 
 
