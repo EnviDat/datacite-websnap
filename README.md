@@ -126,7 +126,7 @@ Repositories with records on DataCite each have their own DataCite repository ac
 
 To confirm you have the correct repository ID you can call the [DataCite API client endpoint](https://support.datacite.org/reference/get_clients-id). 
 
-If you do not know the repository ID but do know a specific DOI that belongs the repository:
+If you do not know the repository ID but do know a specific DOI that belongs to the repository:
 1. Navigate to [DataCite Commons](https://commons.datacite.org/)
 2. Enter the DOI in the search box. For example: 10.16904/envidat.576
 3. Click on the record and then click "Download Metadata", select "DataCite JSON"
