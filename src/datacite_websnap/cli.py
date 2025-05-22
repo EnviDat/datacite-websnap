@@ -46,8 +46,8 @@ from .exporter import (
 @click.group()
 def cli():
     """
-    Tool that bulk exports DataCite metadata records from a repository as XML objects
-    to an S3 bucket.
+    Tool that bulk exports DataCite metadata records from a DataCite repository as
+    XML objects to an S3 bucket.
 
     Also supports writing DataCite metadata records as XML files to a local machine.
 

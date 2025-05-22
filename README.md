@@ -21,8 +21,6 @@
 
 `datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
-
-
 ## Installation
 
 <details>
@@ -98,7 +96,7 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | Option             | Default                    | Description                                                                                                                                                                                                                                                                                                                                           |
 |--------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--doi-prefix`     | `None`                     | <ul><li>DataCite DOI prefix used to filter results</li><li>Accepts single or multiple prefix arguments</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul>                                                                                                                                                                     |
-| `--client-id`      | `None`                     | <ul><li>DataCite repository account ID used to filter results</li><li>Referred to as the "client-id" in the DataCite API documentation</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                                                                                            |
+| `--client-id`      | `None`                     | <ul><li>DataCite repository account ID used to filter results</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                                                                                                                                                                     |
 | `--destination`    | `S3`                       | <ul><li>Export destination for the DataCite XML records</li><li>`S3` (default) for an S3 bucket</li><li>`local` for local file system</li></ul>                                                                                                                                                                                                       |
 | `--bucket`         | `None`                     | <ul><li>Name of S3 bucket that DataCite XML records (as S3 objects) will be written in</li><li>*Example*: `--bucket opendataswiss`</li><ul>                                                                                                                                                                                                           |
 | `--key-prefix`     | `None`                     | <ul><li>Optional key prefix for objects in S3 bucket</li><li>If omitted then objects are written in S3 bucket without a prefix</li><li>*Example*: `--key-prefix wsl`</li></ul>                                                                                                                                                                        |
@@ -120,6 +118,33 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
   </summary>
 
 Utilizes the AWS SDK for Python (Boto3) to export DataCite XML metadata records for a specific repository and/or DOI prefix as objects in an S3 bucket. 
+
+### Repository Account ID
+
+Repositories with records on DataCite each have their own DataCite repository account ID.
+
+To confirm you have the correct repository ID you can call the [DataCite API client endpoint](https://support.datacite.org/reference/get_clients-id). 
+
+If you do not know the repository ID but do know a specific DOI that belongs the repository:
+1. Navigate to [DataCite Commons](https://commons.datacite.org/)
+2. Enter the DOI in the search box. For example: 10.16904/envidat.576
+3. Click on the record and then click "Download Metadata", select "DataCite JSON"
+4. The repository account ID is the value for `"clientId"`. For DOI 10.16904/envidat.576 the `"clientId"` value is `"ethz.wsl"`.
+
+Example usage as a command line argument: `--client-id ethz.wsl`
+
+### DOI Prefix
+
+Records can also be exported by their DOI prefix. 
+
+The `--doi-prefix` argument accepts multiple prefix arguments.
+
+Example usage as a command line argument: `--doi-prefix 10.16904 --doi-prefix 10.25678`
+
+It can also combined with the `--client-id` arguments. 
+
+
+
 
 
 ### Environment Variables 
