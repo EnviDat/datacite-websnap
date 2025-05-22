@@ -141,11 +141,7 @@ The `--doi-prefix` argument accepts multiple prefix arguments.
 
 Example usage as a command line argument: `--doi-prefix 10.16904 --doi-prefix 10.25678`
 
-It can also combined with the `--client-id` arguments. 
-
-
-
-
+It can also combined with the `--client-id` argument.
 
 ### Environment Variables 
 
