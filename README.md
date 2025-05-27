@@ -63,8 +63,8 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | `--file-logs`      | `False`                    | <ul><li>Enables logging info messages and errors to a file log</li></ul>                                                                                                                                                                                                                                                                              |
 | `--log-level`      | `INFO`                     | <ul><li>Level to use for logging if using `--file-logs` option</li><li>Default value is `INFO`</li><li>Valid logging levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`</li><li><a href="https://docs.python.org/3/library/logging.html#logging-levels" target="_blank">Click here to learn more about Python logging levels</a></li></ul> |
 | `--early-exit`     | `False`                    | <ul><li>If enabled then terminates program immediately after export error occurs</li><li>Default value is `False` (not enabled)</li><li>If `False` then only logs export error and continues to try to export other DataCite XML records returned by search query</li></ul>                                                                           |
-| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>[Can also be set using a DataCite API environment variable](#datacite-api)</li></ul>                                                                                                                                                                                                           |
-| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>[Can also be set using a DataCite API environment variable](#datacite-api)</li></ul>                                                                                                                                                                    |
+| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>[Can also be set using a DataCite API configuration variable](#datacite-api)</li></ul>                                                                                                                                                                                                         |
+| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>[Can also be set using a DataCite API configuration variable](#datacite-api)</li></ul>                                                                                                                                                                  |
 
 </details>
 
@@ -238,21 +238,21 @@ To enable file logs the following option **must** be enabled: `--file-logs`
 datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --file-logs            
 ```
 
-### Environment Variables: Logs
+### Configuration: Logs
 
-Default environment variables are assigned in `config.py` for logging configuration.
+Variables are assigned in `config.py` for logging configuration.
 
-To override the default environment variables related to logging the variables in the table below can be set in a `.env` file. 
+To override the default configuration variables related to logging the variables in the table below can be set in `config.py`. 
 
 `LOG_NAME` is the name of the file log (used if the `--file-logs` option is enabled).
 
 <a href="https://docs.python.org/3/library/logging.html#logging.basicConfig" target="_blank">Python logging basic configuration documentation.</a>
 
-| Environment Variable | Default                                                                               |
-|----------------------|---------------------------------------------------------------------------------------|
-| `LOG_NAME`           | `"datacite-websnap.log"`                                                              |
-| `LOG_FORMAT`         | `"%(asctime)s \| %(levelname)s \| %(module)s.%(funcName)s:%(lineno)d \| %(message)s"` |
-| `LOG_DATE_FORMAT`    | `"%Y-%m-%d %H:%M:%S"`                                                                 |
+| Configuration Variable | Default                                                                               |
+|------------------------|---------------------------------------------------------------------------------------|
+| `LOG_NAME`             | `"datacite-websnap.log"`                                                              |
+| `LOG_FORMAT`           | `"%(asctime)s \| %(levelname)s \| %(module)s.%(funcName)s:%(lineno)d \| %(message)s"` |
+| `LOG_DATE_FORMAT`      | `"%Y-%m-%d %H:%M:%S"`                                                                 |
 
 
 </details>
@@ -272,13 +272,13 @@ Documentation for the DataCite API endpoints and pagination used in `datacite-we
 - <a href="https://support.datacite.org/docs/pagination#method-2-cursor" target="_blank">Cursor-based pagination</a>
 - <a href="https://support.datacite.org/reference/get_clients-id" target="_blank">Return a client (DataCite repository)</a>
 
-### Environment Variables: DataCite API 
+### Configuration: DataCite API 
 
-Default environment variables are assigned in `config.py` for DataCite API base URL, endpoints, page size and timeout.
+Default configuration variables are assigned in `config.py` for DataCite API base URL, endpoints, page size and timeout.
 
-To override the default environment variables related to DataCite the variables in the table below can be set in a `.env` file. 
+To override the default configuration variables related to DataCite the variables in the table below can be set in `config.py`. 
 
-| Environment Variable            | Default                    | Description                                                                                                      |
+| Configuration Variable          | Default                    | Description                                                                                                      |
 |---------------------------------|----------------------------|------------------------------------------------------------------------------------------------------------------|
 | `TIMEOUT`                       | `32`                       | Timeout of API requests in seconds.                                                                              |
 | `DATACITE_API_URL`              | `https://api.datacite.org` | DataCite base URL used for API requests.<br>Value is assigned as default to `--api-url` CLI option.              |
