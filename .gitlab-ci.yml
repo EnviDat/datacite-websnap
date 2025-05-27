@@ -1,12 +1,9 @@
 image: python:3.13-slim-bookworm  # Default image
 
-# TODO investigate logging into Docker Hub
-#before_script:
-#  - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
-
 stages:
   - test
   - deploy
+  - publish
 
 variables:
   PDM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pdm"
@@ -57,3 +54,15 @@ deploy:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: manual
+
+publish-package:
+  stage: publish
+  rules:
+    - when: manual
+  before_script:
+    - pip install pdm
+  script:
+    - pdm config repository.pypi.username "__token__"
+    - pdm config repository.pypi.password "${PYPI_API_TOKEN}"
+    - pdm publish
+

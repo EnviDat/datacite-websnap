@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.0.0 (2025-05-27) 
+### First production release
+### Docs
+- add filter information to README
+
 ## 1.0.0-alpha.5 (2025-05-21)
 ### Refactor
 - allow env vars to be loaded without virtual environment
