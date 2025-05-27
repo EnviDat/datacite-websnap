@@ -57,6 +57,7 @@ deploy:
 
 publish-package:
   stage: publish
+  image: python:3.13-slim-bookworm
   rules:
     - when: manual
   before_script:
