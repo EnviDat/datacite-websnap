@@ -16,8 +16,40 @@ dependencies = [
     "boto3>=1.37.32"
 ]
 requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Internet",
+    "Topic :: System",
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: System :: Archiving :: Mirroring",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators"
+]
 readme = "README.md"
 license = {text = "MIT"}
+keywords = [
+    "S3",
+    "Boto3",
+    "boto3",
+    "API",
+    "backup",
+    "AWS",
+    "AWS SDK",
+    "AWS SDK for Python",
+    "DataCite"
+]
+
+[project.urls]
+documentation = "https://github.com/EnviDat/datacite-websnap/blob/main/README.md"
+repository = "https://github.com/EnviDat/datacite-websnap"
+changelog = "https://github.com/EnviDat/datacite-websnap/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["pdm-backend"]

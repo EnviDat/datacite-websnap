@@ -2,7 +2,7 @@
 
 <div>
     <img alt="Tested Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue">
-    <a href="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE" target="_blank">
+    <a href="https://github.com/EnviDat/datacite-websnap/blob/main/LICENSE" target="_blank">
       <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
     </a>
     <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
@@ -21,53 +21,12 @@
 
 `datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
 
+
 ## Installation
 
-<details>
-  <summary>Click to unfold</summary>
-
-_To run the test suite the GitLab project must be cloned rather than installed as a package._ 
-
-### Package
-
-Install the package:
-
 ```bash
-pip install datacite-websnap --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
+pip install datacite-websnap
 ```
-
-To upgrade and install the newest available version of the package use the `--upgrade` flag:
-
-```bash
-pip install datacite-websnap --upgrade --index-url https://gitlabext.wsl.ch/api/v4/projects/552/packages/pypi/simple
-```
-
-
-### Clone GitLab Project
-
-Install the GitLab project including the development dependencies used for the test suite:
-
-1. Clone the project
-    ```bash
-    git clone https://gitlabext.wsl.ch/EnviDat/datacite-websnap.git
-    ```
-
-2. Navigate to the `datacite-websnap` directory
-    ```bash
-    cd datacite-websnap 
-    ```
-
-3. Install PDM 
-    ```bash
-    pip install pdm 
-    ```
-
-4. Install all dependencies including dev dependencies
-    ```bash
-    pdm install --dev
-    ```
-
-</details>
 
 
 ## Terminal Documentation
@@ -329,34 +288,6 @@ To override the default environment variables related to DataCite the variables 
 
 
 </details>
-
-
-## Tests
-
-<details>
-  <summary>
-  Click to unfold
-  </summary>
-
-
-Both `pytest` and `tox` can be used to run the test suite for `datacite-websnap`.
-
-To run pytest and print coverage to terminal:
-```bash
-pdm run pytest --cov=datacite_websnap --cov-report=term
-```
-
-To test `datacite-websnap` using the Python versions configured in `tox.ini` (see the `envlist` setting):
-```bash
-pdm run tox
-```
-
-</details>
-
-
-## Project Status
-
-`datacite-websnap` is in alpha testing 
 
 
 ## Author
