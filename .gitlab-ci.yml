@@ -58,12 +58,14 @@ deploy:
 publish-package:
   stage: publish
   image: python:3.13-slim-bookworm
-  rules:
-    - when: manual
   before_script:
     - pip install pdm
   script:
     - pdm config repository.pypi.username "__token__"
     - pdm config repository.pypi.password "${PYPI_API_TOKEN}"
     - pdm publish
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - when: manual
 
