@@ -307,4 +307,4 @@ An EnviDat PyPI package that copies files retrieved from an API to an S3 bucket 
 
 ## License
 
-<a href="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE" target="_blank">MIT License</a>
+<a href="https://github.com/EnviDat/datacite-websnap/blob/main/LICENSE" target="_blank">MIT License</a>
