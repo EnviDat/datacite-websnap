@@ -1,7 +1,12 @@
 # CHANGELOG
 
-## 1.0.0 (2025-05-27) 
-### First production release
+## 1.0.1 (2025-05-27)
+### Docs
+- update config variables instructions
+## Refactor
+- handle config variables directly in config.py without env var processing
+
+## 1.0.0 (2025-05-27)
 ### Docs
 - add filter information to README
 
