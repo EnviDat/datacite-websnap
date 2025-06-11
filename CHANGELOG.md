@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.2 (2025-06-11)
+### Docs
+- refine cli options table and add badge
+
 ## 1.0.1 (2025-05-27)
 ### Docs
 - update config variables instructions
