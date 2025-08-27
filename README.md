@@ -8,8 +8,6 @@
     <a href="https://github.com/EnviDat/datacite-websnap/blob/main/LICENSE" target="_blank">
       <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
     </a>
-    <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
-    <img alt="Coverage" src="https://gitlabext.wsl.ch/EnviDat/datacite-websnap/badges/main/coverage.svg">
 </div>
 
 ### CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket. 
