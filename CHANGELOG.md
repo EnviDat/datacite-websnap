@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.3 (2025-08-27)
+### Docs
+- update badges
+
 ## 1.0.2 (2025-06-11)
 ### Docs
 - refine cli options table and add badge
