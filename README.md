@@ -59,7 +59,7 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | `--doi-prefix`     | `None`                     | <ul><li>DataCite DOI prefix used to filter results</li><li>Accepts single or multiple prefix arguments</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul>                                                                                                                                                                     |
 | `--client-id`      | `None`                     | <ul><li>DataCite repository account ID used to filter results</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                                                                                                                                                                     |
 | `--destination`    | `S3`                       | <ul><li>Export destination for the DataCite XML records</li><li>`S3` (default) for an S3 bucket</li><li>`local` for local file system</li></ul>                                                                                                                                                                                                       |
-| `--bucket`         | `None`                     | <ul><li>Name of S3 bucket that DataCite XML records (as S3 objects) will be written in</li><li>*Example*: `--bucket opendataswiss`</li><ul>                                                                                                                                                                                                           |
+| `--bucket`         | `None`                     | <ul><li>Name of S3 bucket that DataCite XML records (as S3 objects) will be written in</li><li>*Example*: `--bucket opendata`</li><ul>                                                                                                                                                                                                                |
 | `--key-prefix`     | `None`                     | <ul><li>Optional key prefix for objects in S3 bucket</li><li>If omitted then objects are written in S3 bucket without a prefix</li><li>*Example*: `--key-prefix wsl`</li></ul>                                                                                                                                                                        |
 | `--directory-path` | `None`                     | <ul><li>Only used if exporting to `local` destination<li>Path of the local directory that DataCite XML records will be written in </li></ul>                                                                                                                                                                                                          |
 | `--file-logs`      | `False`                    | <ul><li>Enables logging info messages and errors to a file log</li></ul>                                                                                                                                                                                                                                                                              |
@@ -154,21 +154,21 @@ To export the records to an S3 bucket:
 #### Basic Usage
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
-- Write XML records to a bucket called "opendataswiss" 
+- Write XML records to a bucket called "opendata" 
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss
+datacite-websnap export --client-id ethz.wsl --bucket opendata
 ```
 
 #### Advanced Usage
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
-- Write XML records to a bucket called "opendataswiss" 
+- Write XML records to a bucket called "opendata" 
 - Use key prefix `wsl`
 - Enable logging to a file
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix wsl --file-logs
+datacite-websnap export --client-id ethz.wsl --bucket opendata --key-prefix wsl --file-logs
 ```
 
 </details>
@@ -237,7 +237,7 @@ To enable file logs the following option **must** be enabled: `--file-logs`
 
 ### Example   
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --file-logs            
+datacite-websnap export --client-id ethz.wsl --bucket opendata --file-logs            
 ```
 
 ### Configuration: Logs
