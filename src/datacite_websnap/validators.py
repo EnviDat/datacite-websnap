@@ -1,8 +1,7 @@
 """Validators for datacite-websnap."""
 
-import os
 import click
-from pydantic import BaseModel, AnyHttpUrl, ValidationError, TypeAdapter
+from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
 from .logger import CustomBadParameter, CustomClickException
 
@@ -148,36 +147,3 @@ def validate_single_string_key_value(d: dict, file_logs: bool = False) -> None:
         )
 
     return
-
-
-# TODO remove after checking for usage
-class S3ConfigModel(BaseModel):
-    """
-    Class with required S3 config values and their types.
-    """
-
-    endpoint_url: AnyHttpUrl
-    aws_access_key_id: str
-    aws_secret_access_key: str
-
-
-# TODO refactor to use aws credentials file
-# TODO remove after checking for usage
-def validate_s3_config(file_logs: bool = False) -> S3ConfigModel:
-    """
-    Return S3ConfigModel object after validating required environment variables.
-    """
-    try:
-        s3_conf = {
-            "endpoint_url": os.getenv("ENDPOINT_URL"),
-            "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-            "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
-        }
-        return S3ConfigModel(**s3_conf)
-    except ValidationError as e:
-        raise CustomClickException(
-            f"Failed to validate S3 config environment variables, error(s): {e}",
-            file_logs,
-        )
-    except Exception as e:
-        raise CustomClickException(f"Unexpected error: {e}", file_logs)

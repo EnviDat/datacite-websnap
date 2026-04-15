@@ -16,7 +16,6 @@ from botocore.exceptions import (
 import boto3
 
 from .logger import CustomClickException, CustomEcho
-from .validators import S3ConfigModel  # TODO remove
 from .config import TIMEOUT
 
 
@@ -62,7 +61,7 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
 
 
 def create_s3_client(
-    endpoint_url: str, profile_name: str = None, file_logs: bool = False
+    endpoint_url: str, bucket: str, profile_name: str = None, file_logs: bool = False
 ) -> boto3.Session.client:
     """
     Returns a validated Boto3 S3 client created using a shared AWS credentials file.
@@ -72,6 +71,8 @@ def create_s3_client(
 
     Args:
         endpoint_url: The complete URL to use for the constructed S3 client.
+        bucket: Name of S3 bucket that DataCite XML records (as S3 objects) will be
+                written in. Must have access to bucket with passed S3 credentials.
         profile_name: The name of a profile to use for S3 credentials file.
                       If not given, then the default profile is used.
         file_logs: If True enables logging info messages and errors to a file log.
@@ -101,50 +102,14 @@ def create_s3_client(
         raise CustomClickException(f"Failed to create S3 client: {e}", file_logs)
 
     try:
-        # Validate credentials and endpoint
-        client.list_buckets()
+        # Validate credentials, endpoint and access to an existing bucket
+        client.head_bucket(Bucket=bucket)
     except ClientError as e:
-        raise CustomClickException(f"S3 credentials or endpoint are invalid: {e}", file_logs)
+        raise CustomClickException(f"S3 credentials, endpoint and bucket are "
+                                   f"invalid (or credentials are not valid for bucket):"
+                                   f" {e}", file_logs)
 
     return client
-
-
-# TODO remove
-# def create_s3_client(
-#     conf_s3: S3ConfigModel, file_logs: bool = False
-# ) -> boto3.Session.client:
-#     """
-#     Return a Boto3 S3 client.
-#
-#     Args:
-#         conf_s3: S3ConfigModel
-#         file_logs: If True enables logging info messages and errors to a file log.
-#
-#     Raises:
-#         CustomClickException: If the client could not be created.
-#
-#     Returns:
-#         boto3.client: Configured S3 client
-#     """
-#     try:
-#         session = boto3.Session(
-#             aws_access_key_id=conf_s3.aws_access_key_id,
-#             aws_secret_access_key=conf_s3.aws_secret_access_key,
-#         )
-#         return session.client(
-#             service_name="s3",
-#             endpoint_url=str(conf_s3.endpoint_url),
-#             config=Config(
-#                 request_checksum_calculation="when_required",
-#                 response_checksum_validation="when_required",
-#                 connect_timeout=5,
-#                 read_timeout=TIMEOUT,
-#                 retries={"max_attempts": 3},
-#             ),
-#         )
-#
-#     except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
-#         raise CustomClickException(f"Failed to create S3 client: {e}", file_logs)
 
 
 def s3_client_put_object(

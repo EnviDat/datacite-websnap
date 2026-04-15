@@ -16,10 +16,8 @@ Example command:
     datacite-websnap export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
 """
 
-import os  # TODO remove
 import click
 from typing import Literal
-from dotenv import load_dotenv  # TODO remove
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
@@ -28,7 +26,6 @@ from .validators import (
     validate_at_least_one_query_param,
     validate_positive_int,
     validate_single_string_key_value,
-    validate_s3_config,  # TODO remove
     validate_bucket,
     validate_key_prefix,
     validate_directory_path,
@@ -81,7 +78,7 @@ def cli():
 @click.option(
     "--bucket",
     help="Name of S3 bucket that DataCite XML records (as S3 objects) "
-    "will be written in.",
+    "will be written in. Must have access to bucket with passed S3 credentials.",
 )
 @click.option(
     "--key-prefix",
@@ -162,12 +159,6 @@ def datacite_bulk_export(
     The default behavior is to export DataCite XML records to an S3 bucket but
     command also supports downloading the records to a local machine.
     """
-    # TODO remove
-    # Load variables in .env from current working directory
-    # cwd = os.getcwd()
-    # dotenv_path = os.path.join(cwd, ".env")
-    # load_dotenv(dotenv_path)
-
     # Set up logging
     if file_logs:
         setup_logging(log_level)
@@ -182,16 +173,9 @@ def datacite_bulk_export(
     # Validate S3 config and return S3 client
     s3_client = None
     if destination == "S3":
+        s3_client = create_s3_client(endpoint_url, bucket, profile_name, file_logs)
 
-        # TODO remove
-        # conf_s3 = validate_s3_config(file_logs)
-        # s3_client = create_s3_client(conf_s3, file_logs)
-
-        # TODO finish WIP and start here
-        # TODO test refactored S3 client, start with testing local usage first
-        s3_client = create_s3_client(endpoint_url, profile_name, file_logs)
-
-        # Log export information
+    # Log export information
     CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
     CustomEcho(f"Export destination: {destination}", file_logs)
     CustomEcho(
@@ -210,9 +194,6 @@ def datacite_bulk_export(
     xml_list = get_datacite_list_dois_xml(
         api_url, client_id, doi_prefix, page_size, file_logs
     )
-
-    # TODO remove
-    return
 
     # Export XML files for each record
     for doi_xml_dict in xml_list:
