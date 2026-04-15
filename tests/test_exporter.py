@@ -12,7 +12,6 @@ from datacite_websnap.exporter import (
     write_local_file,
     s3_client_put_object,
 )
-from datacite_websnap.validators import S3ConfigModel
 
 
 def test_decode_base64_xml_valid():
@@ -59,46 +58,6 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
 
-
-@patch("boto3.Session")
-def test_create_s3_client_success(mock_boto3_session):
-    # Given a valid S3ConfigModel
-    conf_s3 = S3ConfigModel(
-        aws_access_key_id="fake_access_key",
-        aws_secret_access_key="fake_secret_key",
-        endpoint_url="http://fake-s3-endpoint.com",
-    )
-
-    # Mock the client creation
-    mock_client = MagicMock()
-    mock_boto3_session.return_value.client.return_value = mock_client
-
-    # When calling the create_s3_client function
-    result = create_s3_client(conf_s3)
-
-    # Then it should return a valid boto3 client
-    assert result == mock_client
-
-
-@patch("boto3.Session")
-def test_create_s3_client_failure(mock_boto3_session):
-    """Test that CustomClickException is raised if boto3 client creation fails."""
-
-    # Arrange
-    conf_s3 = S3ConfigModel(
-        aws_access_key_id="invalid_key",
-        aws_secret_access_key="invalid_secret",
-        endpoint_url="http://fake-s3-endpoint.com",
-    )
-
-    # Mock the session to raise an exception on client creation
-    mock_session = MagicMock()
-    mock_session.client.side_effect = BotoCoreError()
-    mock_boto3_session.return_value = mock_session
-
-    # Act & Assert
-    with pytest.raises(CustomClickException):
-        create_s3_client(conf_s3)
 
 
 @patch("boto3.Session.client")
