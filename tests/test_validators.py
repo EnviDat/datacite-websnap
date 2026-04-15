@@ -2,7 +2,6 @@
 
 import pytest
 from click import BadParameter
-from unittest.mock import patch
 
 from datacite_websnap.validators import (
     validate_url,
@@ -14,6 +13,7 @@ from datacite_websnap.validators import (
     validate_single_string_key_value,
     CustomBadParameter,
     CustomClickException,
+    validate_endpoint_url,
 )
 
 
@@ -54,6 +54,20 @@ def test_validate_bucket_valid():
 def test_validate_bucket_invalid():
     with pytest.raises(CustomBadParameter):
         validate_bucket(None, "S3")
+
+
+def test_validate_endpoint_url():
+    assert validate_endpoint_url("https://cloud.com/", "S3") == "https://cloud.com/"
+    assert validate_endpoint_url(None, "local") is None
+
+
+def test_validate_endpoint_url_invalid():
+    with pytest.raises(CustomBadParameter):
+        validate_endpoint_url(None, "S3")
+
+def test_validate_endpoint_url_invalid_url():
+    with pytest.raises(CustomBadParameter):
+        validate_endpoint_url("abc", "S3")
 
 
 def test_validate_directory_path_valid():

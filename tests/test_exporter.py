@@ -2,13 +2,12 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import ClientError
 
 from datacite_websnap.exporter import (
     decode_base64_xml,
     CustomClickException,
     format_xml_file_name,
-    create_s3_client,
     write_local_file,
     s3_client_put_object,
 )
@@ -57,8 +56,6 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     key_prefix = "data"
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
-
-
 
 @patch("boto3.Session.client")
 def test_s3_client_put_object_success(mock_boto3_client):

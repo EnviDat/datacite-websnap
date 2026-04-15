@@ -1,7 +1,7 @@
 """Tests for src/datacite-websnap/cli.py"""
 
 import click.testing
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from datacite_websnap.cli import cli
 from datacite_websnap.logger import CustomClickException
