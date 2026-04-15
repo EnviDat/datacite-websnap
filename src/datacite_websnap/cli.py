@@ -13,13 +13,13 @@ To access more detailed export command help in terminal execute:
     datacite-websnap export --help
 
 Example command:
-    datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
+    datacite-websnap export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
 """
 
-import os
+import os  # TODO remove
 import click
 from typing import Literal
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # TODO remove
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
@@ -28,10 +28,11 @@ from .validators import (
     validate_at_least_one_query_param,
     validate_positive_int,
     validate_single_string_key_value,
-    validate_s3_config,
+    validate_s3_config,  # TODO remove
     validate_bucket,
     validate_key_prefix,
     validate_directory_path,
+    validate_endpoint_url,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 from .exporter import (
@@ -130,6 +131,15 @@ def cli():
     f"pagination (default: {DATACITE_PAGE_SIZE})",
     callback=validate_positive_int,
 )
+@click.option(
+    "--profile-name",
+    help="The name of a profile to use for S3 credentials file. "
+         "If not given, then the default profile is used."
+)
+@click.option(
+    "--endpoint-url",
+    help="The complete URL to use for the constructed S3 client."
+)
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
@@ -142,6 +152,8 @@ def datacite_bulk_export(
     early_exit: bool = False,
     api_url: str = DATACITE_API_URL,
     page_size: int = DATACITE_PAGE_SIZE,
+    profile_name: str | None = None,
+    endpoint_url: str | None = None
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the records for a
@@ -150,38 +162,43 @@ def datacite_bulk_export(
     The default behavior is to export DataCite XML records to an S3 bucket but
     command also supports downloading the records to a local machine.
     """
+    # TODO remove
     # Load variables in .env from current working directory
-    cwd = os.getcwd()
-    dotenv_path = os.path.join(cwd, ".env")
-    load_dotenv(dotenv_path)
+    # cwd = os.getcwd()
+    # dotenv_path = os.path.join(cwd, ".env")
+    # load_dotenv(dotenv_path)
 
     # Set up logging
     if file_logs:
         setup_logging(log_level)
 
-    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
-
     # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id, file_logs)
     validate_key_prefix(key_prefix, destination, file_logs)
-
-    if destination == "S3":
-        validate_bucket(bucket, destination, file_logs)
-    else:
-        validate_directory_path(directory_path, destination, file_logs)
-
-    CustomEcho(f"Export destination: {destination}", file_logs)
-    CustomEcho(
-        f"Querying DataCite API for DOIs with repository account ID: '{client_id}' "
-        f"and/or prefix(es): {doi_prefix}",
-        file_logs,
-    )
+    validate_bucket(bucket, destination, file_logs)
+    validate_endpoint_url(endpoint_url, destination, file_logs)
+    validate_directory_path(directory_path, destination, file_logs)
 
     # Validate S3 config and return S3 client
     s3_client = None
     if destination == "S3":
-        conf_s3 = validate_s3_config(file_logs)
-        s3_client = create_s3_client(conf_s3, file_logs)
+
+        # TODO remove
+        # conf_s3 = validate_s3_config(file_logs)
+        # s3_client = create_s3_client(conf_s3, file_logs)
+
+        # TODO finish WIP and start here
+        # TODO test refactored S3 client, start with testing local usage first
+        s3_client = create_s3_client(endpoint_url, profile_name, file_logs)
+
+        # Log export information
+    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
+    CustomEcho(f"Export destination: {destination}", file_logs)
+    CustomEcho(
+        f"Querying DataCite API for DOIs with repository account ID: "
+        f"'{client_id}' and/or prefix(es): {doi_prefix}",
+        file_logs,
+    )
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
@@ -193,6 +210,9 @@ def datacite_bulk_export(
     xml_list = get_datacite_list_dois_xml(
         api_url, client_id, doi_prefix, page_size, file_logs
     )
+
+    # TODO remove
+    return
 
     # Export XML files for each record
     for doi_xml_dict in xml_list:
