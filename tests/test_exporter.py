@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, BotoCoreError
 
 from datacite_websnap.exporter import (
     decode_base64_xml,
@@ -10,6 +10,7 @@ from datacite_websnap.exporter import (
     format_xml_file_name,
     write_local_file,
     s3_client_put_object,
+    create_s3_client,
 )
 
 
@@ -156,3 +157,52 @@ def test_write_local_file_generic_exception(mock_open_fn):
         write_local_file(b"data", "file.xml", file_logs=True)
 
     assert "Unexpected error" in str(exc.value)
+
+
+@patch("boto3.Session")
+def test_create_s3_client_success(mock_session_class):
+    # Setup mocks
+    mock_session_inst = MagicMock()
+    mock_client = MagicMock()
+    mock_session_class.return_value = mock_session_inst
+    mock_session_inst.client.return_value = mock_client
+
+    # Execute
+    endpoint = "https://example.com"
+    bucket = "my-test-bucket"
+    result = create_s3_client(endpoint, bucket, profile_name="dev")
+
+    # Assertions
+    mock_session_class.assert_called_once_with(profile_name="dev")
+    mock_session_inst.client.assert_called_once()
+    mock_client.head_bucket.assert_called_once_with(Bucket=bucket)
+    assert result == mock_client
+
+
+@patch("boto3.Session")
+def test_create_s3_client_connection_error(mock_session_class):
+    # Simulate a BotoCoreError during session/client creation
+    mock_session_class.side_effect = BotoCoreError()
+
+    with pytest.raises(CustomClickException) as exc:
+        create_s3_client("http://invalid", "bucket")
+
+    assert "Failed to create S3 client" in str(exc.value)
+
+
+@patch("boto3.Session")
+def test_create_s3_client_invalid_bucket(mock_session_class):
+    # Setup mocks to fail at head_bucket
+    mock_session_inst = MagicMock()
+    mock_client = MagicMock()
+    mock_session_class.return_value = mock_session_inst
+    mock_session_inst.client.return_value = mock_client
+
+    # Simulate a 404/403 ClientError
+    error_response = {'Error': {'Code': '404', 'Message': 'Not Found'}}
+    mock_client.head_bucket.side_effect = ClientError(error_response, "HeadBucket")
+
+    with pytest.raises(CustomClickException) as exc:
+        create_s3_client("http://valid", "nonexistent-bucket")
+
+    assert "S3 credentials, endpoint and bucket are invalid" in str(exc.value)
