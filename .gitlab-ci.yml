@@ -37,7 +37,7 @@ test-tox:
     - pdm run tox -e py${PYTHON_VERSION}
   parallel:
     matrix:
-      - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]
+      - PYTHON_VERSION: [ "3.11", "3.12", "3.13", "3.14"]
   when: manual
 
 deploy:
