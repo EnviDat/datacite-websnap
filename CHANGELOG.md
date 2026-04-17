@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2.0.0 (2026-04-17)
+### Refactor
+- connect to S3 service using shared credentials file
+- add CLI options `--profile-name` and `--endpoint-url`
+### Docs
+- document new CLI options
+- update S3 usage instructions
+### Tests
+- update tests to cover refactored S3 client handlers
+
 ## 1.0.3 (2025-08-27)
 ### Docs
 - update badges
