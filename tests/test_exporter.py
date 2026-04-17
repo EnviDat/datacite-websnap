@@ -2,17 +2,16 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import ClientError, BotoCoreError
 
 from datacite_websnap.exporter import (
     decode_base64_xml,
     CustomClickException,
     format_xml_file_name,
-    create_s3_client,
     write_local_file,
     s3_client_put_object,
+    create_s3_client,
 )
-from datacite_websnap.validators import S3ConfigModel
 
 
 def test_decode_base64_xml_valid():
@@ -58,48 +57,6 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     key_prefix = "data"
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
-
-
-@patch("boto3.Session")
-def test_create_s3_client_success(mock_boto3_session):
-    # Given a valid S3ConfigModel
-    conf_s3 = S3ConfigModel(
-        aws_access_key_id="fake_access_key",
-        aws_secret_access_key="fake_secret_key",
-        endpoint_url="http://fake-s3-endpoint.com",
-    )
-
-    # Mock the client creation
-    mock_client = MagicMock()
-    mock_boto3_session.return_value.client.return_value = mock_client
-
-    # When calling the create_s3_client function
-    result = create_s3_client(conf_s3)
-
-    # Then it should return a valid boto3 client
-    assert result == mock_client
-
-
-@patch("boto3.Session")
-def test_create_s3_client_failure(mock_boto3_session):
-    """Test that CustomClickException is raised if boto3 client creation fails."""
-
-    # Arrange
-    conf_s3 = S3ConfigModel(
-        aws_access_key_id="invalid_key",
-        aws_secret_access_key="invalid_secret",
-        endpoint_url="http://fake-s3-endpoint.com",
-    )
-
-    # Mock the session to raise an exception on client creation
-    mock_session = MagicMock()
-    mock_session.client.side_effect = BotoCoreError()
-    mock_boto3_session.return_value = mock_session
-
-    # Act & Assert
-    with pytest.raises(CustomClickException):
-        create_s3_client(conf_s3)
-
 
 @patch("boto3.Session.client")
 def test_s3_client_put_object_success(mock_boto3_client):
@@ -200,3 +157,52 @@ def test_write_local_file_generic_exception(mock_open_fn):
         write_local_file(b"data", "file.xml", file_logs=True)
 
     assert "Unexpected error" in str(exc.value)
+
+
+@patch("boto3.Session")
+def test_create_s3_client_success(mock_session_class):
+    # Setup mocks
+    mock_session_inst = MagicMock()
+    mock_client = MagicMock()
+    mock_session_class.return_value = mock_session_inst
+    mock_session_inst.client.return_value = mock_client
+
+    # Execute
+    endpoint = "https://example.com"
+    bucket = "my-test-bucket"
+    result = create_s3_client(endpoint, bucket, profile_name="dev")
+
+    # Assertions
+    mock_session_class.assert_called_once_with(profile_name="dev")
+    mock_session_inst.client.assert_called_once()
+    mock_client.head_bucket.assert_called_once_with(Bucket=bucket)
+    assert result == mock_client
+
+
+@patch("boto3.Session")
+def test_create_s3_client_connection_error(mock_session_class):
+    # Simulate a BotoCoreError during session/client creation
+    mock_session_class.side_effect = BotoCoreError()
+
+    with pytest.raises(CustomClickException) as exc:
+        create_s3_client("http://invalid", "bucket")
+
+    assert "Failed to create S3 client" in str(exc.value)
+
+
+@patch("boto3.Session")
+def test_create_s3_client_invalid_bucket(mock_session_class):
+    # Setup mocks to fail at head_bucket
+    mock_session_inst = MagicMock()
+    mock_client = MagicMock()
+    mock_session_class.return_value = mock_session_inst
+    mock_session_inst.client.return_value = mock_client
+
+    # Simulate a 404/403 ClientError
+    error_response = {'Error': {'Code': '404', 'Message': 'Not Found'}}
+    mock_client.head_bucket.side_effect = ClientError(error_response, "HeadBucket")
+
+    with pytest.raises(CustomClickException) as exc:
+        create_s3_client("http://valid", "nonexistent-bucket")
+
+    assert "S3 credentials, endpoint and/or bucket are invalid" in str(exc.value)

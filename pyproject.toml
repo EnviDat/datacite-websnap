@@ -9,11 +9,10 @@ maintainers = [
     {name = "EnviDat", email="envidat@wsl.ch"}
 ]
 dependencies = [
-    "click>=8.1.8",
-    "requests>=2.32.3",
-    "pydantic>=2.11.3",
-    "python-dotenv>=1.1.0",
-    "boto3>=1.37.32"
+    "click>=8.3.2",
+    "requests>=2.33.1",
+    "pydantic>=2.13.0",
+    "boto3>=1.42.89"
 ]
 requires-python = ">=3.11"
 classifiers = [

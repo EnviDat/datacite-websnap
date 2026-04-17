@@ -24,8 +24,7 @@ test:
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
-    - pdm run pytest --cov=datacite_websnap --cov-report=term --no-cov-on-fail
-  coverage: '/TOTAL.*\s+(\d+)%/'
+    - pdm run pytest --cov=datacite_websnap --cov-report=term
 
 test-tox:
   stage: test
@@ -38,7 +37,7 @@ test-tox:
     - pdm run tox -e py${PYTHON_VERSION}
   parallel:
     matrix:
-      - PYTHON_VERSION: [ "3.11", "3.12", "3.13" ]
+      - PYTHON_VERSION: [ "3.11", "3.12", "3.13", "3.14"]
   when: manual
 
 deploy:
@@ -57,7 +56,6 @@ deploy:
 
 publish-package:
   stage: publish
-  image: python:3.13-slim-bookworm
   before_script:
     - pip install pdm
   script:
@@ -68,4 +66,3 @@ publish-package:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: manual
-

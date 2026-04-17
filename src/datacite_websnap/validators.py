@@ -1,8 +1,7 @@
 """Validators for datacite-websnap."""
 
-import os
 import click
-from pydantic import BaseModel, AnyHttpUrl, ValidationError
+from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
 from .logger import CustomBadParameter, CustomClickException
 
@@ -65,6 +64,37 @@ def validate_bucket(bucket, destination, file_logs: bool = False) -> str | None:
     return bucket
 
 
+def validate_endpoint_url(
+        endpoint_url, destination, file_logs: bool = False
+) -> str | None:
+    """
+    Validate and return endpoint_url, it must be an http or https URL.
+    Raises BadParameter exception if endpoint_url is not truthy when
+    option '--destination' is 'S3'.
+    """
+    if destination == "S3" and not endpoint_url:
+        raise CustomBadParameter(
+            "'--endpoint-url' option must be provided when the "
+            "'--destination' option is set to 'S3'",
+            file_logs,
+        )
+
+    if endpoint_url:
+        try:
+            ta = TypeAdapter(AnyHttpUrl)
+            validated = ta.validate_python(endpoint_url)
+            return str(validated)
+
+        except ValidationError:
+            raise CustomBadParameter(
+                f"'--endpoint-url' value '{endpoint_url}' "
+                f"is not a valid HTTP/HTTPS URL",
+                file_logs,
+            )
+
+    return endpoint_url
+
+
 def validate_directory_path(
     directory_path, destination, file_logs: bool = False
 ) -> str | None:
@@ -117,33 +147,3 @@ def validate_single_string_key_value(d: dict, file_logs: bool = False) -> None:
         )
 
     return
-
-
-class S3ConfigModel(BaseModel):
-    """
-    Class with required S3 config values and their types.
-    """
-
-    endpoint_url: AnyHttpUrl
-    aws_access_key_id: str
-    aws_secret_access_key: str
-
-
-def validate_s3_config(file_logs: bool = False) -> S3ConfigModel:
-    """
-    Return S3ConfigModel object after validating required environment variables.
-    """
-    try:
-        s3_conf = {
-            "endpoint_url": os.getenv("ENDPOINT_URL"),
-            "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-            "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
-        }
-        return S3ConfigModel(**s3_conf)
-    except ValidationError as e:
-        raise CustomClickException(
-            f"Failed to validate S3 config environment variables, error(s): {e}",
-            file_logs,
-        )
-    except Exception as e:
-        raise CustomClickException(f"Unexpected error: {e}", file_logs)

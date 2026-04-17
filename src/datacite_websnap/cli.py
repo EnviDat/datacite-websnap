@@ -13,13 +13,11 @@ To access more detailed export command help in terminal execute:
     datacite-websnap export --help
 
 Example command:
-    datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix ethz.wsl --file-logs
+    datacite-websnap export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
 """
 
-import os
 import click
 from typing import Literal
-from dotenv import load_dotenv
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
@@ -28,10 +26,10 @@ from .validators import (
     validate_at_least_one_query_param,
     validate_positive_int,
     validate_single_string_key_value,
-    validate_s3_config,
     validate_bucket,
     validate_key_prefix,
     validate_directory_path,
+    validate_endpoint_url,
 )
 from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
 from .exporter import (
@@ -78,13 +76,22 @@ def cli():
     "'S3' (default) for an S3 bucket or 'local' for local file system.",
 )
 @click.option(
+    "--profile-name",
+    help="Name of a profile to use for S3 shared credentials file. "
+         "If omitted then the default profile is used."
+)
+@click.option(
+    "--endpoint-url",
+    help="Complete URL to use for the constructed S3 client."
+)
+@click.option(
     "--bucket",
     help="Name of S3 bucket that DataCite XML records (as S3 objects) "
-    "will be written in.",
+    "will be written in. Must have access to bucket with configured S3 credentials.",
 )
 @click.option(
     "--key-prefix",
-    help="Optional key prefix for objects in S3 bucket. If omitted then objects are "
+    help="Name of a key prefix for objects in S3 bucket. If omitted then objects are "
     "written in S3 bucket without a prefix.",
 )
 @click.option(
@@ -134,6 +141,8 @@ def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
     client_id: str | None = None,
     destination: Literal["S3", "local"] = "S3",
+    profile_name: str | None = None,
+    endpoint_url: str | None = None,
     bucket: str | None = None,
     key_prefix: str | None = None,
     directory_path: str | None = None,
@@ -141,7 +150,7 @@ def datacite_bulk_export(
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
     early_exit: bool = False,
     api_url: str = DATACITE_API_URL,
-    page_size: int = DATACITE_PAGE_SIZE,
+    page_size: int = DATACITE_PAGE_SIZE
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the records for a
@@ -150,38 +159,30 @@ def datacite_bulk_export(
     The default behavior is to export DataCite XML records to an S3 bucket but
     command also supports downloading the records to a local machine.
     """
-    # Load variables in .env from current working directory
-    cwd = os.getcwd()
-    dotenv_path = os.path.join(cwd, ".env")
-    load_dotenv(dotenv_path)
-
     # Set up logging
     if file_logs:
         setup_logging(log_level)
 
-    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
-
     # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id, file_logs)
     validate_key_prefix(key_prefix, destination, file_logs)
+    validate_bucket(bucket, destination, file_logs)
+    validate_endpoint_url(endpoint_url, destination, file_logs)
+    validate_directory_path(directory_path, destination, file_logs)
 
-    if destination == "S3":
-        validate_bucket(bucket, destination, file_logs)
-    else:
-        validate_directory_path(directory_path, destination, file_logs)
-
-    CustomEcho(f"Export destination: {destination}", file_logs)
-    CustomEcho(
-        f"Querying DataCite API for DOIs with repository account ID: '{client_id}' "
-        f"and/or prefix(es): {doi_prefix}",
-        file_logs,
-    )
-
-    # Validate S3 config and return S3 client
+    # Validate S3 credentials and return S3 client
     s3_client = None
     if destination == "S3":
-        conf_s3 = validate_s3_config(file_logs)
-        s3_client = create_s3_client(conf_s3, file_logs)
+        s3_client = create_s3_client(endpoint_url, bucket, profile_name, file_logs)
+
+    # Log export information
+    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
+    CustomEcho(f"Export destination: {destination}", file_logs)
+    CustomEcho(
+        f"Querying DataCite API for DOIs with repository account ID: "
+        f"'{client_id}' and/or prefix(es): {doi_prefix}",
+        file_logs,
+    )
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API

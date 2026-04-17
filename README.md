@@ -1,7 +1,7 @@
 # datacite-websnap
 
 <div>
-    <img alt="Supported Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue">
+    <img alt="Supported Python Versions" src="https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13|%203.14-blue">
      <a href="https://pypi.org/project/datacite-websnap" target="_blank">
         <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/datacite-websnap">
     </a>
@@ -59,14 +59,16 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | `--doi-prefix`     | `None`                     | <ul><li>DataCite DOI prefix used to filter results</li><li>Accepts single or multiple prefix arguments</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul>                                                                                                                                                                     |
 | `--client-id`      | `None`                     | <ul><li>DataCite repository account ID used to filter results</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                                                                                                                                                                     |
 | `--destination`    | `S3`                       | <ul><li>Export destination for the DataCite XML records</li><li>`S3` (default) for an S3 bucket</li><li>`local` for local file system</li></ul>                                                                                                                                                                                                       |
-| `--bucket`         | `None`                     | <ul><li>Name of S3 bucket that DataCite XML records (as S3 objects) will be written in</li><li>*Example*: `--bucket opendataswiss`</li><ul>                                                                                                                                                                                                           |
-| `--key-prefix`     | `None`                     | <ul><li>Optional key prefix for objects in S3 bucket</li><li>If omitted then objects are written in S3 bucket without a prefix</li><li>*Example*: `--key-prefix wsl`</li></ul>                                                                                                                                                                        |
+| `--profile-name`   | `None`                     | <ul><li>Name of a profile to use for S3 shared credentials file</li><li>If omitted then the default profile is used</li><li>*Example*: `--profile-name dev`</li></ul>                                                                                                                                                                                 |
+| `--endpoint-url`   | `None`                     | <ul><li>Complete URL to use for the constructed S3 client</li><li>*Example*: `--endpoint-url "https://examplecloud.com"`</li></ul>                                                                                                                                                                                                                    |
+| `--bucket`         | `None`                     | <ul><li>Name of S3 bucket that DataCite XML records (as S3 objects) will be written in</li><li>Configured S3 credentials must have access to bucket</li><li>*Example*: `--bucket opendata`</li><ul>                                                                                                                                                   |
+| `--key-prefix`     | `None`                     | <ul><li>Name of a key prefix for objects in S3 bucket</li><li>If omitted then objects are written in S3 bucket without a prefix</li><li>*Example*: `--key-prefix wsl`</li></ul>                                                                                                                                                                       |
 | `--directory-path` | `None`                     | <ul><li>Only used if exporting to `local` destination<li>Path of the local directory that DataCite XML records will be written in </li></ul>                                                                                                                                                                                                          |
 | `--file-logs`      | `False`                    | <ul><li>Enables logging info messages and errors to a file log</li></ul>                                                                                                                                                                                                                                                                              |
 | `--log-level`      | `INFO`                     | <ul><li>Level to use for logging if using `--file-logs` option</li><li>Default value is `INFO`</li><li>Valid logging levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`</li><li><a href="https://docs.python.org/3/library/logging.html#logging-levels" target="_blank">Click here to learn more about Python logging levels</a></li></ul> |
 | `--early-exit`     | `False`                    | <ul><li>If enabled then terminates program immediately after export error occurs</li><li>Default value is `False` (not enabled)</li><li>If `False` then only logs export error and continues to try to export other DataCite XML records returned by search query</li></ul>                                                                           |
 | `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                                                                                                                          |
-| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                                                                                   |
+| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                                                                                   | |
 
 </details>
 
@@ -121,54 +123,61 @@ It can also be combined with the `--client-id` argument.
 
 Utilizes the AWS SDK for Python (Boto3) to export DataCite XML metadata records for a specific repository and/or DOI prefix as objects in an S3 bucket. 
 
-### Environment Variables 
+### Credentials
+Use a shared credentials file to export records to an S3 bucket.
 
-The environment variables listed below are **required** to export records to an S3 bucket.
+<a href="https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#shared-credentials-file" target="_blank">Click here</a>
+ to learn about Boto3 shared credentials file, expected default location of file (`~/.aws/credentials`), supported configuration variables, and profiles.
 
-| Environment Variable    | Description                              |
-|-------------------------|------------------------------------------|
-| `ENDPOINT_URL`          | URL to use for the constructed S3 client |
-| `AWS_ACCESS_KEY_ID`     | AWS access key ID                        |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret access key                    |
+**__Note:__** Be aware that environment variables will take precedence over a shared credentials file! 
+<a href="https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentialse" target="_blank">Click here</a>
+ to learn more about the order that Boto3 searches for credentials.
 
+The CLI will use the `[default]` settings in the shared credentials file unless the option `--profile-name` is used.
 
-Supports setting environment variables in a `.env` file. 
-
-The `.env` file **must** be located in the directory where the CLI is being executed.
-
-For example, if you are running the program from `my-drive/cli-tools/datacite-websnap` then the `.env` file **must** be in that directory.
-
-Example `.env` file:
-
+Example `~/.aws/credentials` file:
 ```
-ENDPOINT_URL=https://dreamycloud.com
-AWS_ACCESS_KEY_ID=1234567abcdefg
-AWS_SECRET_ACCESS_KEY=hijklmn1234567
+[default]
+aws_access_key_id=food
+aws_secret_access_key=bard
 ```
 
-### Examples
+If using the CLI option `--profile-name` option then a specific configuration profile can be used in the `~/.aws/credentials` file:
+```
+[default]
+aws_access_key_id=food
+aws_secret_access_key=bard
+
+[dev]
+aws_access_key_id=snack
+aws_secret_access_key=singer
+```
+
+### Required Options
 
 To export the records to an S3 bucket:
-- `--bucket` option **must** be assigned to an existing S3 bucket
+- `--endpoint-url` option **must** be assigned to the complete URL to use for the constructed S3 client
+- `--bucket` option **must** be assigned to an existing S3 bucket 
 
-#### Basic Usage
+#### Basic Usage Example
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
-- Write XML records to a bucket called "opendataswiss" 
+- Write XML records to a bucket called "opendata" 
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss
+datacite-websnap export --client-id ethz.wsl --endpoint-url "https://examplecloud.com" --bucket opendata 
 ```
 
-#### Advanced Usage
+#### Advanced Usage Example
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
-- Write XML records to a bucket called "opendataswiss" 
+- Specify `dev` as the profile to use in the `~/.aws/credentials` file
+- Write XML records to a bucket called "opendata" 
 - Use key prefix `wsl`
 - Enable logging to a file
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --key-prefix wsl --file-logs
+datacite-websnap export --client-id ethz.wsl --profile-name dev --endpoint-url "https://examplecloud.com" --bucket opendata --key-prefix wsl --file-logs 
 ```
 
 </details>
@@ -191,8 +200,7 @@ To write the records locally:
 ### Example
 
 - Return all DataCite records for the EnviDat repository (using client-id `ethz.wsl`)
-- Write XML records locally
-- Write XML records to a directory called "opendata/wsl"
+- Write XML records locally to a directory called "opendata/wsl"
 
 ```bash
 datacite-websnap export --client-id ethz.wsl --destination local --directory-path "opendata/wsl"
@@ -237,7 +245,7 @@ To enable file logs the following option **must** be enabled: `--file-logs`
 
 ### Example   
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendataswiss --file-logs            
+datacite-websnap export --client-id ethz.wsl --bucket opendata --file-logs            
 ```
 
 ### Configuration: Logs

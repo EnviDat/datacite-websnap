@@ -2,7 +2,6 @@
 
 import pytest
 from click import BadParameter
-from unittest.mock import patch
 
 from datacite_websnap.validators import (
     validate_url,
@@ -12,9 +11,9 @@ from datacite_websnap.validators import (
     validate_directory_path,
     validate_key_prefix,
     validate_single_string_key_value,
-    validate_s3_config,
     CustomBadParameter,
     CustomClickException,
+    validate_endpoint_url,
 )
 
 
@@ -57,6 +56,20 @@ def test_validate_bucket_invalid():
         validate_bucket(None, "S3")
 
 
+def test_validate_endpoint_url():
+    assert validate_endpoint_url("https://cloud.com/", "S3") == "https://cloud.com/"
+    assert validate_endpoint_url(None, "local") is None
+
+
+def test_validate_endpoint_url_invalid():
+    with pytest.raises(CustomBadParameter):
+        validate_endpoint_url(None, "S3")
+
+def test_validate_endpoint_url_invalid_url():
+    with pytest.raises(CustomBadParameter):
+        validate_endpoint_url("abc", "S3")
+
+
 def test_validate_directory_path_valid():
     assert validate_directory_path("samples/abc", "local") == "samples/abc"
     assert validate_directory_path(None, "S3") is None
@@ -89,31 +102,3 @@ def test_validate_single_string_key_value_invalid_non_string():
 def test_validate_single_string_key_value_invalid_multiple_pairs():
     with pytest.raises(CustomClickException):
         validate_single_string_key_value({"a": "b", "c": "d"})
-
-
-def test_validate_s3_config_valid(monkeypatch):
-    monkeypatch.setenv("ENDPOINT_URL", "https://s3.amazonaws.com")
-    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "abc")
-    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "123")
-    conf = validate_s3_config()
-    assert str(conf.endpoint_url) == "https://s3.amazonaws.com/"
-    assert conf.aws_access_key_id == "abc"
-    assert conf.aws_secret_access_key == "123"
-
-
-def test_validate_s3_config_validation_error():
-    with (
-        patch("datacite_websnap.validators.os.getenv", side_effect=lambda k: None),
-    ):
-        with pytest.raises(CustomClickException):
-            validate_s3_config(file_logs=True)
-
-
-def test_validate_s3_config_unexpected_error():
-    with (
-        patch(
-            "datacite_websnap.validators.os.getenv", side_effect=Exception("unexpected")
-        ),
-    ):
-        with pytest.raises(CustomClickException):
-            validate_s3_config(file_logs=True)
