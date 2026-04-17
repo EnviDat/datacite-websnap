@@ -105,7 +105,7 @@ def create_s3_client(
         # Validate credentials, endpoint and access to an existing bucket
         client.head_bucket(Bucket=bucket)
     except ClientError as e:
-        raise CustomClickException(f"S3 credentials, endpoint and bucket are "
+        raise CustomClickException(f"S3 credentials, endpoint and/or bucket are "
                                    f"invalid (or credentials are not valid for bucket):"
                                    f" {e}", file_logs)
 
