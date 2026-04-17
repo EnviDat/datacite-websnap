@@ -205,4 +205,4 @@ def test_create_s3_client_invalid_bucket(mock_session_class):
     with pytest.raises(CustomClickException) as exc:
         create_s3_client("http://valid", "nonexistent-bucket")
 
-    assert "S3 credentials, endpoint and bucket are invalid" in str(exc.value)
+    assert "S3 credentials, endpoint and/or bucket are invalid" in str(exc.value)
