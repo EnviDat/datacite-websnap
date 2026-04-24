@@ -46,7 +46,6 @@ def test_export_command_local_success(tmp_path):
                 "local",
                 "--directory-path",
                 str(tmp_path),
-                "--file-logs",
             ],
         )
 
@@ -102,17 +101,11 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
             ],
         )
 
-    mock_create_s3.assert_called_once_with(
-        "https://s3.com", "my-bucket", "my-profile", True
-    )
+    mock_create_s3.assert_called_once_with("https://s3.com", "my-bucket", "my-profile")
 
     # Note: Ensure the argument names (client, body, etc.) match your function signature
     mock_put_obj.assert_called_once_with(
-        client=mock_s3_instance,
-        body=b"<xml/>",
-        bucket="my-bucket",
-        key="formatted.xml",
-        file_logs=True,
+        client=mock_s3_instance, body=b"<xml/>", bucket="my-bucket", key="formatted.xml"
     )
 
 

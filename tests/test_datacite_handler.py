@@ -34,6 +34,26 @@ def test_get_url_json_http_error():
             get_url_json("http://example.com")
 
 
+@patch("requests.get")
+def test_get_url_json_decode_error(mock_get):
+    """Test that JSONDecodeError raises CustomClickException."""
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+
+    mock_response.json.side_effect = requests.exceptions.JSONDecodeError(
+        "msg", "doc", 0
+    )
+    mock_get.return_value = mock_response
+
+    url = "https://example.com"
+    with pytest.raises(CustomClickException) as exc_info:
+        get_url_json(url)
+
+    assert "Invalid response" in str(exc_info.value)
+    assert "The server did not return valid JSON" in str(exc_info.value)
+
+
 def test_get_url_json_connection_error():
     with patch("requests.get", side_effect=requests.exceptions.ConnectionError):
         with pytest.raises(CustomClickException):
@@ -99,7 +119,6 @@ def test_get_datacite_list_dois_xml_single_page():
                 api_url="https://api.example.org",
                 client_id="client123",
                 doi_prefix=("abc", "def"),
-                file_logs=False,
             )
             assert len(results) == 2
             assert {"10.123/abc": "<xml1>"} in results
@@ -118,9 +137,7 @@ def test_get_datacite_list_dois_xml_zero_records():
     ):
         with pytest.raises(CustomClickException):
             get_datacite_list_dois_xml(
-                api_url="https://api.example.org",
-                client_id="test-client",
-                file_logs=False,
+                api_url="https://api.example.org", client_id="test-client"
             )
 
 
@@ -150,9 +167,7 @@ def test_get_datacite_list_dois_xml_multiple_pages():
             "datacite_websnap.datacite_handler.get_url_json", return_value=second_page
         ):
             result = get_datacite_list_dois_xml(
-                api_url="https://api.example.org",
-                client_id="test-client",
-                file_logs=False,
+                api_url="https://api.example.org", client_id="test-client"
             )
 
     expected = [
@@ -180,7 +195,5 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
     ):
         with pytest.raises(CustomClickException):
             get_datacite_list_dois_xml(
-                api_url="https://api.example.org",
-                client_id="test-client",
-                file_logs=False,
+                api_url="https://api.example.org", client_id="test-client"
             )
