@@ -36,7 +36,7 @@ def test_decode_base64_xml_unexpected_exception():
 
         # Call the function with a valid base64 string
         with pytest.raises(CustomClickException):
-            decode_base64_xml("some_base64_string", file_logs=False)
+            decode_base64_xml("some_base64_string")
 
 
 def test_format_xml_file_name_no_prefix():
@@ -58,24 +58,20 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
 
+
 @patch("boto3.Session.client")
 def test_s3_client_put_object_success(mock_boto3_client):
     mock_client = MagicMock()
 
     # Simulate a successful response from the S3 client (HTTP status code 200)
-    mock_client.put_object.return_value = {
-        "ResponseMetadata": {"HTTPStatusCode": 200}  # Successful status code
-    }
+    mock_client.put_object.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
     mock_boto3_client.return_value = mock_client
 
     body = b"<xml>success</xml>"
     bucket = "test-bucket"
     key = "test_key.xml"
 
-    # Act
-    s3_client_put_object(
-        client=mock_client, body=body, bucket=bucket, key=key, file_logs=True
-    )
+    s3_client_put_object(client=mock_client, body=body, bucket=bucket, key=key)
 
     mock_client.put_object.assert_called_once_with(Body=body, Bucket=bucket, Key=key)
 
@@ -92,7 +88,6 @@ def test_s3_client_put_object_client_error():
             body=b"<xml>error</xml>",
             bucket="test-bucket",
             key="fail.xml",
-            file_logs=True,
         )
 
 
@@ -108,7 +103,6 @@ def test_s3_client_put_object_exception():
             body=b"<xml>error</xml>",
             bucket="test-bucket",
             key="fail.xml",
-            file_logs=True,
         )
 
 
@@ -122,7 +116,6 @@ def test_s3_client_put_object_non_200_status():
             body=b"<xml>fail</xml>",
             bucket="test-bucket",
             key="bad_status.xml",
-            file_logs=False,
         )
 
 
@@ -143,7 +136,7 @@ def test_write_local_file_ioerror(mock_open_fn):
     mock_open_fn.side_effect = IOError("Disk full")
 
     with pytest.raises(CustomClickException) as exc:
-        write_local_file(b"data", "file.xml", directory_path="/fake", file_logs=True)
+        write_local_file(b"data", "file.xml", directory_path="/fake")
 
     assert "IOError" in str(exc.value)
 
@@ -154,7 +147,7 @@ def test_write_local_file_generic_exception(mock_open_fn):
     mock_open_fn.side_effect = Exception("Something went wrong")
 
     with pytest.raises(CustomClickException) as exc:
-        write_local_file(b"data", "file.xml", file_logs=True)
+        write_local_file(b"data", "file.xml")
 
     assert "Unexpected error" in str(exc.value)
 
@@ -199,7 +192,7 @@ def test_create_s3_client_invalid_bucket(mock_session_class):
     mock_session_inst.client.return_value = mock_client
 
     # Simulate a 404/403 ClientError
-    error_response = {'Error': {'Code': '404', 'Message': 'Not Found'}}
+    error_response = {"Error": {"Code": "404", "Message": "Not Found"}}
     mock_client.head_bucket.side_effect = ClientError(error_response, "HeadBucket")
 
     with pytest.raises(CustomClickException) as exc:

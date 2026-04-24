@@ -78,11 +78,10 @@ def cli():
 @click.option(
     "--profile-name",
     help="Name of a profile to use for S3 shared credentials file. "
-         "If omitted then the default profile is used."
+    "If omitted then the default profile is used.",
 )
 @click.option(
-    "--endpoint-url",
-    help="Complete URL to use for the constructed S3 client."
+    "--endpoint-url", help="Complete URL to use for the constructed S3 client."
 )
 @click.option(
     "--bucket",
@@ -150,7 +149,7 @@ def datacite_bulk_export(
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
     early_exit: bool = False,
     api_url: str = DATACITE_API_URL,
-    page_size: int = DATACITE_PAGE_SIZE
+    page_size: int = DATACITE_PAGE_SIZE,
 ) -> None:
     """
     Bulk export DataCite XML metadata records that correspond to the records for a
@@ -164,44 +163,41 @@ def datacite_bulk_export(
         setup_logging(log_level)
 
     # Validate arguments
-    validate_at_least_one_query_param(doi_prefix, client_id, file_logs)
-    validate_key_prefix(key_prefix, destination, file_logs)
-    validate_bucket(bucket, destination, file_logs)
-    validate_endpoint_url(endpoint_url, destination, file_logs)
-    validate_directory_path(directory_path, destination, file_logs)
+    validate_at_least_one_query_param(doi_prefix, client_id)
+    validate_key_prefix(key_prefix, destination)
+    validate_bucket(bucket, destination)
+    validate_endpoint_url(endpoint_url, destination)
+    validate_directory_path(directory_path, destination)
 
     # Validate S3 credentials and return S3 client
     s3_client = None
     if destination == "S3":
-        s3_client = create_s3_client(endpoint_url, bucket, profile_name, file_logs)
+        s3_client = create_s3_client(endpoint_url, bucket, profile_name)
 
     # Log export information
-    CustomEcho("**** Starting DataCite bulk export... ****", file_logs)
-    CustomEcho(f"Export destination: {destination}", file_logs)
+    CustomEcho("**** Starting DataCite bulk export... ****")
+    CustomEcho(f"Export destination: {destination}")
     CustomEcho(
         f"Querying DataCite API for DOIs with repository account ID: "
-        f"'{client_id}' and/or prefix(es): {doi_prefix}",
-        file_logs,
+        f"'{client_id}' and/or prefix(es): {doi_prefix}"
     )
 
     # Validate client_id argument, raise error if client_id does not return successful
     # response when used to return a client from the DataCite API
     if client_id:
-        get_datacite_client(api_url, client_id, file_logs)
+        get_datacite_client(api_url, client_id)
 
     # Create a list of dictionaries with DOIs and Base64 encoded XML strings that
     # correspond to the record results for the queried DataCite repository or DOI prefix
-    xml_list = get_datacite_list_dois_xml(
-        api_url, client_id, doi_prefix, page_size, file_logs
-    )
+    xml_list = get_datacite_list_dois_xml(api_url, client_id, doi_prefix, page_size)
 
     # Export XML files for each record
     for doi_xml_dict in xml_list:
         try:
-            validate_single_string_key_value(doi_xml_dict, file_logs)
+            validate_single_string_key_value(doi_xml_dict)
             doi, xml_str = next(iter(doi_xml_dict.items()))
             xml_filename = format_xml_file_name(doi, key_prefix)
-            xml_decoded = decode_base64_xml(xml_str, file_logs)
+            xml_decoded = decode_base64_xml(xml_str)
 
             match destination:
                 case "S3":
@@ -210,23 +206,21 @@ def datacite_bulk_export(
                         body=xml_decoded,
                         bucket=bucket,
                         key=xml_filename,
-                        file_logs=file_logs,
                     )
                 case "local":
                     write_local_file(
                         content_bytes=xml_decoded,
                         filename=xml_filename,
                         directory_path=directory_path,
-                        file_logs=file_logs,
                     )
 
         except CustomClickException as err:
             if early_exit:
-                raise CustomClickException(err.message, file_logs)
+                raise CustomClickException(err.message)
             else:
-                CustomWarning(err.message, file_logs)
+                CustomWarning(err.message)
                 continue
 
-    CustomEcho("**** Finished DataCite bulk export ****", file_logs)
+    CustomEcho("**** Finished DataCite bulk export ****")
 
     return
