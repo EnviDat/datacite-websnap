@@ -16,52 +16,48 @@ def setup_logging(log_level: str = "INFO"):
     )
 
 
-def _log_error(message):
-    """Log the error message."""
-    logging.error(message, stacklevel=3)
-
-
 class CustomClickException(click.ClickException):
     """Custom ClickException that conditionally logs exceptions."""
 
-    def __init__(self, message: str, file_logs: bool = False):
+    def __init__(self, message: str):
         """
-        Custom exception that logs formatted ClickExceptions to a log if
-        file_logs is True.
+        Custom exception that logs formatted ClickExceptions
+        if --file-log option has been enabled and FileHandler setup.
 
         Args:
             message: Error message to display.
-            file_logs: Flag to that enables logging exceptions to a log.
-                         Default is False (logs are not enabled.)
         """
         super().__init__(message)
-        self.file_logs = file_logs
 
-        if self.file_logs:
-            _log_error(message)
+    @staticmethod
+    def _log_error(message):
+        """Log the error message."""
+        logging.error(message)
 
     def format_message(self) -> str:
         return click.style(super().format_message(), fg="red")
+
+    def show(self, file=None):
+        should_log = any(
+            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
+        )
+        if should_log:
+            self._log_error(self.message)
+
+        click.echo(f"ERROR: {self.format_message()}", err=True)
 
 
 class CustomBadParameter(click.BadParameter):
     """Custom BadParameter exception that conditionally logs BadParameter exceptions."""
 
-    def __init__(self, message: str, file_logs: bool = False):
+    def __init__(self, message: str):
         """
-        Custom BadParameter exception that conditionally logs BadParameter exceptions
-        to a log if file_logs is True.
+        Custom BadParameter exception that styles console message.
 
         Args:
             message: Error message to display.
-            file_logs: Flag to that enables logging exceptions to a log.
-                         Default is False (logs are not enabled.)
         """
         super().__init__(message)
-        self.file_logs = file_logs
-
-        if self.file_logs:
-            _log_error(message)
 
     def format_message(self) -> str:
         return click.style(super().format_message(), fg="red")
@@ -70,45 +66,48 @@ class CustomBadParameter(click.BadParameter):
 class CustomEcho:
     """Custom Echo that conditionally logs echo statements."""
 
-    def __init__(self, message: str, file_logs: bool = False):
+    def __init__(self, message: str):
         """
-        Custom echo class that conditionally logs echo statements to a log if
-        file_logs is True.
+        Custom echo class that conditionally logs echo statements to a log
+        if --file-log option has been enabled and FileHandler setup.
 
         Args:
             message: Message to display.
-            file_logs: Flag to that enables logging echo statements to a file log.
-                       Default is False (logs are not enabled.)
         """
         click.echo(message)
-        self.file_logs = file_logs
 
-        if self.file_logs:
+        should_log = any(
+            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
+        )
+        if should_log:
             self._log_info(message)
 
     @staticmethod
     def _log_info(message):
-        """Log the 'INFO' message to the log file."""
-        logging.info(message, stacklevel=3)
+        """Log the 'INFO' message."""
+        logging.info(message)
 
 
 class CustomWarning:
-    """Custom stylized echo class that conditionally logs warning statements."""
+    """
+    Custom stylized echo class that conditionally logs warning statements
+    if --file-log option has been enabled and FileHandler setup.
+    """
 
-    def __init__(self, message: str, file_logs: bool = False):
+    def __init__(self, message: str):
         """
-        Custom stylized echo class that conditionally logs warning statements to a log
-        if file_logs is True.
-
         Args:
             message: Message to display.
-            file_logs: Flag to that enables logging warning statements to a file log.
-                       Default is False (logs are not enabled.)
         """
         click.secho(f"WARNING: {message}", fg="yellow", err=True)
-        self.file_logs = file_logs
+
+        should_log = any(
+            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
+        )
+        if should_log:
+            self._log_warning(message)
 
     @staticmethod
     def _log_warning(message):
         """Log the 'WARNING' message to the log file."""
-        logging.warning(message, stacklevel=3)
+        logging.warning(message)

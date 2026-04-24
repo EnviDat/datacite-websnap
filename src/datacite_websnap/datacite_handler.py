@@ -19,7 +19,6 @@ def get_url_json(
     url: str,
     params: dict | None = None,
     timeout: int = TIMEOUT,
-    file_logs: bool = False,
 ) -> Any:
     """
     Return the JSON encoded part of a response if it exists as a Python object.
@@ -29,38 +28,41 @@ def get_url_json(
         url: The URL to call return the JSON response from.
         params: An optional dictionary of query parameters to send to the URL.
         timeout: Timeout of request in seconds.
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
-        response = requests.get(url, timeout=timeout, params=params or {})
+        response = requests.get(url, timeout=timeout, params=params)
         response.raise_for_status()
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
-        raise CustomClickException(f"HTTP error: {http_err}", file_logs)
+        raise CustomClickException(f"HTTP error while calling URL'{url}': {http_err}")
+
+    except requests.exceptions.JSONDecodeError:
+        raise CustomClickException(
+            f"Invalid response for URL '{url}': The server did not return valid JSON.",
+        )
 
     except requests.exceptions.ConnectionError:
         raise CustomClickException(
-            "Network error: Unable to connect to the API.", file_logs
+            f"Network error for URL '{url}': Unable to connect to the API."
         )
 
     except requests.exceptions.Timeout:
         raise CustomClickException(
-            f"Request timeout: The API did not respond within the timeout of "
-            f"{timeout} seconds.",
-            file_logs,
+            f"Request timeout for URL '{url}': The API did not respond within "
+            f"the timeout of {timeout} seconds."
         )
 
     except requests.exceptions.RequestException as req_err:
-        raise CustomClickException(f"API request failed: {req_err}", file_logs)
+        raise CustomClickException(f"API request failed for URL '{url}': {req_err}")
 
     except Exception as err:
-        raise CustomClickException(f"Unexpected error: {err}", file_logs)
+        raise CustomClickException(
+            f"Unexpected error occurred while calling URL '{url}': {err}"
+        ) from err
 
 
-def get_datacite_client(
-    api_url: str, client_id: str, file_logs: bool = False
-) -> dict[str, Any]:
+def get_datacite_client(api_url: str, client_id: str) -> dict[str, Any]:
     """
     Return client response from DataCite API.
     Raises error if client id does not return a successful response from the
@@ -72,11 +74,8 @@ def get_datacite_client(
     Args:
         api_url: The DataCite base URL to call the API with.
         client_id: The DataCite API client id that will be used to query DataCite DOIs.
-        file_logs: If True enables logging info messages and errors to a file log.
     """
-    return get_url_json(
-        url=f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}", file_logs=file_logs
-    )
+    return get_url_json(url=f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}")
 
 
 def get_datacite_dois(
@@ -84,7 +83,6 @@ def get_datacite_dois(
     client_id: str,
     doi_prefix: tuple[str, ...] = (),
     page_size: int = DATACITE_PAGE_SIZE,
-    file_logs: bool = False,
 ) -> dict[str, Any]:
     """
     Returns a list of DOIs as a response from DataCite API.
@@ -101,7 +99,6 @@ def get_datacite_dois(
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
         page_size: DataCite page size is the number of records
                    returned per page using pagination.
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     url = f"{api_url}{DATACITE_API_DOIS_ENDPOINT}"
     params = {}
@@ -120,7 +117,7 @@ def get_datacite_dois(
     params["page[size"] = page_size
 
     # Get response for first page
-    return get_url_json(url, params=params, timeout=TIMEOUT, file_logs=file_logs)
+    return get_url_json(url, params=params, timeout=TIMEOUT)
 
 
 def extract_doi_xml(datacite_response: dict) -> list[dict]:
@@ -156,7 +153,6 @@ def get_datacite_list_dois_xml(
     client_id: str | None = None,
     doi_prefix: tuple[str, ...] = (),
     page_size: int = DATACITE_PAGE_SIZE,
-    file_logs: bool = False,
 ) -> list[dict]:
     """
     Return a list of dictionaries in the following format:
@@ -178,33 +174,30 @@ def get_datacite_list_dois_xml(
         doi_prefix: The DOI prefixes used to query DataCite DOIs.
         page_size: DataCite page size is the number of records
                    returned per page using pagination.
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     # Get response for first page
-    resp_obj = get_datacite_dois(api_url, client_id, doi_prefix, page_size, file_logs)
+    resp_obj = get_datacite_dois(api_url, client_id, doi_prefix, page_size)
 
     # Echo total number of returned DOIs
     total_records = resp_obj.get("meta", {}).get("total")
     CustomEcho(
-        f"Total number of DataCite DOIs returned for search query: {total_records}",
-        file_logs,
+        f"Total number of DataCite DOIs returned for search query: {total_records}"
     )
 
     # Handle 0 records returned
     if total_records == 0:
         raise CustomClickException(
             "0 records returned for search query, review '--client-id' and/or "
-            "'--doi-prefix' arguments",
-            file_logs,
+            "'--doi-prefix' arguments"
         )
 
     # Echo DOIs per page
-    CustomEcho(f"Number of DOIs per page: {page_size}", file_logs)
+    CustomEcho(f"Number of DOIs per page: {page_size}")
 
     # Echo page being currently processed
     pages = 1
     total_pages = resp_obj.get("meta", {}).get("totalPages")
-    CustomEcho(f"Currently processing page {pages}/{total_pages}...", file_logs)
+    CustomEcho(f"Currently processing page {pages}/{total_pages}...")
 
     # Extract DOIs and XML strings for first page
     xml_lst = []
@@ -214,9 +207,7 @@ def get_datacite_list_dois_xml(
     # Extract DOIs and XML strings for subsequent pages
     while True:
         if pages < total_pages:
-            CustomEcho(
-                f"Currently processing page {pages + 1}/{total_pages}...", file_logs
-            )
+            CustomEcho(f"Currently processing page {pages + 1}/{total_pages}...")
 
         # Get next link using cursor-based pagination
         next_link = resp_obj.get("links", {}).get("next")
@@ -235,8 +226,7 @@ def get_datacite_list_dois_xml(
         raise CustomClickException(
             f"Total number of XML records retrieved ({xml_lst_length}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}, "
-            f"for DataCite API call see {next_link}",
-            file_logs,
+            f"for DataCite API call see {next_link}"
         )
 
     return xml_lst

@@ -19,20 +19,19 @@ from .logger import CustomClickException, CustomEcho
 from .config import TIMEOUT
 
 
-def decode_base64_xml(encoded_xml: str, file_logs: bool = False) -> bytes:
+def decode_base64_xml(encoded_xml: str) -> bytes:
     """
     Decodes a Base64-encoded XML string and returns it as a bytes object.
 
     Args:
         encoded_xml: Base64-encoded XML string.
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         return base64.b64decode(encoded_xml)
     except binascii.Error:
-        raise CustomClickException("binascii Error: Unable to decode XML", file_logs)
+        raise CustomClickException("binascii Error: Unable to decode XML")
     except Exception as err:
-        raise CustomClickException(f"Unexpected error: {err}", file_logs)
+        raise CustomClickException(f"Unexpected error: {err}")
 
 
 def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
@@ -61,7 +60,7 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
 
 
 def create_s3_client(
-    endpoint_url: str, bucket: str, profile_name: str = None, file_logs: bool = False
+    endpoint_url: str, bucket: str, profile_name: str = None
 ) -> boto3.Session.client:
     """
     Returns a validated Boto3 S3 client created using a shared AWS credentials file.
@@ -75,7 +74,6 @@ def create_s3_client(
                 written in. Must have access to bucket with passed S3 credentials.
         profile_name: The name of a profile to use for S3 credentials file.
                       If not given, then the default profile is used.
-        file_logs: If True enables logging info messages and errors to a file log.
 
     Raises:
         CustomClickException: If the client could not be created.
@@ -84,7 +82,11 @@ def create_s3_client(
         boto3.Session.client: Configured S3 client
     """
     try:
-        session = boto3.Session(profile_name=profile_name) if profile_name else boto3.Session()
+        session = (
+            boto3.Session(profile_name=profile_name)
+            if profile_name
+            else boto3.Session()
+        )
 
         client = session.client(
             service_name="s3",
@@ -99,25 +101,23 @@ def create_s3_client(
         )
 
     except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
-        raise CustomClickException(f"Failed to create S3 client: {e}", file_logs)
+        raise CustomClickException(f"Failed to create S3 client: {e}")
 
     try:
         # Validate credentials, endpoint and access to an existing bucket
         client.head_bucket(Bucket=bucket)
-    except ClientError as e:
-        raise CustomClickException(f"S3 credentials, endpoint and/or bucket are "
-                                   f"invalid (or credentials are not valid for bucket):"
-                                   f" {e}", file_logs)
+    except (ClientError, EndpointConnectionError) as e:
+        raise CustomClickException(
+            f"S3 credentials, endpoint and/or bucket are "
+            f"invalid (or credentials are not valid for bucket):"
+            f" {e}"
+        )
 
     return client
 
 
 def s3_client_put_object(
-    client: boto3.Session.client,
-    body: bytes,
-    bucket: str,
-    key: str,
-    file_logs: bool = False,
+    client: boto3.Session.client, body: bytes, bucket: str, key: str
 ) -> None:
     """
     Copy string as an S3 object to a S3 bucket.
@@ -129,38 +129,34 @@ def s3_client_put_object(
         body: bytes object that will be written as an S3 object's data
         bucket: name of bucket that object should be written in
         key: name (or path) of the object in the S3 bucket
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     err_msg = f"Failed to export key {key}: "
+
     try:
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
-    except ClientError as err:
-        raise CustomClickException(f"{err_msg}boto3 ClientError: {err}", file_logs)
-    except Exception as err:
-        raise CustomClickException(f"{err_msg}Unexpected error: {err}", file_logs)
 
-    if (
-        status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    ) == 200:
-        CustomEcho(
-            f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}",
-            file_logs,
-        )
-    else:
-        raise CustomClickException(
-            f"{err_msg}S3 client returned unexpected HTTP response "
-            f"status code {status_code} for key '{key}'",
-            file_logs,
-        )
+        if (
+            status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        ) == 200:
+            CustomEcho(
+                f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
+            )
+        else:
+            raise CustomClickException(
+                f"{err_msg}S3 client returned unexpected HTTP response "
+                f"status code {status_code} for key '{key}'"
+            )
+
+    except ClientError as err:
+        raise CustomClickException(f"{err_msg}boto3 ClientError: {err}")
+    except Exception as err:
+        raise CustomClickException(f"{err_msg}Unexpected error: {err}")
 
     return
 
 
 def write_local_file(
-    content_bytes: bytes,
-    filename: str,
-    directory_path: str | None = None,
-    file_logs: bool = False,
+    content_bytes: bytes, filename: str, directory_path: str | None = None
 ) -> None:
     """
     Write a bytes object to a local file.
@@ -169,7 +165,6 @@ def write_local_file(
         content_bytes: bytes object that will be written to a local file
         filename: name of file to write, be sure to include desired extension
         directory_path: path to directory to write the file in
-        file_logs: If True enables logging info messages and errors to a file log.
     """
     try:
         if directory_path:
@@ -181,10 +176,10 @@ def write_local_file(
             f.write(content_bytes)
 
         posix_file_path = file_path.as_posix()
-        CustomEcho(f"Wrote file: {posix_file_path}", file_logs)
+        CustomEcho(f"Wrote file: {posix_file_path}")
 
     except IOError as io_err:
-        raise CustomClickException(f"IOError: {io_err}", file_logs)
+        raise CustomClickException(f"IOError: {io_err}")
 
     except Exception as err:
-        raise CustomClickException(f"Unexpected error: {err}", file_logs)
+        raise CustomClickException(f"Unexpected error: {err}")
