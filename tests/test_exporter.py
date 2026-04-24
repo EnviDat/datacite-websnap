@@ -58,6 +58,7 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
 
+
 @patch("boto3.Session.client")
 def test_s3_client_put_object_success(mock_boto3_client):
     mock_client = MagicMock()
@@ -199,7 +200,7 @@ def test_create_s3_client_invalid_bucket(mock_session_class):
     mock_session_inst.client.return_value = mock_client
 
     # Simulate a 404/403 ClientError
-    error_response = {'Error': {'Code': '404', 'Message': 'Not Found'}}
+    error_response = {"Error": {"Code": "404", "Message": "Not Found"}}
     mock_client.head_bucket.side_effect = ClientError(error_response, "HeadBucket")
 
     with pytest.raises(CustomClickException) as exc:

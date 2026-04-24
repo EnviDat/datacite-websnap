@@ -73,8 +73,9 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
     # We need to mock these to prevent the loop from crashing
     with (
         patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>"),
-        patch("datacite_websnap.cli.format_xml_file_name",
-              return_value="formatted.xml"),
+        patch(
+            "datacite_websnap.cli.format_xml_file_name", return_value="formatted.xml"
+        ),
         patch("datacite_websnap.cli.get_datacite_client"),
         patch("datacite_websnap.cli.validate_at_least_one_query_param"),
         patch("datacite_websnap.cli.validate_bucket"),
@@ -87,12 +88,17 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
             cli,
             [
                 "export",
-                "--client-id", "test.id",
-                "--destination", "S3",
-                "--bucket", "my-bucket",
-                "--endpoint-url", "https://s3.com",
-                "--profile-name", "my-profile",
-                "--file-logs"
+                "--client-id",
+                "test.id",
+                "--destination",
+                "S3",
+                "--bucket",
+                "my-bucket",
+                "--endpoint-url",
+                "https://s3.com",
+                "--profile-name",
+                "my-profile",
+                "--file-logs",
             ],
         )
 
@@ -106,7 +112,7 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
         body=b"<xml/>",
         bucket="my-bucket",
         key="formatted.xml",
-        file_logs=True
+        file_logs=True,
     )
 
 
@@ -126,8 +132,9 @@ def test_s3_client_not_created_when_local(mock_create_s3):
         patch("datacite_websnap.cli.validate_key_prefix"),
         patch("datacite_websnap.cli.validate_endpoint_url"),
     ):
-        runner.invoke(cli,
-                      ["export", "--client-id", "test.id", "--destination", "local"])
+        runner.invoke(
+            cli, ["export", "--client-id", "test.id", "--destination", "local"]
+        )
 
     # Assert create_s3_client was never called
     mock_create_s3.assert_not_called()

@@ -65,6 +65,7 @@ def test_validate_endpoint_url_invalid():
     with pytest.raises(CustomBadParameter):
         validate_endpoint_url(None, "S3")
 
+
 def test_validate_endpoint_url_invalid_url():
     with pytest.raises(CustomBadParameter):
         validate_endpoint_url("abc", "S3")
