@@ -3,7 +3,7 @@
 import click
 from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
-from .logger import CustomBadParameter, CustomClickException
+from .logger import CustomBadParameter
 
 
 def validate_url(ctx, param, url) -> str:
@@ -19,13 +19,15 @@ def validate_url(ctx, param, url) -> str:
     return url
 
 
-def validate_positive_int(ctx, param, value) -> int:
+def validate_page_size(ctx, param, value) -> int:
     """
     Validate and return integer.
-    Raises BadParameter exception if value is not positive.
+    Raises BadParameter exception if value is not positive or is greater than 1000.
     """
-    if value < 0:
-        raise click.BadParameter(f"{value} must be positive integer")
+    if value <= 0 or value > 1000:
+        raise click.BadParameter(
+            f"{value} must be positive integer no greater than 1000."
+        )
 
     return value
 
@@ -116,22 +118,3 @@ def validate_key_prefix(key_prefix, destination) -> str:
         )
 
     return key_prefix
-
-
-def validate_single_string_key_value(d: dict) -> None:
-    """
-    Validate that dictionary has exactly one key-value pair and both are strings.
-    Raises ClickException if validation fails.
-    """
-    if len(d) == 1:
-        key, value = list(d.items())[0]
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise CustomClickException(
-                f"Both key and value must be strings in dictionary: {d}"
-            )
-    else:
-        raise CustomClickException(
-            f"Dictionary must have only 1 key-value pair, currently has {len(d)} pairs"
-        )
-
-    return

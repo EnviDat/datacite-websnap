@@ -5,6 +5,7 @@ Handles interactions with DataCite API.
 from typing import Any
 
 import requests
+from pydantic import ValidationError
 
 from .config import (
     DATACITE_API_CLIENTS_ENDPOINT,
@@ -13,6 +14,7 @@ from .config import (
     DATACITE_PAGE_SIZE,
 )
 from .logger import CustomClickException, CustomEcho
+from .models import DoisResponse
 
 
 def get_url_json(
@@ -120,7 +122,16 @@ def get_datacite_dois(
     return get_url_json(url, params=params, timeout=TIMEOUT)
 
 
-def extract_doi_xml(datacite_response: dict) -> list[dict]:
+def _validate_dois_response(raw: dict) -> DoisResponse:
+    try:
+        return DoisResponse.model_validate(raw)
+    except ValidationError as err:
+        raise CustomClickException(
+            f"Unexpected response format from DataCite API: {err}"
+        ) from err
+
+
+def extract_doi_xml(datacite_response: DoisResponse) -> list[dict]:
     """
     Returns a list of dictionaries with DOIs and extracted XML strings from a
     DataCite API data response object.
@@ -134,16 +145,13 @@ def extract_doi_xml(datacite_response: dict) -> list[dict]:
     DataCite API documentation: https://support.datacite.org/reference/get_dois
 
     Args:
-        datacite_response: DataCite API data response object.
+        datacite_response: Validated DataCite API data response object.
     """
-    data = datacite_response.get("data", [])
     doi_xml = []
 
-    for obj in data:
-        if (xml := obj.get("attributes", {}).get("xml")) and (
-            doi := obj.get("attributes", {}).get("doi")
-        ):
-            doi_xml.append({doi: xml})
+    for obj in datacite_response.data:
+        if obj.attributes.xml is not None:
+            doi_xml.append({obj.attributes.doi: obj.attributes.xml})
 
     return doi_xml
 
@@ -175,11 +183,13 @@ def get_datacite_list_dois_xml(
         page_size: DataCite page size is the number of records
                    returned per page using pagination.
     """
-    # Get response for first page
-    resp_obj = get_datacite_dois(api_url, client_id, doi_prefix, page_size)
+    # Get and validate response for first page
+    resp = _validate_dois_response(
+        get_datacite_dois(api_url, client_id, doi_prefix, page_size)
+    )
 
     # Echo total number of returned DOIs
-    total_records = resp_obj.get("meta", {}).get("total")
+    total_records = resp.meta.total
     CustomEcho(
         f"Total number of DataCite DOIs returned for search query: {total_records}"
     )
@@ -196,12 +206,12 @@ def get_datacite_list_dois_xml(
 
     # Echo page being currently processed
     pages = 1
-    total_pages = resp_obj.get("meta", {}).get("totalPages")
+    total_pages = resp.meta.totalPages
     CustomEcho(f"Currently processing page {pages}/{total_pages}...")
 
     # Extract DOIs and XML strings for first page
     xml_lst = []
-    if resp_xml_lst := extract_doi_xml(resp_obj):
+    if resp_xml_lst := extract_doi_xml(resp):
         xml_lst.extend(resp_xml_lst)
 
     # Extract DOIs and XML strings for subsequent pages
@@ -210,12 +220,14 @@ def get_datacite_list_dois_xml(
             CustomEcho(f"Currently processing page {pages + 1}/{total_pages}...")
 
         # Get next link using cursor-based pagination
-        next_link = resp_obj.get("links", {}).get("next")
+        next_link = resp.links.next
         if not next_link:
             break
 
-        resp_obj = get_url_json(next_link, params={"detail": "true"}, timeout=TIMEOUT)
-        if resp_xml_lst := extract_doi_xml(resp_obj):
+        resp = _validate_dois_response(
+            get_url_json(next_link, params={"detail": "true"}, timeout=TIMEOUT)
+        )
+        if resp_xml_lst := extract_doi_xml(resp):
             xml_lst.extend(resp_xml_lst)
 
         pages += 1
