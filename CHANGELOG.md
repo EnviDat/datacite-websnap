@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## 2.0.2 (2026-04-27)
+### Refactor
+- implement Pydantic models for DataCite API response handlers
+- simplify log setup
+- adjust `--page-size` validator
+### Tests
+- update tests to cover refactored validators
+
 ## 2.0.1 (2026-04-24)
 ### Refactor
 - update custom log functions to improve file log handling
