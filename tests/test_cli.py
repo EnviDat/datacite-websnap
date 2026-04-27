@@ -30,7 +30,6 @@ def test_export_command_local_success(tmp_path):
         patch("datacite_websnap.cli.get_datacite_client"),
         patch("datacite_websnap.cli.write_local_file") as mock_write_file,
         patch("datacite_websnap.cli.CustomEcho"),
-        patch("datacite_websnap.cli.validate_single_string_key_value"),
         patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<hello>"),
         patch(
             "datacite_websnap.cli.format_xml_file_name", return_value="10.123_abc.xml"
@@ -81,7 +80,6 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
         patch("datacite_websnap.cli.validate_key_prefix"),
         patch("datacite_websnap.cli.validate_endpoint_url"),
         patch("datacite_websnap.cli.validate_directory_path"),
-        patch("datacite_websnap.cli.validate_single_string_key_value"),
     ):
         runner.invoke(
             cli,
@@ -149,8 +147,8 @@ def test_export_command_error_early_exit(tmp_path):
         patch("datacite_websnap.cli.CustomWarning") as mock_warning,
         patch("datacite_websnap.cli.CustomEcho"),
         patch(
-            "datacite_websnap.cli.validate_single_string_key_value",
-            side_effect=CustomClickException("Validation failed"),
+            "datacite_websnap.cli.decode_base64_xml",
+            side_effect=CustomClickException("Decode failed"),
         ),
     ):
         result = runner.invoke(
@@ -188,8 +186,8 @@ def test_export_command_error_continue(tmp_path):
         patch("datacite_websnap.cli.CustomWarning") as mock_warning,
         patch("datacite_websnap.cli.CustomEcho"),
         patch(
-            "datacite_websnap.cli.validate_single_string_key_value",
-            side_effect=CustomClickException("Validation failed"),
+            "datacite_websnap.cli.decode_base64_xml",
+            side_effect=CustomClickException("Decode failed"),
         ),
     ):
         result = runner.invoke(

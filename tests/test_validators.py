@@ -5,14 +5,12 @@ from click import BadParameter
 
 from datacite_websnap.validators import (
     validate_url,
-    validate_positive_int,
+    validate_page_size,
     validate_at_least_one_query_param,
     validate_bucket,
     validate_directory_path,
     validate_key_prefix,
-    validate_single_string_key_value,
     CustomBadParameter,
-    CustomClickException,
     validate_endpoint_url,
 )
 
@@ -27,13 +25,17 @@ def test_validate_url_invalid():
         validate_url(None, None, "http://example.com")
 
 
-def test_validate_positive_int_valid():
-    assert validate_positive_int(None, None, 10) == 10
+def test_validate_page_size_valid():
+    assert validate_page_size(None, None, 10) == 10
+    assert validate_page_size(None, None, 1000) == 1000
 
 
-def test_validate_positive_int_invalid():
+def test_validate_page_size_invalid():
     with pytest.raises(BadParameter):
-        validate_positive_int(None, None, -5)
+        validate_page_size(None, None, -5)
+
+    with pytest.raises(BadParameter):
+        validate_page_size(None, None, 1001)
 
 
 def test_validate_at_least_one_query_param_valid():
@@ -89,17 +91,3 @@ def test_validate_key_prefix_valid():
 def test_validate_key_prefix_invalid():
     with pytest.raises(CustomBadParameter):
         validate_key_prefix("not-allowed", "local")
-
-
-def test_validate_single_string_key_value_valid():
-    validate_single_string_key_value({"key": "value"})
-
-
-def test_validate_single_string_key_value_invalid_non_string():
-    with pytest.raises(CustomClickException):
-        validate_single_string_key_value({1: "value"})
-
-
-def test_validate_single_string_key_value_invalid_multiple_pairs():
-    with pytest.raises(CustomClickException):
-        validate_single_string_key_value({"a": "b", "c": "d"})
