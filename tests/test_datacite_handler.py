@@ -11,6 +11,7 @@ from datacite_websnap.datacite_handler import (
     get_datacite_list_dois_xml,
     CustomClickException,
 )
+from datacite_websnap.models import DoisResponse
 
 
 def test_get_url_json_success():
@@ -86,19 +87,40 @@ def test_get_datacite_client():
 
 
 def test_extract_doi_xml_valid():
-    data = {
-        "data": [
-            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
-        ]
-    }
+    resp = DoisResponse.model_validate(
+        {
+            "data": [
+                {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
+                {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+            ],
+            "meta": {"total": 2, "totalPages": 1},
+            "links": {},
+        }
+    )
     expected = [{"10.123/abc": "<xml1>"}, {"10.123/def": "<xml2>"}]
-    assert extract_doi_xml(data) == expected
+    assert extract_doi_xml(resp) == expected
 
 
-def test_extract_doi_xml_missing_fields():
-    data = {"data": [{"attributes": {"doi": "10.123/abc"}}]}
-    assert extract_doi_xml(data) == []
+def test_extract_doi_xml_missing_xml():
+    resp = DoisResponse.model_validate(
+        {
+            "data": [{"attributes": {"doi": "10.123/abc"}}],
+            "meta": {"total": 1, "totalPages": 1},
+            "links": {},
+        }
+    )
+    assert extract_doi_xml(resp) == []
+
+
+def test_get_datacite_list_dois_xml_invalid_response():
+    with patch(
+        "datacite_websnap.datacite_handler.get_datacite_dois",
+        return_value={"unexpected": "shape"},
+    ):
+        with pytest.raises(CustomClickException, match="Unexpected response format"):
+            get_datacite_list_dois_xml(
+                api_url="https://api.example.org", client_id="test-client"
+            )
 
 
 def test_get_datacite_list_dois_xml_single_page():
