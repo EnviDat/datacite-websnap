@@ -24,8 +24,7 @@ from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
     validate_url,
     validate_at_least_one_query_param,
-    validate_positive_int,
-    validate_single_string_key_value,
+    validate_page_size,
     validate_bucket,
     validate_key_prefix,
     validate_directory_path,
@@ -134,7 +133,7 @@ def cli():
     default=DATACITE_PAGE_SIZE,
     help=f"Number of records returned per page of DataCite API response using "
     f"pagination (default: {DATACITE_PAGE_SIZE})",
-    callback=validate_positive_int,
+    callback=validate_page_size,
 )
 def datacite_bulk_export(
     doi_prefix: tuple[str, ...] = (),
@@ -159,8 +158,7 @@ def datacite_bulk_export(
     command also supports downloading the records to a local machine.
     """
     # Set up logging
-    if file_logs:
-        setup_logging(log_level)
+    setup_logging(log_level, file_logs)
 
     # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id)
@@ -194,7 +192,6 @@ def datacite_bulk_export(
     # Export XML files for each record
     for doi_xml_dict in xml_list:
         try:
-            validate_single_string_key_value(doi_xml_dict)
             doi, xml_str = next(iter(doi_xml_dict.items()))
             xml_filename = format_xml_file_name(doi, key_prefix)
             xml_decoded = decode_base64_xml(xml_str)
@@ -222,5 +219,3 @@ def datacite_bulk_export(
                 continue
 
     CustomEcho("**** Finished DataCite bulk export ****")
-
-    return
