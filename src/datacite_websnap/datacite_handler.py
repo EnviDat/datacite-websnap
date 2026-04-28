@@ -37,7 +37,7 @@ def get_url_json(
         return response.json()
 
     except requests.exceptions.HTTPError as http_err:
-        raise CustomClickException(f"HTTP error while calling URL'{url}': {http_err}")
+        raise CustomClickException(f"HTTP error while calling URL '{url}': {http_err}")
 
     except requests.exceptions.JSONDecodeError:
         raise CustomClickException(
@@ -116,7 +116,7 @@ def get_datacite_dois(
 
     # Params needed for cursor-based pagination
     params["page[cursor]"] = 1
-    params["page[size"] = page_size
+    params["page[size]"] = page_size
 
     # Get response for first page
     return get_url_json(url, params=params, timeout=TIMEOUT)
