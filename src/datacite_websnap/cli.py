@@ -24,8 +24,9 @@ import functools
 from pprint import pprint
 
 import click
-from click_help_colors import HelpColorsGroup
 from typing import Literal
+
+import click_extra
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
@@ -49,12 +50,10 @@ from .exporter import (
 
 
 # TODO update docstring with doi-export command info
-@click.group(
-    cls=HelpColorsGroup,
-    help_headers_color="yellow",
-    help_options_color="green",
+@click_extra.group(
+    params=[],
     context_settings={
-        "max_content_width": min(shutil.get_terminal_size().columns, 120)
+        "max_content_width": min(shutil.get_terminal_size().columns, 120),
     },
 )
 def cli():
