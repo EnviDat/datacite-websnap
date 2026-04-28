@@ -38,9 +38,9 @@ To access CLI documentation:
 datacite-websnap --help
 ```
 
-To access more detailed documentation for the `export` command:
+To access more detailed documentation for the `bulk-export` command:
 ```bash
-datacite-websnap export --help
+datacite-websnap bulk-export --help
 ```
 
 ## CLI Options
@@ -48,7 +48,7 @@ datacite-websnap export --help
 <details>
   <summary>Click to unfold</summary>
 
-### Command: `export`
+### Command: `bulk-export`
 
 Bulk export DataCite XML metadata records that correspond to the records for a particular DataCite repository and/or DOI prefix.
 
@@ -165,7 +165,7 @@ To export the records to an S3 bucket:
 - Write XML records to a bucket called "opendata" 
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --endpoint-url "https://examplecloud.com" --bucket opendata 
+datacite-websnap bulk-export --client-id ethz.wsl --endpoint-url "https://examplecloud.com" --bucket opendata 
 ```
 
 #### Advanced Usage Example
@@ -177,7 +177,7 @@ datacite-websnap export --client-id ethz.wsl --endpoint-url "https://exampleclou
 - Enable logging to a file
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --profile-name dev --endpoint-url "https://examplecloud.com" --bucket opendata --key-prefix wsl --file-logs 
+datacite-websnap bulk-export --client-id ethz.wsl --profile-name dev --endpoint-url "https://examplecloud.com" --bucket opendata --key-prefix wsl --file-logs 
 ```
 
 </details>
@@ -203,7 +203,7 @@ To write the records locally:
 - Write XML records locally to a directory called "opendata/wsl"
 
 ```bash
-datacite-websnap export --client-id ethz.wsl --destination local --directory-path "opendata/wsl"
+datacite-websnap bulk-export --client-id ethz.wsl --destination local --directory-path "opendata/wsl"
 ```
 
 </details>
@@ -245,7 +245,7 @@ To enable file logs the following option **must** be enabled: `--file-logs`
 
 ### Example   
 ```bash
-datacite-websnap export --client-id ethz.wsl --bucket opendata --file-logs            
+datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --file-logs            
 ```
 
 ### Configuration: Logs
