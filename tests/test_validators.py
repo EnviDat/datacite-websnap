@@ -15,7 +15,6 @@ from datacite_websnap.validators import (
 )
 
 
-# --- validate_url ---
 def test_validate_url_valid():
     assert validate_url(None, None, "https://example.com") == "https://example.com"
 

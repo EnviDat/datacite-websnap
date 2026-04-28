@@ -9,13 +9,13 @@ from datacite_websnap.logger import CustomClickException
 
 def test_export_command_help():
     runner = click.testing.CliRunner()
-    result = runner.invoke(cli, ["export", "--help"])
+    result = runner.invoke(cli, ["bulk-export", "--help"])
     assert result.exit_code == 0
     assert "Usage" in result.output
     assert "--client-id" in result.output
 
 
-def test_export_command_local_success(tmp_path):
+def test_bulk_export_command_local_success(tmp_path):
     runner = click.testing.CliRunner()
 
     mock_xml_list = [
@@ -38,7 +38,7 @@ def test_export_command_local_success(tmp_path):
         result = runner.invoke(
             cli,
             [
-                "export",
+                "bulk-export",
                 "--client-id",
                 "test-client",
                 "--destination",
@@ -55,7 +55,7 @@ def test_export_command_local_success(tmp_path):
 @patch("datacite_websnap.cli.create_s3_client")
 @patch("datacite_websnap.cli.s3_client_put_object")
 @patch("datacite_websnap.cli.get_datacite_list_dois_xml")
-def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
+def test_bulk_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
     """
     Tests the creation of the S3 client and the subsequent put_object call.
     """
@@ -84,7 +84,7 @@ def test_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
         runner.invoke(
             cli,
             [
-                "export",
+                "bulk-export",
                 "--client-id",
                 "test.id",
                 "--destination",
@@ -124,7 +124,7 @@ def test_s3_client_not_created_when_local(mock_create_s3):
         patch("datacite_websnap.cli.validate_endpoint_url"),
     ):
         runner.invoke(
-            cli, ["export", "--client-id", "test.id", "--destination", "local"]
+            cli, ["bulk-export", "--client-id", "test.id", "--destination", "local"]
         )
 
     # Assert create_s3_client was never called
@@ -154,7 +154,7 @@ def test_export_command_error_early_exit(tmp_path):
         result = runner.invoke(
             cli,
             [
-                "export",
+                "bulk-export",
                 "--client-id",
                 "test-client",
                 "--destination",
@@ -170,7 +170,7 @@ def test_export_command_error_early_exit(tmp_path):
     mock_warning.assert_not_called()
 
 
-def test_export_command_error_continue(tmp_path):
+def test_bulk_export_command_error_continue(tmp_path):
     runner = click.testing.CliRunner()
 
     mock_xml_list = [
@@ -193,7 +193,7 @@ def test_export_command_error_continue(tmp_path):
         result = runner.invoke(
             cli,
             [
-                "export",
+                "bulk-export",
                 "--client-id",
                 "test-client",
                 "--destination",

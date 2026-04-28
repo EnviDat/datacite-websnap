@@ -119,6 +119,19 @@ def test_s3_client_put_object_non_200_status():
         )
 
 
+def test_s3_client_put_object_missing_response_metadata():
+    mock_client = MagicMock()
+    mock_client.put_object.return_value = {}
+
+    with pytest.raises(CustomClickException, match="Missing ResponseMetadata"):
+        s3_client_put_object(
+            client=mock_client,
+            body=b"<xml>fail</xml>",
+            bucket="test-bucket",
+            key="missing_metadata.xml",
+        )
+
+
 def test_write_local_file_success(tmp_path):
     content = b"<xml>test</xml>"
     filename = "test.xml"
