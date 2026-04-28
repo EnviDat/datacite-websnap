@@ -6,6 +6,16 @@ from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 from .logger import CustomBadParameter
 
 
+# TODO finish
+def validate_doi(doi: str) -> str | None:
+    """
+    Validate and return doi.
+    Raises BadParameter exception if doi prefix is not in
+    supported DOI prefixes (DATACITE_DOIS_PREFIXES).
+    """
+    pass
+
+
 def validate_url(ctx: click.Context, param: click.Parameter, url: str) -> str:
     """
     Validate and return url.

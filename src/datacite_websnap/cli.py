@@ -39,7 +39,11 @@ from .validators import (
     validate_directory_path,
     validate_endpoint_url,
 )
-from .datacite_handler import get_datacite_client, get_datacite_list_dois_xml
+from .datacite_handler import (
+    get_datacite_client,
+    get_datacite_list_dois_xml,
+    get_datacite_doi,
+)
 from .exporter import (
     decode_base64_xml,
     format_xml_file_name,
@@ -279,6 +283,8 @@ def datacite_single_doi_export(
     # Set up logging
     setup_logging(log_level, file_logs)
 
+    # TODO validate DOI prefix is in accepted tuple DATACITE_DOIS_PREFIXES
+
     # Validate arguments
     validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
@@ -297,6 +303,12 @@ def datacite_single_doi_export(
     CustomEcho(f"Querying DataCite API for DOI: {doi}")
 
     # TODO call DataCite API and retrieve DOI metadata record
+    # Retrieve DataCite DOI record, raises error if DOI does not return successful
+    # response from the DataCite API
+    doi_data = get_datacite_doi(api_url, doi)
+
+    # TODO remove
+    pprint(doi_data)
 
     # TODO verify DOI metadata record passes validation
 

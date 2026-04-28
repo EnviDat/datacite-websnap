@@ -80,6 +80,22 @@ def get_datacite_client(api_url: str, client_id: str) -> dict[str, Any]:
     return get_url_json(url=f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}")
 
 
+def get_datacite_doi(api_url: str, doi: str) -> dict[str, Any]:
+    """
+    Return DOI response from DataCite API.
+    Raises error if DOI does not return a successful response from the
+    DataCite API.
+
+    For DataCite API documentation used in this call see
+    https://support.datacite.org/reference/get_dois-id
+
+    Args:
+        api_url: The DataCite base URL to call the API with.
+        doi: The DOI that will be used to query DataCite DOIs.
+    """
+    return get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
+
+
 def get_datacite_dois(
     api_url: str,
     client_id: str,

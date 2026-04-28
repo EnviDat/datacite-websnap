@@ -9,6 +9,10 @@ DATACITE_API_CLIENTS_ENDPOINT: str = "/clients"
 DATACITE_API_DOIS_ENDPOINT: str = "/dois"
 DATACITE_PAGE_SIZE: int = 250
 
+# Supported DOI prefixes for doi-export command
+#   EnviDat prefix -> 10.16904
+DATACITE_DOIS_PREFIXES: tuple[str, ...] = ("10.16904",)
+
 # Log name, format, and date format
 LOG_NAME: str = "datacite-websnap.log"
 LOG_FORMAT: str = "%(asctime)s | %(levelname)s | %(message)s"
