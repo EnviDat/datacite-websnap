@@ -7,6 +7,7 @@ import requests
 from datacite_websnap.datacite_handler import (
     get_url_json,
     get_datacite_client,
+    get_datacite_dois,
     extract_doi_xml,
     get_datacite_list_dois_xml,
     CustomClickException,
@@ -77,6 +78,27 @@ def test_get_url_json_generic_error():
     with patch("requests.get", side_effect=Exception("unexpected")):
         with pytest.raises(CustomClickException):
             get_url_json("http://example.com")
+
+
+def test_get_datacite_dois_pagination_params():
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"data": [], "meta": {}, "links": {}}
+        mock_resp.raise_for_status.return_value = None
+        mock_get.return_value = mock_resp
+
+        get_datacite_dois(
+            api_url="https://api.example.org",
+            client_id="test-client",
+            doi_prefix=("10.123",),
+            page_size=100,
+        )
+
+        _, kwargs = mock_get.call_args
+        params = kwargs["params"]
+        assert "page[size]" in params
+        assert params["page[size]"] == 100
+        assert "page[cursor]" in params
 
 
 def test_get_datacite_client():
