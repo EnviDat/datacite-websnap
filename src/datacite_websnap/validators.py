@@ -25,9 +25,7 @@ def validate_page_size(ctx: click.Context, param: click.Parameter, value: int) -
     Raises BadParameter exception if value is not positive or is greater than 1000.
     """
     if value <= 0 or value > 1000:
-        raise click.BadParameter(
-            f"{value} must be positive integer no greater than 1000."
-        )
+        raise click.BadParameter("Must be positive integer no greater than 1000.")
 
     return value
 

@@ -135,19 +135,22 @@ def s3_client_put_object(
     try:
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
 
-        if (
-            status_code := response_s3.get("ResponseMetadata", {}).get(
-                "HTTPStatusCode", 500
-            )
-        ) == 200:
-            CustomEcho(
-                f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
-            )
-        else:
+        status_code = response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+        if status_code is None:
             raise CustomClickException(
-                f"{err_msg}S3 client returned unexpected HTTP response "
-                f"status code {status_code} for key '{key}'"
+                f"{err_msg}Missing ResponseMetadata in S3 response for key '{key}'"
             )
+
+        if status_code != 200:
+            raise CustomClickException(
+                f"{err_msg}S3 client returned unexpected status code "
+                f"{status_code} for key '{key}'"
+            )
+
+        CustomEcho(
+            f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
+        )
 
     except ClientError as err:
         raise CustomClickException(f"{err_msg}boto3 ClientError: {err}")

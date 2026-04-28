@@ -9,14 +9,22 @@ Also supports exporting repository records to a local machine.
 To access general CLI help in terminal execute:
     datacite-websnap --help
 
-To access more detailed export command help in terminal execute:
-    datacite-websnap export --help
+To access more detailed bulk-export command help in terminal execute:
+    datacite-websnap bulk-export --help
 
-Example command:
-    datacite-websnap export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
+Example bulk-export command:
+    datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
+
+
+# TODO add examples for doi-export
 """
 
+import shutil
+import functools
+from pprint import pprint
+
 import click
+from click_help_colors import HelpColorsGroup
 from typing import Literal
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
@@ -40,7 +48,15 @@ from .exporter import (
 )
 
 
-@click.group()
+# TODO update docstring with doi-export command info
+@click.group(
+    cls=HelpColorsGroup,
+    help_headers_color="yellow",
+    help_options_color="green",
+    context_settings={
+        "max_content_width": min(shutil.get_terminal_size().columns, 120)
+    },
+)
 def cli():
     """
     Tool that bulk exports DataCite metadata records from a DataCite repository as
@@ -48,14 +64,72 @@ def cli():
 
     Also supports writing DataCite metadata records as XML files to a local machine.
 
-    To learn more about the 'export' command run:
-
-    datacite-websnap export --help
+    To learn more about the 'bulk-export' command run:
+    datacite-websnap bulk-export --help
     """
     pass
 
 
-@cli.command(name="export")
+# Options used by multiple commands
+def common_options(f):
+    @click.option(
+        "--destination",
+        type=click.Choice(["S3", "local"]),
+        default="S3",
+        help="Choose where to export the DataCite XML records: "
+        "'S3' (default) for an S3 bucket or 'local' for local file system.",
+    )
+    @click.option(
+        "--profile-name",
+        help="Name of a profile to use for S3 shared credentials file. "
+        "If omitted then the default profile is used.",
+    )
+    @click.option(
+        "--endpoint-url", help="Complete URL to use for the constructed S3 client."
+    )
+    @click.option(
+        "--bucket",
+        help="Name of S3 bucket that DataCite records (as S3 objects) "
+        "will be written in. Must have access to bucket with configured S3 credentials.",
+    )
+    @click.option(
+        "--key-prefix",
+        help="Name of a key prefix for objects in S3 bucket. If omitted then objects are "
+        "written in S3 bucket without a prefix.",
+    )
+    @click.option(
+        "--directory-path",
+        type=click.Path(exists=True, file_okay=False, dir_okay=True),
+        help="Only used if exporting to local destination. Path of the local directory "
+        "that DataCite records will be written in",
+    )
+    @click.option(
+        "--file-logs",
+        is_flag=True,
+        default=False,
+        help="Flag that enables logging info messages and errors to a file log.",
+    )
+    @click.option(
+        "--log-level",
+        default="INFO",
+        type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+        help="Set the logging level.",
+    )
+    @click.option(
+        "--api-url",
+        default=DATACITE_API_URL,
+        help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
+        callback=validate_url,
+    )
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+@cli.command(name="bulk-export")
+@common_options
 @click.option(
     "--doi-prefix",
     multiple=True,
@@ -66,49 +140,6 @@ def cli():
     "--client-id",
     help="DataCite repository account id used to filter results, "
     "referred to as the 'client-id' in the DataCite documentation.",
-)
-@click.option(
-    "--destination",
-    type=click.Choice(["S3", "local"]),
-    default="S3",
-    help="Choose where to export the DataCite XML records: "
-    "'S3' (default) for an S3 bucket or 'local' for local file system.",
-)
-@click.option(
-    "--profile-name",
-    help="Name of a profile to use for S3 shared credentials file. "
-    "If omitted then the default profile is used.",
-)
-@click.option(
-    "--endpoint-url", help="Complete URL to use for the constructed S3 client."
-)
-@click.option(
-    "--bucket",
-    help="Name of S3 bucket that DataCite XML records (as S3 objects) "
-    "will be written in. Must have access to bucket with configured S3 credentials.",
-)
-@click.option(
-    "--key-prefix",
-    help="Name of a key prefix for objects in S3 bucket. If omitted then objects are "
-    "written in S3 bucket without a prefix.",
-)
-@click.option(
-    "--directory-path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="Only used if exporting to local destination. Path of the local directory "
-    "that DataCite XML metadata records will be written in",
-)
-@click.option(
-    "--file-logs",
-    is_flag=True,
-    default=False,
-    help="Flag that enables logging info messages and errors to a file log.",
-)
-@click.option(
-    "--log-level",
-    default="INFO",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    help="Set the logging level.",
 )
 @click.option(
     "--early-exit",
@@ -122,12 +153,6 @@ def cli():
     "to an S3 bucket or local destination.",
 )
 @click.option(
-    "--api-url",
-    default=DATACITE_API_URL,
-    help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
-    callback=validate_url,
-)
-@click.option(
     "--page-size",
     type=int,
     default=DATACITE_PAGE_SIZE,
@@ -136,8 +161,6 @@ def cli():
     callback=validate_page_size,
 )
 def datacite_bulk_export(
-    doi_prefix: tuple[str, ...] = (),
-    client_id: str | None = None,
     destination: Literal["S3", "local"] = "S3",
     profile_name: str | None = None,
     endpoint_url: str | None = None,
@@ -146,8 +169,10 @@ def datacite_bulk_export(
     directory_path: str | None = None,
     file_logs: bool = False,
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
-    early_exit: bool = False,
     api_url: str = DATACITE_API_URL,
+    doi_prefix: tuple[str, ...] = (),
+    client_id: str | None = None,
+    early_exit: bool = False,
     page_size: int = DATACITE_PAGE_SIZE,
 ) -> None:
     """
@@ -219,3 +244,67 @@ def datacite_bulk_export(
                 continue
 
     CustomEcho("**** Finished DataCite bulk export ****")
+
+
+# TODO implement verification function from library eth-datacite-validator
+@cli.command("doi-export")
+@common_options
+@click.option(
+    "--doi",
+    required=True,
+    help="DataCite DOI XML record, JSON record, and associated resource data files "
+    "that will be exported. Only exports DataCite DOis that pass ETH Zurich "
+    "metadata standards, ",
+)
+def datacite_single_doi_export(
+    doi: str,
+    destination: Literal["S3", "local"] = "S3",
+    profile_name: str | None = None,
+    endpoint_url: str | None = None,
+    bucket: str | None = None,
+    key_prefix: str | None = None,
+    directory_path: str | None = None,
+    file_logs: bool = False,
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+    api_url: str = DATACITE_API_URL,
+) -> None:
+    """
+    Export a single DataCite DOI XML record, JSON record, and associated resource data
+    files.
+
+    Only exports DataCite DOIs that pass ETH Zurich metadata standards.
+
+    The default behavior is to export DataCite records to an S3 bucket but
+    command also supports downloading the records to a local machine.
+    """
+    # Set up logging
+    setup_logging(log_level, file_logs)
+
+    # Validate arguments
+    validate_key_prefix(key_prefix, destination)
+    validate_bucket(bucket, destination)
+    validate_endpoint_url(endpoint_url, destination)
+    validate_directory_path(directory_path, destination)
+
+    # TODO implement
+    # Validate S3 credentials and return S3 client
+    # s3_client = None
+    # if destination == "S3":
+    #     s3_client = create_s3_client(endpoint_url, bucket, profile_name)
+
+    # Log export information
+    CustomEcho("**** Starting DataCite single DOI export... ****")
+    CustomEcho(f"Export destination: {destination}")
+    CustomEcho(f"Querying DataCite API for DOI: {doi}")
+
+    # TODO call DataCite API and retrieve DOI metadata record
+
+    # TODO verify DOI metadata record passes validation
+
+    # TODO export DataCite API XML record, JSON record and associated resource data
+    #  files to local or S3
+
+    # TODO remove
+    # pprint(locals())
+
+    return
