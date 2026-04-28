@@ -136,7 +136,9 @@ def s3_client_put_object(
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
 
         if (
-            status_code := response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            status_code := response_s3.get("ResponseMetadata", {}).get(
+                "HTTPStatusCode", 500
+            )
         ) == 200:
             CustomEcho(
                 f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"

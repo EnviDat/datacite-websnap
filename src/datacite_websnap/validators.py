@@ -6,7 +6,7 @@ from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 from .logger import CustomBadParameter
 
 
-def validate_url(ctx, param, url) -> str:
+def validate_url(ctx: click.Context, param: click.Parameter, url: str) -> str:
     """
     Validate and return url.
     Raises BadParameter exception if url does not start with 'https://.'
@@ -19,7 +19,7 @@ def validate_url(ctx, param, url) -> str:
     return url
 
 
-def validate_page_size(ctx, param, value) -> int:
+def validate_page_size(ctx: click.Context, param: click.Parameter, value: int) -> int:
     """
     Validate and return integer.
     Raises BadParameter exception if value is not positive or is greater than 1000.
