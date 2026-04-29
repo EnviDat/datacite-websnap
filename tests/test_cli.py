@@ -2,8 +2,9 @@
 
 import click.testing
 from unittest.mock import patch, MagicMock
+import pytest
 
-from datacite_websnap.cli import cli
+from datacite_websnap.cli import cli, datacite_bulk_export
 from datacite_websnap.logger import CustomClickException
 
 
@@ -206,3 +207,41 @@ def test_bulk_export_command_error_continue(tmp_path):
 
     assert result.exit_code == 0
     mock_warning.assert_called_once()
+
+
+def test_bulk_export_unsupported_destination():
+    """case _ in the match block raises CustomClickException for unknown destinations."""
+    mock_xml_list = [{"10.123/abc": "PGhlbGxvPjwvaGVsbG8+"}]
+
+    with (
+        patch(
+            "datacite_websnap.cli.get_datacite_list_dois_xml",
+            return_value=mock_xml_list,
+        ),
+        patch("datacite_websnap.cli.get_datacite_client"),
+        patch("datacite_websnap.cli.validate_at_least_one_query_param"),
+        patch("datacite_websnap.cli.validate_key_prefix"),
+        patch("datacite_websnap.cli.validate_bucket"),
+        patch("datacite_websnap.cli.validate_endpoint_url"),
+        patch("datacite_websnap.cli.validate_directory_path"),
+        patch("datacite_websnap.cli.create_s3_client"),
+        patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<hello>"),
+        patch("datacite_websnap.cli.format_xml_file_name", return_value="file.xml"),
+        patch("datacite_websnap.cli.CustomEcho"),
+    ):
+        with pytest.raises(CustomClickException, match="Unsupported destination"):
+            datacite_bulk_export.callback(
+                destination="ftp",
+                profile_name=None,
+                endpoint_url=None,
+                bucket=None,
+                key_prefix=None,
+                directory_path=None,
+                file_logs=False,
+                log_level="INFO",
+                api_url="https://api.datacite.org",
+                doi_prefix=(),
+                client_id="test-client",
+                early_exit=True,
+                page_size=250,
+            )

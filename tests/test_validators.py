@@ -4,6 +4,7 @@ import pytest
 from click import BadParameter
 
 from datacite_websnap.validators import (
+    validate_doi,
     validate_url,
     validate_page_size,
     validate_at_least_one_query_param,
@@ -13,6 +14,37 @@ from datacite_websnap.validators import (
     CustomBadParameter,
     validate_endpoint_url,
 )
+
+
+def test_validate_doi_bare_doi():
+    assert validate_doi(None, None, "10.16904/envidat.504") == "10.16904/envidat.504"
+
+
+def test_validate_doi_url():
+    assert (
+        validate_doi(None, None, "https://www.doi.org/10.16904/envidat.504")
+        == "10.16904/envidat.504"
+    )
+
+
+def test_validate_doi_missing_slash():
+    with pytest.raises(BadParameter, match="does not have a '/'"):
+        validate_doi(None, None, "10.16904")
+
+
+def test_validate_doi_invalid_url():
+    with pytest.raises(BadParameter, match="not a valid URL"):
+        validate_doi(None, None, "http:///10.16904/envidat.504")
+
+
+def test_validate_doi_unsupported_prefix():
+    with pytest.raises(BadParameter, match="not one of the supported"):
+        validate_doi(None, None, "10.9999/some-record")
+
+
+def test_validate_doi_unsupported_prefix_url():
+    with pytest.raises(BadParameter, match="not one of the supported"):
+        validate_doi(None, None, "https://doi.org/10.9999/some-record")
 
 
 def test_validate_url_valid():

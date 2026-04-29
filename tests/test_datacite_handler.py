@@ -7,6 +7,7 @@ import requests
 from datacite_websnap.datacite_handler import (
     get_url_json,
     get_datacite_client,
+    get_datacite_doi,
     get_datacite_dois,
     extract_doi_xml,
     get_datacite_list_dois_xml,
@@ -106,6 +107,16 @@ def test_get_datacite_client():
         mock_get.return_value = {"client": "data"}
         result = get_datacite_client("https://api.example.org", "client123")
         assert result == {"client": "data"}
+
+
+def test_get_datacite_doi():
+    with patch("datacite_websnap.datacite_handler.get_url_json") as mock_get:
+        mock_get.return_value = {"data": {"doi": "10.16904/abc"}}
+        result = get_datacite_doi("https://api.example.org", "10.16904/abc")
+        assert result == {"data": {"doi": "10.16904/abc"}}
+        mock_get.assert_called_once_with(
+            url="https://api.example.org/dois/10.16904/abc"
+        )
 
 
 def test_extract_doi_xml_valid():
