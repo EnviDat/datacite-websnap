@@ -19,8 +19,6 @@ Example bulk-export command:
 # TODO add examples for doi-export
 """
 
-import shutil
-import functools
 from pprint import pprint
 
 import click
@@ -38,6 +36,7 @@ from .validators import (
     validate_key_prefix,
     validate_directory_path,
     validate_endpoint_url,
+    validate_doi,
 )
 from .datacite_handler import (
     get_datacite_client,
@@ -57,7 +56,7 @@ from .exporter import (
 @click_extra.group(
     params=[],
     context_settings={
-        "max_content_width": min(shutil.get_terminal_size().columns, 120),
+        "max_content_width": 120,
     },
 )
 def cli():
@@ -75,60 +74,60 @@ def cli():
 
 # Options used by multiple commands
 def common_options(f):
-    @click.option(
-        "--destination",
-        type=click.Choice(["S3", "local"]),
-        default="S3",
-        help="Choose where to export the DataCite XML records: "
-        "'S3' (default) for an S3 bucket or 'local' for local file system.",
-    )
-    @click.option(
-        "--profile-name",
-        help="Name of a profile to use for S3 shared credentials file. "
-        "If omitted then the default profile is used.",
-    )
-    @click.option(
-        "--endpoint-url", help="Complete URL to use for the constructed S3 client."
-    )
-    @click.option(
-        "--bucket",
-        help="Name of S3 bucket that DataCite records (as S3 objects) "
-        "will be written in. Must have access to bucket with configured S3 credentials.",
-    )
-    @click.option(
-        "--key-prefix",
-        help="Name of a key prefix for objects in S3 bucket. If omitted then objects are "
-        "written in S3 bucket without a prefix.",
-    )
-    @click.option(
-        "--directory-path",
-        type=click.Path(exists=True, file_okay=False, dir_okay=True),
-        help="Only used if exporting to local destination. Path of the local directory "
-        "that DataCite records will be written in",
-    )
-    @click.option(
-        "--file-logs",
-        is_flag=True,
-        default=False,
-        help="Flag that enables logging info messages and errors to a file log.",
-    )
-    @click.option(
-        "--log-level",
-        default="INFO",
-        type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-        help="Set the logging level.",
-    )
-    @click.option(
-        "--api-url",
-        default=DATACITE_API_URL,
-        help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
-        callback=validate_url,
-    )
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        return f(*args, **kwargs)
-
-    return wrapper
+    decorators = [
+        click.option(
+            "--destination",
+            type=click.Choice(["S3", "local"]),
+            default="S3",
+            help="Choose where to export the DataCite XML records: "
+            "'S3' (default) for an S3 bucket or 'local' for local file system.",
+        ),
+        click.option(
+            "--profile-name",
+            help="Name of a profile to use for S3 shared credentials file. "
+            "If omitted then the default profile is used.",
+        ),
+        click.option(
+            "--endpoint-url", help="Complete URL to use for the constructed S3 client."
+        ),
+        click.option(
+            "--bucket",
+            help="Name of S3 bucket that DataCite records (as S3 objects) "
+            "will be written in. Must have access to bucket with configured S3 credentials.",
+        ),
+        click.option(
+            "--key-prefix",
+            help="Name of a key prefix for objects in S3 bucket. If omitted then objects are "
+            "written in S3 bucket without a prefix.",
+        ),
+        click.option(
+            "--directory-path",
+            type=click.Path(exists=True, file_okay=False, dir_okay=True),
+            help="Only used if exporting to local destination. Path of the local directory "
+            "that DataCite records will be written in",
+        ),
+        click.option(
+            "--file-logs",
+            is_flag=True,
+            default=False,
+            help="Flag that enables logging info messages and errors to a file log.",
+        ),
+        click.option(
+            "--log-level",
+            default="INFO",
+            type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+            help="Set the logging level.",
+        ),
+        click.option(
+            "--api-url",
+            default=DATACITE_API_URL,
+            help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
+            callback=validate_url,
+        ),
+    ]
+    for decorator in decorators:
+        f = decorator(f)
+    return f
 
 
 @cli.command(name="bulk-export")
@@ -238,6 +237,10 @@ def datacite_bulk_export(
                         filename=xml_filename,
                         directory_path=directory_path,
                     )
+                case _:
+                    raise CustomClickException(
+                        f"Unsupported destination: {destination}"
+                    )
 
         except CustomClickException as err:
             if early_exit:
@@ -257,7 +260,8 @@ def datacite_bulk_export(
     required=True,
     help="DataCite DOI XML record, JSON record, and associated resource data files "
     "that will be exported. Only exports DataCite DOis that pass ETH Zurich "
-    "metadata standards, ",
+    "metadata standards.",
+    callback=validate_doi,
 )
 def datacite_single_doi_export(
     doi: str,
@@ -283,8 +287,6 @@ def datacite_single_doi_export(
     # Set up logging
     setup_logging(log_level, file_logs)
 
-    # TODO validate DOI prefix is in accepted tuple DATACITE_DOIS_PREFIXES
-
     # Validate arguments
     validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
@@ -308,9 +310,11 @@ def datacite_single_doi_export(
     doi_data = get_datacite_doi(api_url, doi)
 
     # TODO remove
-    pprint(doi_data)
+    # pprint(doi_data)
 
     # TODO verify DOI metadata record passes validation
+    # TODO decode doi_data 'xml' value to xml
+    # Check if DataCite DOI metadata record passes validation
 
     # TODO export DataCite API XML record, JSON record and associated resource data
     #  files to local or S3

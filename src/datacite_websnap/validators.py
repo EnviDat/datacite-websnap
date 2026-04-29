@@ -1,19 +1,11 @@
 """Validators for datacite-websnap."""
 
+from urllib.parse import urlparse
 import click
 from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
+from .config import DATACITE_DOIS_PREFIXES
 from .logger import CustomBadParameter
-
-
-# TODO finish
-def validate_doi(doi: str) -> str | None:
-    """
-    Validate and return doi.
-    Raises BadParameter exception if doi prefix is not in
-    supported DOI prefixes (DATACITE_DOIS_PREFIXES).
-    """
-    pass
 
 
 def validate_url(ctx: click.Context, param: click.Parameter, url: str) -> str:
@@ -35,9 +27,44 @@ def validate_page_size(ctx: click.Context, param: click.Parameter, value: int) -
     Raises BadParameter exception if value is not positive or is greater than 1000.
     """
     if value <= 0 or value > 1000:
-        raise click.BadParameter("Must be positive integer no greater than 1000.")
+        raise click.BadParameter(
+            f"{value} is not valid, must be a positive integer no greater than 1000."
+        )
 
     return value
+
+
+def validate_doi(ctx: click.Context, param: click.Parameter, doi: str) -> str:
+    """
+    Validate and return doi (without URL base).
+    Raises BadParameter exception if doi does not have a "/" or if doi prefix is not in
+    supported DOI prefixes (DATACITE_DOIS_PREFIXES).
+
+    Example input doi with URL base: ""https://www.doi.org/10.16904/envidat.504"
+    Return doi after passing validation: "10.16904/envidat.504"
+    """
+    if "/" not in doi:
+        raise click.BadParameter(
+            f"'{doi}' is invalid because it does not have a '/' character."
+        )
+
+    if doi.startswith("http"):
+        parsed = urlparse(doi)
+        if not parsed.netloc:
+            raise click.BadParameter(f"'{doi}' is not a valid URL.")
+        doi_bare = parsed.path.lstrip("/")
+    else:
+        doi_bare = doi
+
+    prefix = doi_bare.split("/")[0]
+
+    if prefix not in DATACITE_DOIS_PREFIXES:
+        raise click.BadParameter(
+            f"'{prefix}' is not one of the supported "
+            f"DOI prefixes: {DATACITE_DOIS_PREFIXES}"
+        )
+
+    return doi_bare
 
 
 def validate_at_least_one_query_param(
