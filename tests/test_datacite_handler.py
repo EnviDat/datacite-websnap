@@ -7,8 +7,9 @@ import requests
 from datacite_websnap.datacite_handler import (
     get_url_json,
     get_datacite_client,
-    get_datacite_doi,
     get_datacite_dois,
+    get_datacite_doi_xml,
+    _validate_single_doi_response,
     extract_doi_xml,
     get_datacite_list_dois_xml,
     CustomClickException,
@@ -109,14 +110,37 @@ def test_get_datacite_client():
         assert result == {"client": "data"}
 
 
-def test_get_datacite_doi():
-    with patch("datacite_websnap.datacite_handler.get_url_json") as mock_get:
-        mock_get.return_value = {"data": {"doi": "10.16904/abc"}}
-        result = get_datacite_doi("https://api.example.org", "10.16904/abc")
-        assert result == {"data": {"doi": "10.16904/abc"}}
-        mock_get.assert_called_once_with(
-            url="https://api.example.org/dois/10.16904/abc"
-        )
+def test_validate_single_doi_response_valid():
+    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
+    result = _validate_single_doi_response(raw)
+    assert result.data.attributes.doi == "10.16904/abc"
+    assert result.data.attributes.xml == "base64xml"
+
+
+def test_validate_single_doi_response_invalid():
+    with pytest.raises(CustomClickException, match="Unexpected response format"):
+        _validate_single_doi_response({"unexpected": "shape"})
+
+
+def test_get_datacite_doi_xml_success():
+    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
+    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+        result = get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
+        assert result == "base64xml"
+
+
+def test_get_datacite_doi_xml_none_raises():
+    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": None}}}
+    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+        with pytest.raises(CustomClickException, match="does not have an associated XML"):
+            get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
+
+
+def test_get_datacite_doi_xml_url_construction():
+    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
+    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw) as mock_get:
+        get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
+        mock_get.assert_called_once_with(url="https://api.example.org/dois/10.16904/abc")
 
 
 def test_extract_doi_xml_valid():
