@@ -25,3 +25,7 @@ class DoisResponse(BaseModel):
     data: list[DoiObject]
     meta: Meta
     links: Links
+
+
+class SingleDoiResponse(BaseModel):
+    data: DoiObject

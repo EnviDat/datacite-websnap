@@ -14,7 +14,7 @@ from .config import (
     DATACITE_PAGE_SIZE,
 )
 from .logger import CustomClickException, CustomEcho
-from .models import DoisResponse
+from .models import DoisResponse, SingleDoiResponse
 
 
 def get_url_json(
@@ -78,22 +78,6 @@ def get_datacite_client(api_url: str, client_id: str) -> dict[str, Any]:
         client_id: The DataCite API client id that will be used to query DataCite DOIs.
     """
     return get_url_json(url=f"{api_url}{DATACITE_API_CLIENTS_ENDPOINT}/{client_id}")
-
-
-def get_datacite_doi(api_url: str, doi: str) -> dict[str, Any]:
-    """
-    Return DOI response from DataCite API.
-    Raises error if DOI does not return a successful response from the
-    DataCite API.
-
-    For DataCite API documentation used in this call see
-    https://support.datacite.org/reference/get_dois-id
-
-    Args:
-        api_url: The DataCite base URL to call the API with.
-        doi: The DOI that will be used to query DataCite DOIs.
-    """
-    return get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
 
 
 def get_datacite_dois(
@@ -258,3 +242,38 @@ def get_datacite_list_dois_xml(
         )
 
     return xml_lst
+
+
+def _validate_single_doi_response(raw: dict) -> SingleDoiResponse:
+    try:
+        return SingleDoiResponse.model_validate(raw)
+    except ValidationError as err:
+        raise CustomClickException(
+            f"Unexpected response format from DataCite API: {err}"
+        ) from err
+
+
+def get_datacite_doi_xml(api_url: str, doi: str) -> str:
+    """
+    Return a DataCite API DOI response "xml" value.
+    Raises error if DOI does not return a successful response from the
+    DataCite API.
+
+    For DataCite API documentation used in this call see
+    https://support.datacite.org/reference/get_dois-id
+
+    Args:
+        api_url: The DataCite base URL to call the API with.
+        doi: The DOI that will be used to query DataCite DOIs.
+    """
+    resp = _validate_single_doi_response(
+        get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
+    )
+
+    xml = resp.data.attributes.xml
+    if xml is None:
+        raise CustomClickException(
+            f"DOI '{doi}' does not have an associated XML metadata record."
+        )
+
+    return xml

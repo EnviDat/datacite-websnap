@@ -41,7 +41,7 @@ from .validators import (
 from .datacite_handler import (
     get_datacite_client,
     get_datacite_list_dois_xml,
-    get_datacite_doi,
+    get_datacite_doi_xml,
 )
 from .exporter import (
     decode_base64_xml,
@@ -253,6 +253,7 @@ def datacite_bulk_export(
 
 
 # TODO implement verification function from library eth-datacite-validator
+# TODO possibly wrap in try except, review error handling for helpers
 @cli.command("doi-export")
 @common_options
 @click.option(
@@ -305,15 +306,15 @@ def datacite_single_doi_export(
     CustomEcho(f"Querying DataCite API for DOI: {doi}")
 
     # TODO call DataCite API and retrieve DOI metadata record
-    # Retrieve DataCite DOI record, raises error if DOI does not return successful
-    # response from the DataCite API
-    doi_data = get_datacite_doi(api_url, doi)
+    # Retrieve "xml" value of DataCite DOI record, raises error if DOI does not
+    # return successful response from the DataCite API
+    xml = get_datacite_doi_xml(api_url, doi)
+    xml_decoded = decode_base64_xml(xml)
 
     # TODO remove
-    # pprint(doi_data)
+    pprint(xml_decoded)
 
     # TODO verify DOI metadata record passes validation
-    # TODO decode doi_data 'xml' value to xml
     # Check if DataCite DOI metadata record passes validation
 
     # TODO export DataCite API XML record, JSON record and associated resource data
