@@ -8,8 +8,9 @@ from datacite_websnap.datacite_handler import (
     get_url_json,
     get_datacite_client,
     get_datacite_dois,
-    get_datacite_doi_xml,
+    get_datacite_doi,
     _validate_single_doi_response,
+    validate_doi_eth_standard,
     extract_doi_xml,
     get_datacite_list_dois_xml,
     CustomClickException,
@@ -122,25 +123,97 @@ def test_validate_single_doi_response_invalid():
         _validate_single_doi_response({"unexpected": "shape"})
 
 
-def test_get_datacite_doi_xml_success():
+def test_get_datacite_doi_success():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
     with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
-        result = get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
-        assert result == "base64xml"
+        json_resp, xml, data_links = get_datacite_doi(
+            "https://api.example.org", "10.16904/abc"
+        )
+        assert xml == "base64xml"
+        assert data_links == []
+        assert json_resp == raw
 
 
-def test_get_datacite_doi_xml_none_raises():
+def test_get_datacite_doi_none_xml_raises():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": None}}}
     with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
-        with pytest.raises(CustomClickException, match="does not have an associated XML"):
-            get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
+        with pytest.raises(
+            CustomClickException, match="does not have an associated XML"
+        ):
+            get_datacite_doi("https://api.example.org", "10.16904/abc")
 
 
-def test_get_datacite_doi_xml_url_construction():
+def test_get_datacite_doi_url_construction():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
-    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw) as mock_get:
-        get_datacite_doi_xml("https://api.example.org", "10.16904/abc")
-        mock_get.assert_called_once_with(url="https://api.example.org/dois/10.16904/abc")
+    with patch(
+        "datacite_websnap.datacite_handler.get_url_json", return_value=raw
+    ) as mock_get:
+        get_datacite_doi("https://api.example.org", "10.16904/abc")
+        mock_get.assert_called_once_with(
+            url="https://api.example.org/dois/10.16904/abc"
+        )
+
+
+def test_validate_doi_eth_standard_valid():
+    with patch("datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+               return_value=(True, None)):
+        validate_doi_eth_standard(b"<xml/>")
+
+
+def test_validate_doi_eth_standard_invalid():
+    with patch("datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+               return_value=(False, None)):
+        with pytest.raises(CustomClickException, match="ETH metadata standard validation"):
+            validate_doi_eth_standard(b"<xml/>")
+
+
+def test_get_datacite_doi_data_links():
+    raw = {
+        "data": {
+            "attributes": {
+                "doi": "10.16904/abc",
+                "xml": "base64xml",
+                "relatedItems": [
+                    {
+                        "relatedItemType": "Other",
+                        "relationType": "References",
+                        "relatedItemIdentifier": {
+                            "relatedItemIdentifier": "https://example.com/data.csv",
+                            "relatedItemIdentifierType": "URL",
+                        },
+                    }
+                ],
+            }
+        }
+    }
+    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+        _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
+        assert data_links == ["https://example.com/data.csv"]
+
+
+def test_get_datacite_doi_data_links_filtered():
+    """Items that don't match type/relation/identifierType are excluded."""
+    raw = {
+        "data": {
+            "attributes": {
+                "doi": "10.16904/abc",
+                "xml": "base64xml",
+                "relatedItems": [
+                    {
+                        "relatedItemType": "JournalArticle",
+                        "relationType": "References",
+                        "relatedItemIdentifier": {
+                            "relatedItemIdentifier": "https://example.com/paper",
+                            "relatedItemIdentifierType": "URL",
+                        },
+                    }
+                ],
+            }
+        }
+    }
+    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+        _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
+        assert data_links == []
 
 
 def test_extract_doi_xml_valid():
