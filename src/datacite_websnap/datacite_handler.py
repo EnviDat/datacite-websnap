@@ -6,6 +6,7 @@ from typing import Any
 
 import requests
 from pydantic import ValidationError
+from validator import validate
 
 from .config import (
     DATACITE_API_CLIENTS_ENDPOINT,
@@ -253,9 +254,11 @@ def _validate_single_doi_response(raw: dict) -> SingleDoiResponse:
         ) from err
 
 
-def get_datacite_doi_xml(api_url: str, doi: str) -> str:
+def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     """
-    Return a DataCite API DOI response "xml" value.
+    Return a DataCite API DOI JSON response,  "xml" value (in encoded format),
+    and list of links to data files.
+
     Raises error if DOI does not return a successful response from the
     DataCite API.
 
@@ -266,14 +269,54 @@ def get_datacite_doi_xml(api_url: str, doi: str) -> str:
         api_url: The DataCite base URL to call the API with.
         doi: The DOI that will be used to query DataCite DOIs.
     """
-    resp = _validate_single_doi_response(
-        get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
-    )
+    json_resp = get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
 
-    xml = resp.data.attributes.xml
-    if xml is None:
+    validated_resp = _validate_single_doi_response(json_resp)
+
+    xml_encoded = validated_resp.data.attributes.xml
+    if xml_encoded is None:
         raise CustomClickException(
             f"DOI '{doi}' does not have an associated XML metadata record."
         )
 
-    return xml
+    data_links = []
+    related_items = validated_resp.data.attributes.relatedItems or []
+    for item in related_items:
+        if (
+            item.relatedItemType == "Other"
+            and item.relationType == "References"
+            and item.relatedItemIdentifier
+            and item.relatedItemIdentifier.relatedItemIdentifierType == "URL"
+            and item.relatedItemIdentifier.relatedItemIdentifier
+        ):
+            data_links.append(item.relatedItemIdentifier.relatedItemIdentifier)
+
+    return json_resp, xml_encoded, data_links
+
+
+# TODO review give_warning and result_only values
+# TODO test with a non-compliant DOI
+def validate_doi_eth_standard(xml_decoded: bytes) -> None:
+    """
+    Validate DataCite DOI XML value is compliant with ETH metadata standard.
+    Raises error if validation fails.
+
+    To learn more about the ETH metadata standard please refer to:
+    https://www.dora.lib4ri.ch/psi/dload/psi:81336/PDF/Felder-2025-Recommendation_on_how_to_implement-(published_version).pdf
+
+    To learn more about the validation function used please refer to:
+    https://pypi.org/project/eth-datacite-validator/
+
+    Args:
+        xml_decoded: DataCite DOI XML string in decoded format
+    """
+    is_record_valid, _ = validate.validate_datacite_from_string(
+        xml_decoded=xml_decoded, give_warning=False, result_only=True
+    )
+
+    if not is_record_valid:
+        raise CustomClickException(
+            "DOI failed to pass ETH metadata standard validation."
+        )
+
+    return
