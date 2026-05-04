@@ -1,5 +1,6 @@
 """Validators for datacite-websnap."""
 
+from pathlib import Path
 from urllib.parse import urlparse
 import click
 from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
@@ -8,33 +9,34 @@ from .config import DATACITE_DOIS_PREFIXES
 from .logger import CustomBadParameter
 
 
-def validate_url(ctx: click.Context, param: click.Parameter, url: str) -> str:
+def validate_api_url(api_url: str) -> str:
     """
-    Validate and return url.
+    Validate and return api_url.
     Raises BadParameter exception if url does not start with 'https://.'
     """
-    if not url.startswith("https://"):
+    if not api_url.startswith("https://"):
         raise click.BadParameter(
-            f"'{url}' is invalid because it must start with 'https://'"
+            f"api_url '{api_url}' is invalid because it must start with 'https://'"
         )
 
-    return url
+    return api_url
 
 
-def validate_page_size(ctx: click.Context, param: click.Parameter, value: int) -> int:
+def validate_page_size(page_size: int) -> int:
     """
-    Validate and return integer.
-    Raises BadParameter exception if value is not positive or is greater than 1000.
+    Validate and return page_size.
+    Raises BadParameter exception if page_size is not positive or is greater than 1000.
     """
-    if value <= 0 or value > 1000:
+    if page_size <= 0 or page_size > 1000:
         raise click.BadParameter(
-            f"{value} is not valid, must be a positive integer no greater than 1000."
+            f"page_size {page_size} is not valid, "
+            f"must be a positive integer no greater than 1000."
         )
 
-    return value
+    return page_size
 
 
-def validate_doi(ctx: click.Context, param: click.Parameter, doi: str) -> str:
+def validate_doi(doi: str) -> str:
     """
     Validate and return doi (without URL base).
     Raises BadParameter exception if doi does not have a "/" or if doi prefix is not in
@@ -129,12 +131,17 @@ def validate_directory_path(directory_path, destination) -> str | None:
     """
     Validate and return directory_path.
     Raises BadParameter exception if directory_path is not truthy when
-    option '--destination' is 'local'.
+    option '--destination' is 'local', or if the path does not exist.
     """
     if destination == "local" and not directory_path:
         raise CustomBadParameter(
             "'--directory-path' option must be provided when the "
             "'--destination' option is set to 'local'"
+        )
+
+    if directory_path and not Path(directory_path).is_dir():
+        raise CustomBadParameter(
+            f"'--directory-path' value '{directory_path}' does not exist or is not a directory."
         )
 
     return directory_path

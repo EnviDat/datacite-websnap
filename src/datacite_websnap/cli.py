@@ -19,6 +19,10 @@ Example bulk-export command:
 # TODO add examples for doi-export
 """
 
+import json
+from pathlib import Path
+from urllib.parse import urlparse
+
 import click
 from typing import Literal
 import click_extra
@@ -26,7 +30,6 @@ import click_extra
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
 from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
 from .validators import (
-    validate_url,
     validate_at_least_one_query_param,
     validate_page_size,
     validate_bucket,
@@ -34,12 +37,14 @@ from .validators import (
     validate_directory_path,
     validate_endpoint_url,
     validate_doi,
+    validate_api_url,
 )
 from .datacite_handler import (
     get_datacite_client,
     get_datacite_list_dois_xml,
     get_datacite_doi,
     validate_doi_eth_standard,
+    get_url_content,
 )
 from .exporter import (
     decode_base64_xml,
@@ -47,6 +52,7 @@ from .exporter import (
     write_local_file,
     create_s3_client,
     s3_client_put_object,
+    format_json_file_name,
 )
 
 
@@ -120,7 +126,6 @@ def common_options(f):
             "--api-url",
             default=DATACITE_API_URL,
             help=f"DataCite API base URL used for queries (default: {DATACITE_API_URL})",
-            callback=validate_url,
         ),
     ]
     for decorator in decorators:
@@ -158,7 +163,6 @@ def common_options(f):
     default=DATACITE_PAGE_SIZE,
     help=f"Number of records returned per page of DataCite API response using "
     f"pagination (default: {DATACITE_PAGE_SIZE})",
-    callback=validate_page_size,
 )
 def datacite_bulk_export(
     destination: Literal["S3", "local"] = "S3",
@@ -191,6 +195,8 @@ def datacite_bulk_export(
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
+    validate_api_url(api_url)
+    validate_page_size(page_size)
 
     # Validate S3 credentials and return S3 client
     s3_client = None
@@ -260,7 +266,6 @@ def datacite_bulk_export(
     help="DataCite DOI XML record, JSON record, and associated resource data files "
     "that will be exported. Only exports DataCite DOis that pass ETH Zurich "
     "metadata standards.",
-    callback=validate_doi,
 )
 def datacite_single_doi_export(
     doi: str,
@@ -287,10 +292,12 @@ def datacite_single_doi_export(
     setup_logging(log_level, file_logs)
 
     # Validate arguments
+    doi_bare = validate_doi(doi)
     validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
+    validate_api_url(api_url)
 
     # TODO implement
     # Validate S3 credentials and return S3 client
@@ -301,16 +308,51 @@ def datacite_single_doi_export(
     # Log export information
     CustomEcho("**** Starting DataCite single DOI export... ****")
     CustomEcho(f"Export destination: {destination}")
-    CustomEcho(f"Querying DataCite API for DOI: {doi}")
+    CustomEcho(f"Querying DataCite API for DOI: {doi_bare}")
 
     # Retrieve a DataCite DOI record
-    json_resp, xml_encoded, data_links = get_datacite_doi(api_url, doi)
+    json_resp, xml_encoded, data_links = get_datacite_doi(api_url, doi_bare)
 
     # Check if DataCite DOI metadata record passes validation
     xml_decoded = decode_base64_xml(xml_encoded)
     validate_doi_eth_standard(xml_decoded)
 
+    # Format filenames
+    xml_filename = format_xml_file_name(doi_bare, key_prefix)
+    json_filename = format_json_file_name(xml_filename)
+
+    # Retrieve data filenames and content
+    data_files: list[tuple[str, bytes]] = [
+        (Path(urlparse(url).path).name, get_url_content(url)) for url in data_links
+    ]
+
     # TODO export DataCite API XML record, JSON record and associated resource data
-    #  files to local or S3
+    #  files to S3
+    # Export record and data files
+    match destination:
+        case "S3":
+            pass
+
+        case "local":
+            write_local_file(
+                content_bytes=xml_decoded,
+                filename=xml_filename,
+                directory_path=directory_path,
+            )
+            write_local_file(
+                content_bytes=json.dumps(
+                    json_resp, indent=2, ensure_ascii=False
+                ).encode("utf-8"),
+                filename=json_filename,
+                directory_path=directory_path,
+            )
+            for filename, content in data_files:
+                write_local_file(
+                    content_bytes=content,
+                    filename=filename,
+                    directory_path=directory_path,
+                )
+        case _:
+            raise CustomClickException(f"Unsupported destination: {destination}")
 
     return

@@ -57,12 +57,40 @@ def get_url_json(
         )
 
     except requests.exceptions.RequestException as req_err:
-        raise CustomClickException(f"API request failed for URL '{url}': {req_err}")
+        raise CustomClickException(f"Request failed for URL '{url}': {req_err}")
 
     except Exception as err:
         raise CustomClickException(
             f"Unexpected error occurred while calling URL '{url}': {err}"
         ) from err
+
+
+def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes:
+    """
+    Return the content of the given URL as a byte string.
+
+    Args:
+         url: The URL to call return the content from.
+         timeout: Timeout of request in seconds.
+    """
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        return response.content
+
+    except requests.exceptions.HTTPError as http_err:
+        raise CustomClickException(f"HTTP error while calling URL '{url}': {http_err}")
+
+    except requests.exceptions.ConnectionError:
+        raise CustomClickException(f"Network error for URL '{url}': Unable to connect.")
+
+    except requests.exceptions.Timeout:
+        raise CustomClickException(
+            f"Request timeout for URL '{url}': No response within {timeout}s."
+        )
+
+    except requests.exceptions.RequestException as err:
+        raise CustomClickException(f"Request failed for URL '{url}': {err}")
 
 
 def get_datacite_client(api_url: str, client_id: str) -> dict[str, Any]:
@@ -294,7 +322,7 @@ def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     return json_resp, xml_encoded, data_links
 
 
-# TODO review give_warning and result_only values
+# TODO review give_warning value
 # TODO test with a non-compliant DOI
 def validate_doi_eth_standard(xml_decoded: bytes) -> None:
     """
@@ -311,7 +339,7 @@ def validate_doi_eth_standard(xml_decoded: bytes) -> None:
         xml_decoded: DataCite DOI XML string in decoded format
     """
     is_record_valid, _ = validate.validate_datacite_from_string(
-        xml_decoded=xml_decoded, give_warning=False, result_only=True
+        xml_decoded=xml_decoded, give_warning=False, result_only=False
     )
 
     if not is_record_valid:

@@ -59,6 +59,16 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         return f"{key_prefix}/{doi_format}.xml"
 
 
+def format_json_file_name(xml_file_name: str) -> str:
+    """
+    Format xml_filename into a JSON filename.
+
+    Args:
+        xml_file_name: XML file name assigned from formatted DOI.
+    """
+    return xml_file_name.replace(".xml", ".json")
+
+
 def create_s3_client(
     endpoint_url: str, bucket: str, profile_name: str = None
 ) -> boto3.Session.client:
@@ -164,12 +174,12 @@ def write_local_file(
     content_bytes: bytes, filename: str, directory_path: str | None = None
 ) -> None:
     """
-    Write a bytes object to a local file.
-
-    Args:
-        content_bytes: bytes object that will be written to a local file
-        filename: name of file to write, be sure to include desired extension
-        directory_path: path to directory to write the file in
+        Write a bytes object to a local file.
+    3
+        Args:
+            content_bytes: bytes object that will be written to a local file
+            filename: name of file to write, be sure to include desired extension
+            directory_path: path to directory to write the file in
     """
     try:
         if directory_path:
