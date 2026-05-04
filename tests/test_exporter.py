@@ -60,6 +60,12 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     assert result == "data/10.16904_envidat.31.xml"
 
 
+def test_format_xml_file_name_with_colon():
+    doi = "10.24435/materialscloud:2017.0005/v1"
+    result = format_xml_file_name(doi)
+    assert result == "10.24435_materialscloud_2017.0005_v1.xml"
+
+
 def test_format_json_file_name():
     assert (
         format_json_file_name("10.16904_envidat.31.xml") == "10.16904_envidat.31.json"
