@@ -299,11 +299,10 @@ def datacite_single_doi_export(
     validate_directory_path(directory_path, destination)
     validate_api_url(api_url)
 
-    # TODO implement
     # Validate S3 credentials and return S3 client
-    # s3_client = None
-    # if destination == "S3":
-    #     s3_client = create_s3_client(endpoint_url, bucket, profile_name)
+    s3_client = None
+    if destination == "S3":
+        s3_client = create_s3_client(endpoint_url, bucket, profile_name)
 
     # Log export information
     CustomEcho("**** Starting DataCite single DOI export... ****")
@@ -317,40 +316,64 @@ def datacite_single_doi_export(
     xml_decoded = decode_base64_xml(xml_encoded)
     validate_doi_eth_standard(xml_decoded)
 
-    # Format filenames
-    xml_filename = format_xml_file_name(doi_bare, key_prefix)
-    json_filename = format_json_file_name(xml_filename)
-
     # Retrieve data filenames and content
     data_files: list[tuple[str, bytes]] = [
         (Path(urlparse(url).path).name, get_url_content(url)) for url in data_links
     ]
 
-    # TODO export DataCite API XML record, JSON record and associated resource data
-    #  files to S3
     # Export record and data files
     match destination:
         case "S3":
-            pass
+            doi_stem = doi_bare.replace("/", "_")
+            doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
+
+            s3_client_put_object(
+                client=s3_client,
+                body=xml_decoded,
+                bucket=bucket,
+                key=f"{doi_s3_dir}/{doi_stem}.xml",
+            )
+            s3_client_put_object(
+                client=s3_client,
+                body=json.dumps(json_resp, indent=2, ensure_ascii=False).encode(
+                    "utf-8"
+                ),
+                bucket=bucket,
+                key=f"{doi_s3_dir}/{doi_stem}.json",
+            )
+            for filename, content in data_files:
+                s3_client_put_object(
+                    client=s3_client,
+                    body=content,
+                    bucket=bucket,
+                    key=f"{doi_s3_dir}/{filename}",
+                )
 
         case "local":
+            xml_filename = format_xml_file_name(doi_bare)
+            json_filename = format_json_file_name(xml_filename)
+
+            doi_dir = Path(directory_path) / Path(xml_filename).stem
+            doi_dir.mkdir(exist_ok=True)
+            doi_directory = str(doi_dir)
+
             write_local_file(
                 content_bytes=xml_decoded,
                 filename=xml_filename,
-                directory_path=directory_path,
+                directory_path=doi_directory,
             )
             write_local_file(
                 content_bytes=json.dumps(
                     json_resp, indent=2, ensure_ascii=False
                 ).encode("utf-8"),
                 filename=json_filename,
-                directory_path=directory_path,
+                directory_path=doi_directory,
             )
             for filename, content in data_files:
                 write_local_file(
                     content_bytes=content,
                     filename=filename,
-                    directory_path=directory_path,
+                    directory_path=doi_directory,
                 )
         case _:
             raise CustomClickException(f"Unsupported destination: {destination}")
