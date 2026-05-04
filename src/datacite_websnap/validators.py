@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from urllib.parse import urlparse
-import click
 from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
 from .config import DATACITE_DOIS_PREFIXES
@@ -15,7 +14,7 @@ def validate_api_url(api_url: str) -> str:
     Raises BadParameter exception if url does not start with 'https://.'
     """
     if not api_url.startswith("https://"):
-        raise click.BadParameter(
+        raise CustomBadParameter(
             f"api_url '{api_url}' is invalid because it must start with 'https://'"
         )
 
@@ -28,7 +27,7 @@ def validate_page_size(page_size: int) -> int:
     Raises BadParameter exception if page_size is not positive or is greater than 1000.
     """
     if page_size <= 0 or page_size > 1000:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             f"page_size {page_size} is not valid, "
             f"must be a positive integer no greater than 1000."
         )
@@ -46,14 +45,14 @@ def validate_doi(doi: str) -> str:
     Return doi after passing validation: "10.16904/envidat.504"
     """
     if "/" not in doi:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             f"'{doi}' is invalid because it does not have a '/' character."
         )
 
     if doi.startswith("http"):
         parsed = urlparse(doi)
         if not parsed.netloc:
-            raise click.BadParameter(f"'{doi}' is not a valid URL.")
+            raise CustomBadParameter(f"'{doi}' is not a valid URL.")
         doi_bare = parsed.path.lstrip("/")
     else:
         doi_bare = doi
@@ -61,7 +60,7 @@ def validate_doi(doi: str) -> str:
     prefix = doi_bare.split("/")[0]
 
     if prefix not in DATACITE_DOIS_PREFIXES:
-        raise click.BadParameter(
+        raise CustomBadParameter(
             f"'{prefix}' is not one of the supported "
             f"DOI prefixes: {DATACITE_DOIS_PREFIXES}"
         )
@@ -147,7 +146,7 @@ def validate_directory_path(directory_path, destination) -> str | None:
     return directory_path
 
 
-def validate_key_prefix(key_prefix, destination) -> str:
+def validate_key_prefix(key_prefix, destination) -> str | None:
     """
     Validate and return key_prefix.
     Raises BadParameter exception it key_prefix is truthy when option '--destination'

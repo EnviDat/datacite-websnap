@@ -66,11 +66,11 @@ def format_json_file_name(xml_file_name: str) -> str:
     Args:
         xml_file_name: XML file name assigned from formatted DOI.
     """
-    return xml_file_name.replace(".xml", ".json")
+    return Path(xml_file_name).with_suffix(".json").as_posix()
 
 
 def create_s3_client(
-    endpoint_url: str, bucket: str, profile_name: str = None
+    endpoint_url: str, bucket: str, profile_name: str | None = None
 ) -> boto3.Session.client:
     """
     Returns a validated Boto3 S3 client created using a shared AWS credentials file.

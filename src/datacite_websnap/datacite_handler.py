@@ -92,6 +92,11 @@ def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes:
     except requests.exceptions.RequestException as err:
         raise CustomClickException(f"Request failed for URL '{url}': {err}")
 
+    except Exception as err:
+        raise CustomClickException(
+            f"Unexpected error occurred while calling URL '{url}': {err}"
+        ) from err
+
 
 def get_datacite_client(api_url: str, client_id: str) -> dict[str, Any]:
     """
@@ -284,7 +289,7 @@ def _validate_single_doi_response(raw: dict) -> SingleDoiResponse:
 
 def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     """
-    Return a DataCite API DOI JSON response,  "xml" value (in encoded format),
+    Return a DataCite API DOI JSON response, "xml" value (in encoded format),
     and list of links to data files.
 
     Raises error if DOI does not return a successful response from the
