@@ -141,6 +141,12 @@ def test_get_url_content_request_exception():
             get_url_content("https://example.com/file.csv")
 
 
+def test_get_url_content_unexpected_exception():
+    with patch("requests.get", side_effect=Exception("unexpected")):
+        with pytest.raises(CustomClickException, match="Unexpected error"):
+            get_url_content("https://example.com/file.csv")
+
+
 def test_get_datacite_client():
     with patch("datacite_websnap.datacite_handler.get_url_json") as mock_get:
         mock_get.return_value = {"client": "data"}
