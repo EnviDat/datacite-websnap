@@ -6,6 +6,7 @@ import requests
 
 from datacite_websnap.datacite_handler import (
     get_url_json,
+    get_url_content,
     get_datacite_client,
     get_datacite_dois,
     get_datacite_doi,
@@ -104,6 +105,42 @@ def test_get_datacite_dois_pagination_params():
         assert "page[cursor]" in params
 
 
+def test_get_url_content_success():
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.content = b"file content"
+        mock_resp.raise_for_status.return_value = None
+        mock_get.return_value = mock_resp
+        assert get_url_content("https://example.com/file.csv") == b"file content"
+
+
+def test_get_url_content_http_error():
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = requests.exceptions.HTTPError("404")
+        mock_get.return_value = mock_resp
+        with pytest.raises(CustomClickException, match="HTTP error"):
+            get_url_content("https://example.com/file.csv")
+
+
+def test_get_url_content_connection_error():
+    with patch("requests.get", side_effect=requests.exceptions.ConnectionError):
+        with pytest.raises(CustomClickException, match="Network error"):
+            get_url_content("https://example.com/file.csv")
+
+
+def test_get_url_content_timeout():
+    with patch("requests.get", side_effect=requests.exceptions.Timeout):
+        with pytest.raises(CustomClickException, match="Request timeout"):
+            get_url_content("https://example.com/file.csv")
+
+
+def test_get_url_content_request_exception():
+    with patch("requests.get", side_effect=requests.exceptions.RequestException):
+        with pytest.raises(CustomClickException, match="Request failed"):
+            get_url_content("https://example.com/file.csv")
+
+
 def test_get_datacite_client():
     with patch("datacite_websnap.datacite_handler.get_url_json") as mock_get:
         mock_get.return_value = {"client": "data"}
@@ -155,15 +192,21 @@ def test_get_datacite_doi_url_construction():
 
 
 def test_validate_doi_eth_standard_valid():
-    with patch("datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
-               return_value=(True, None)):
+    with patch(
+        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        return_value=(True, None),
+    ):
         validate_doi_eth_standard(b"<xml/>")
 
 
 def test_validate_doi_eth_standard_invalid():
-    with patch("datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
-               return_value=(False, None)):
-        with pytest.raises(CustomClickException, match="ETH metadata standard validation"):
+    with patch(
+        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        return_value=(False, None),
+    ):
+        with pytest.raises(
+            CustomClickException, match="ETH metadata standard validation"
+        ):
             validate_doi_eth_standard(b"<xml/>")
 
 

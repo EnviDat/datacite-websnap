@@ -8,6 +8,7 @@ from datacite_websnap.exporter import (
     decode_base64_xml,
     CustomClickException,
     format_xml_file_name,
+    format_json_file_name,
     write_local_file,
     s3_client_put_object,
     create_s3_client,
@@ -57,6 +58,19 @@ def test_format_xml_file_name_with_prefix_no_trailing_slash():
     key_prefix = "data"
     result = format_xml_file_name(doi, key_prefix)
     assert result == "data/10.16904_envidat.31.xml"
+
+
+def test_format_json_file_name():
+    assert (
+        format_json_file_name("10.16904_envidat.31.xml") == "10.16904_envidat.31.json"
+    )
+
+
+def test_format_json_file_name_with_prefix():
+    assert (
+        format_json_file_name("data/10.16904_envidat.31.xml")
+        == "data/10.16904_envidat.31.json"
+    )
 
 
 @patch("boto3.Session.client")
