@@ -324,7 +324,7 @@ def datacite_single_doi_export(
     # Export record and data files
     match destination:
         case "S3":
-            doi_stem = doi_bare.replace("/", "_")
+            doi_stem = doi_bare.replace("/", "_").replace(":", "_")
             doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
 
             s3_client_put_object(

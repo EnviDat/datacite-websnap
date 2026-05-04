@@ -48,7 +48,7 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         doi: "doi" string, example "10.16904/envidat.31"
         key_prefix: Optional key prefix for objects in S3 bucket.
     """
-    doi_format = doi.replace("/", "_")
+    doi_format = doi.replace("/", "_").replace(":", "_")
 
     if not key_prefix:
         return f"{doi_format}.xml"
