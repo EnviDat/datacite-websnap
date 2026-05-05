@@ -349,13 +349,13 @@ def validate_doi_eth_standard(xml_decoded: bytes) -> None:
         xml_decoded=xml_decoded, give_warning=True, result_only=False
     )
 
+    if warnings:
+        for warning in warnings:
+            CustomWarning(warning)
+
     if not is_record_valid:
         raise CustomClickException(
             "DOI failed to pass ETH metadata standard validation."
         )
-
-    if warnings:
-        for warning in warnings:
-            CustomWarning(warning)
 
     return

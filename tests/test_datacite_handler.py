@@ -231,10 +231,12 @@ def test_validate_doi_eth_standard_noncompliant():
         "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
         return_value=(False, ["missing required field"]),
     ):
-        with pytest.raises(
-            CustomClickException, match="ETH metadata standard validation"
-        ):
-            validate_doi_eth_standard(b"<xml/>")
+        with patch("datacite_websnap.datacite_handler.CustomWarning") as mock_warning:
+            with pytest.raises(
+                CustomClickException, match="ETH metadata standard validation"
+            ):
+                validate_doi_eth_standard(b"<xml/>")
+            assert mock_warning.call_count == 1
 
 
 def test_get_datacite_doi_data_links():
