@@ -14,7 +14,7 @@ from .config import (
     DATACITE_API_DOIS_ENDPOINT,
     DATACITE_PAGE_SIZE,
 )
-from .logger import CustomClickException, CustomEcho
+from .logger import CustomClickException, CustomEcho, CustomWarning
 from .models import DoisResponse, SingleDoiResponse
 
 
@@ -327,11 +327,13 @@ def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     return json_resp, xml_encoded, data_links
 
 
-# TODO review give_warning value
 # TODO test with a non-compliant DOI
 def validate_doi_eth_standard(xml_decoded: bytes) -> None:
     """
     Validate DataCite DOI XML value is compliant with ETH metadata standard.
+    Logs warnings regarding recommended values in DOI
+    in alignment with ETH metadata standard.
+
     Raises error if validation fails.
 
     To learn more about the ETH metadata standard please refer to:
@@ -343,13 +345,17 @@ def validate_doi_eth_standard(xml_decoded: bytes) -> None:
     Args:
         xml_decoded: DataCite DOI XML string in decoded format
     """
-    is_record_valid, _ = validate.validate_datacite_from_string(
-        xml_decoded=xml_decoded, give_warning=False, result_only=False
+    is_record_valid, warnings = validate.validate_datacite_from_string(
+        xml_decoded=xml_decoded, give_warning=True, result_only=False
     )
 
     if not is_record_valid:
         raise CustomClickException(
             "DOI failed to pass ETH metadata standard validation."
         )
+
+    if warnings:
+        for warning in warnings:
+            CustomWarning(warning)
 
     return
