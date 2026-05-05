@@ -256,7 +256,7 @@ def datacite_bulk_export(
     CustomEcho("**** Finished DataCite bulk export ****")
 
 
-# TODO implement verification function from library eth-datacite-validator
+# TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
 @cli.command("doi-export")
 @common_options
@@ -317,9 +317,10 @@ def datacite_single_doi_export(
     validate_doi_eth_standard(xml_decoded)
 
     # Retrieve data filenames and content
-    data_files: list[tuple[str, bytes]] = [
-        (Path(urlparse(url).path).name, get_url_content(url)) for url in data_links
-    ]
+    data_files: list[tuple[str, bytes]] = []
+    for url in data_links:
+        if content := get_url_content(url):
+            data_files.append((Path(urlparse(url).path).name, content))
 
     # Export record and data files
     match destination:

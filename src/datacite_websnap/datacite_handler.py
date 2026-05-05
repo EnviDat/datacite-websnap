@@ -65,7 +65,7 @@ def get_url_json(
         ) from err
 
 
-def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes:
+def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes | None:
     """
     Return the content of the given URL as a byte string.
 
@@ -79,6 +79,9 @@ def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes:
         return response.content
 
     except requests.exceptions.HTTPError as http_err:
+        if http_err.response is not None and http_err.response.status_code == 401:
+            CustomWarning(f"401 Unauthorized for URL '{url}': {http_err}")
+            return None
         raise CustomClickException(f"HTTP error while calling URL '{url}': {http_err}")
 
     except requests.exceptions.ConnectionError:

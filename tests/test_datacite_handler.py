@@ -123,6 +123,38 @@ def test_get_url_content_http_error():
             get_url_content("https://example.com/file.csv")
 
 
+def test_get_url_content_401_returns_none_and_warns():
+    mock_response = MagicMock()
+    mock_response.status_code = 401
+    http_error = requests.exceptions.HTTPError("401 Unauthorized")
+    http_error.response = mock_response
+
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = http_error
+        mock_get.return_value = mock_resp
+
+        with patch("datacite_websnap.datacite_handler.CustomWarning") as mock_warning:
+            result = get_url_content("https://example.com/file.csv")
+            assert result is None
+            mock_warning.assert_called_once()
+
+
+def test_get_url_content_non_401_http_error_raises():
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    http_error = requests.exceptions.HTTPError("403 Forbidden")
+    http_error.response = mock_response
+
+    with patch("requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = http_error
+        mock_get.return_value = mock_resp
+
+        with pytest.raises(CustomClickException, match="HTTP error"):
+            get_url_content("https://example.com/file.csv")
+
+
 def test_get_url_content_connection_error():
     with patch("requests.get", side_effect=requests.exceptions.ConnectionError):
         with pytest.raises(CustomClickException, match="Network error"):
