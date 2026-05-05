@@ -256,6 +256,27 @@ def datacite_bulk_export(
     CustomEcho("**** Finished DataCite bulk export ****")
 
 
+# TODO handle EnviDat prefix cloud storage
+def _write_local_file_data_links(url: str, doi_directory: str) -> None:
+    """
+    Write a bytes object to a local file.
+    The content in the local file corresponds a data file resource
+    passed as a URL in the DOI metadata.
+
+    Args:
+        url: URL that leads to the data content
+        doi_directory: local path to directory to write the file in
+    """
+    if content := get_url_content(url):
+        write_local_file(
+            content_bytes=content,
+            filename=Path(urlparse(url).path).name,
+            directory_path=doi_directory,
+        )
+
+    return
+
+
 # TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
 @cli.command("doi-export")
@@ -316,12 +337,6 @@ def datacite_single_doi_export(
     xml_decoded = decode_base64_xml(xml_encoded)
     validate_doi_eth_standard(xml_decoded)
 
-    # Retrieve data filenames and content
-    data_files: list[tuple[str, bytes]] = []
-    for url in data_links:
-        if content := get_url_content(url):
-            data_files.append((Path(urlparse(url).path).name, content))
-
     # Export record and data files
     match destination:
         case "S3":
@@ -342,13 +357,15 @@ def datacite_single_doi_export(
                 bucket=bucket,
                 key=f"{doi_s3_dir}/{doi_stem}.json",
             )
-            for filename, content in data_files:
-                s3_client_put_object(
-                    client=s3_client,
-                    body=content,
-                    bucket=bucket,
-                    key=f"{doi_s3_dir}/{filename}",
-                )
+            # TODO test
+            for url in data_links:
+                if content := get_url_content(url):
+                    s3_client_put_object(
+                        client=s3_client,
+                        body=content,
+                        bucket=bucket,
+                        key=f"{doi_s3_dir}/{Path(urlparse(url).path).name}",
+                    )
 
         case "local":
             xml_filename = format_xml_file_name(doi_bare)
@@ -370,12 +387,8 @@ def datacite_single_doi_export(
                 filename=json_filename,
                 directory_path=doi_directory,
             )
-            for filename, content in data_files:
-                write_local_file(
-                    content_bytes=content,
-                    filename=filename,
-                    directory_path=doi_directory,
-                )
+            for url in data_links:
+                _write_local_file_data_links(url, doi_directory)
         case _:
             raise CustomClickException(f"Unsupported destination: {destination}")
 
