@@ -216,6 +216,27 @@ def test_validate_doi_eth_standard_invalid():
             validate_doi_eth_standard(b"<xml/>")
 
 
+def test_validate_doi_eth_standard_with_warnings():
+    with patch(
+        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        return_value=(True, ["missing recommended field", "invalid date format"]),
+    ):
+        with patch("datacite_websnap.datacite_handler.CustomWarning") as mock_warning:
+            validate_doi_eth_standard(b"<xml/>")
+            assert mock_warning.call_count == 2
+
+
+def test_validate_doi_eth_standard_noncompliant():
+    with patch(
+        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        return_value=(False, ["missing required field"]),
+    ):
+        with pytest.raises(
+            CustomClickException, match="ETH metadata standard validation"
+        ):
+            validate_doi_eth_standard(b"<xml/>")
+
+
 def test_get_datacite_doi_data_links():
     raw = {
         "data": {
