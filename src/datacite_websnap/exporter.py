@@ -4,9 +4,11 @@ Process and export DataCite XML metadata records.
 
 import base64
 from pathlib import Path
-from urllib.parse import urlparse, unquote, parse_qs
 import binascii
+from typing import Any
+from urllib.parse import urlparse, unquote, parse_qs
 
+from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import (
     ClientError,
@@ -71,9 +73,49 @@ def format_json_file_name(xml_file_name: str) -> str:
     return Path(xml_file_name).with_suffix(".json").as_posix()
 
 
+def create_s3_client_unsigned(endpoint_url: str, bucket: str) -> Any:
+    """
+    Returns a validated Boto3 client for accessing a public S3 bucket
+    (no access credentials required).
+
+    Args:
+        endpoint_url: The complete URL to use for the constructed S3 client.
+        bucket: Name of S3 bucket that needs to be accessed.
+                Bucket must be publicly accessible.
+
+    Raises:
+        CustomClickException: If the client could not be created or accessed.
+    """
+    try:
+        client = boto3.client(
+            service_name="s3",
+            endpoint_url=endpoint_url,
+            config=Config(
+                signature_version=UNSIGNED,
+                connect_timeout=5,
+                read_timeout=TIMEOUT,
+                retries={"max_attempts": 3},
+            ),
+        )
+
+    except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
+        raise CustomClickException(f"Failed to create S3 client: {e}")
+
+    try:
+        # Validate endpoint and access to an existing bucket
+        client.head_bucket(Bucket=bucket)
+    except (ClientError, EndpointConnectionError) as e:
+        raise CustomClickException(
+            f"S3 endpoint URL and/or bucket are invalid "
+            f"or are not publicly accessible: {e}"
+        )
+
+    return client
+
+
 def create_s3_client(
     endpoint_url: str, bucket: str, profile_name: str | None = None
-) -> boto3.Session.client:
+) -> Any:
     """
     Returns a validated Boto3 S3 client created using a shared AWS credentials file.
 
@@ -88,10 +130,7 @@ def create_s3_client(
                       If not given, then the default profile is used.
 
     Raises:
-        CustomClickException: If the client could not be created.
-
-    Returns:
-        boto3.Session.client: Configured S3 client
+        CustomClickException: If the client could not be created or accessed.
     """
     try:
         session = (
@@ -128,16 +167,52 @@ def create_s3_client(
     return client
 
 
-def s3_client_put_object(
-    client: boto3.Session.client, body: bytes, bucket: str, key: str
-) -> None:
+def s3_client_list_bucket_contents(
+    client: Any, bucket: str, prefix: str, max_keys: int = 1000
+) -> list[dict]:
+    """
+    Return list of all "Contents" objects in an S3 bucket matching the given prefix.
+    Handles pagination automatically.
+
+    Args:
+      client: configured boto3 S3 client
+      bucket: name of S3 bucket to list objects in
+      prefix: key prefix to filter objects by
+      max_keys: number of objects returned per page (default: 1000)
+    """
+    try:
+        contents = []
+        kwargs = {"Bucket": bucket, "Prefix": prefix, "MaxKeys": max_keys}
+
+        while True:
+            response = client.list_objects_v2(**kwargs)
+            contents.extend(response.get("Contents", []))
+
+            if not response.get("IsTruncated"):
+                break
+
+            kwargs["ContinuationToken"] = response["NextContinuationToken"]
+
+        return contents
+
+    except ClientError as err:
+        raise CustomClickException(
+            f"Failed to list objects in bucket '{bucket}' with prefix '{prefix}': {err}"
+        )
+    except Exception as err:
+        raise CustomClickException(
+            f"Unexpected error listing objects in bucket '{bucket}': {err}"
+        )
+
+
+def s3_client_put_object(client: Any, body: bytes, bucket: str, key: str) -> None:
     """
     Copy string as an S3 object to a S3 bucket.
 
     NOTE: This function will overwrite objects with the same key names!
 
     Args:
-        client: boto3.Session.client
+        client: configured boto3 S3 client
         body: bytes object that will be written as an S3 object's data
         bucket: name of bucket that object should be written in
         key: name (or path) of the object in the S3 bucket
@@ -231,8 +306,36 @@ def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
         return None
 
 
+def get_envicloud_object_links(url: str) -> list[str] | None:
+    """
+    Return a list of envicloud object links.
+    Links must include a filename (with a suffix extension, for example '.csv').
+
+    Args:
+        url: URL that leads to the envicloud data content
+    """
+    object_links = []
+
+    parsed_url = parse_envicloud_url(url)
+    if not parsed_url:
+        return None
+
+    endpoint_url, bucket, prefix = parsed_url
+    client = create_s3_client_unsigned(endpoint_url, bucket)
+
+    bucket_contents = s3_client_list_bucket_contents(client, bucket, prefix)
+
+    for obj in bucket_contents:
+        object_url = f"{endpoint_url}/{bucket}/{obj['Key']}"
+        if Path(obj["Key"]).suffix:
+            object_links.append(object_url)
+
+    return object_links
+
+
 # TODO finish WIP
 # TODO handle EnviDat prefix cloud storage
+# TODO determine nesting structure for envicloud local files
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
     Write a bytes object to a local file.
@@ -246,20 +349,8 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
     """
     match doi_prefix:
         case "10.16904":  # EnviDat DOI prefix
-            envicloud_url = "https://envicloud.wsl.ch/#/?bucket="
-            if url.startswith(envicloud_url):
-                print("")
-                print(url)
-
-                parsed_url = parse_envicloud_url(url)
-                if not parsed_url:
-                    return
-
-                endpoint_url, bucket, prefix = parsed_url
-
-                print(endpoint_url)
-                print(bucket)
-                print(prefix)
+            if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
+                get_envicloud_object_links(url)
 
             elif (content := get_url_content(url)) and (
                 file_name := Path(urlparse(url).path).name
