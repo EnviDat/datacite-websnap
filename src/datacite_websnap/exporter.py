@@ -4,10 +4,13 @@ Process and export DataCite XML metadata records.
 
 import base64
 from pathlib import Path
+from pprint import pprint
 import binascii
 from typing import Any
 from urllib.parse import urlparse, unquote, parse_qs
 
+import click
+import requests
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import (
@@ -212,7 +215,7 @@ def s3_client_put_object(client: Any, body: bytes, bucket: str, key: str) -> Non
     NOTE: This function will overwrite objects with the same key names!
 
     Args:
-        client: configured boto3 S3 client
+        client: configured Boto3 S3 client
         body: bytes object that will be written as an S3 object's data
         bucket: name of bucket that object should be written in
         key: name (or path) of the object in the S3 bucket
@@ -275,6 +278,7 @@ def write_local_file(
         raise CustomClickException(f"Unexpected error: {err}")
 
 
+# TODO possibly extract to new module
 def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
     """
     Parse envicloud URL and return endpoint_url, bucket, and prefix.
@@ -306,10 +310,12 @@ def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
         return None
 
 
-def get_envicloud_object_links(url: str) -> list[str] | None:
+# TODO possibly extract to new module
+# TODO review S3 and local nesting/prefix structure
+def get_envicloud_objects(url: str) -> list[tuple[str, str]] | None:
     """
-    Return a list of envicloud object links.
-    Links must include a filename (with a suffix extension, for example '.csv').
+    Return a list of envicloud object tuples: (object_key, object_url)
+    Links must have a suffix extension to be added to the list, for example '.csv'.
 
     Args:
         url: URL that leads to the envicloud data content
@@ -326,16 +332,16 @@ def get_envicloud_object_links(url: str) -> list[str] | None:
     bucket_contents = s3_client_list_bucket_contents(client, bucket, prefix)
 
     for obj in bucket_contents:
-        object_url = f"{endpoint_url}/{bucket}/{obj['Key']}"
-        if Path(obj["Key"]).suffix:
-            object_links.append(object_url)
+        object_key = obj["Key"]
+        object_url = f"{endpoint_url}/{bucket}/{object_key}"
+        if Path(object_key).suffix:
+            object_links.append((object_key, object_url))
 
     return object_links
 
 
 # TODO finish WIP
 # TODO handle EnviDat prefix cloud storage
-# TODO determine nesting structure for envicloud local files
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
     Write a bytes object to a local file.
@@ -350,7 +356,7 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
     match doi_prefix:
         case "10.16904":  # EnviDat DOI prefix
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
-                get_envicloud_object_links(url)
+                pprint(get_envicloud_objects(url))
 
             elif (content := get_url_content(url)) and (
                 file_name := Path(urlparse(url).path).name
@@ -365,4 +371,117 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
             CustomWarning(
                 f"CLI does not support writing local data files for DOI "
                 f"prefix: {doi_prefix}. Failed to write file '{url}' locally."
+            )
+
+
+class _UploadProgress:
+    def __init__(self, total_bytes: int = 0) -> None:
+        self._transferred = 0
+        self._total_bytes = total_bytes
+
+    def __call__(self, bytes_transferred: int) -> None:
+        self._transferred += bytes_transferred
+        transferred_mb = self._transferred / 1024 / 1024
+        if self._total_bytes:
+            total_mb = self._total_bytes / 1024 / 1024
+            click.echo(
+                f"\r  Progress: {transferred_mb:.1f} / {total_mb:.1f} MB", nl=False
+            )
+        else:
+            click.echo(f"\r  Progress: {transferred_mb:.1f} MB", nl=False)
+
+
+def stream_url_to_s3(
+    url: str,
+    bucket: str,
+    key: str,
+    s3_client: Any,
+) -> None:
+    """
+    Streams content from a URL directly to an S3 bucket without loading into memory.
+
+    Args:
+        url: URL of the resource to stream.
+        bucket: S3 bucket name.
+        key: S3 object key.
+        s3_client: configured Boto3 S3 client.
+    """
+    try:
+        response = requests.get(url, stream=True, timeout=(10, 60))
+        response.raise_for_status()
+        response.raw.decode_content = True
+
+        total_bytes = int(response.headers.get("Content-Length", 0))
+        s3_client.upload_fileobj(
+            Fileobj=response.raw,
+            Bucket=bucket,
+            Key=key,
+            Callback=_UploadProgress(total_bytes),
+        )
+        click.echo()  # terminate progress line
+
+        CustomEcho(f"Successfully exported to bucket '{bucket}' data file: {key}")
+
+    except requests.exceptions.Timeout:
+        CustomWarning(f"Request timed out fetching URL: '{url}'")
+    except requests.exceptions.HTTPError as err:
+        CustomWarning(f"HTTP error fetching URL '{url}': {err}")
+    except requests.exceptions.RequestException as err:
+        CustomWarning(f"Error fetching URL '{url}': {err}")
+    except Exception as err:
+        CustomWarning(f"Unexpected error streaming '{url}' to S3: {err}")
+
+
+# TODO finish WIP
+# TODO test
+def s3_export_data_links(
+    doi_prefix: str, url: str, s3_client: Any, bucket: str, doi_s3_dir: str
+) -> None:
+    """
+    Export a bytes object to an object in a S3 bucket.
+    The content in the S3 object corresponds a data file resource
+    passed as a URL in the DOI metadata.
+
+    Args:
+        doi_prefix: prefix of the DOI
+        url: URL that leads to the data content
+        s3_client: configured Boto3 S3 client
+        bucket: S3 bucket name
+        doi_s3_dir: string with a formatted DOI (can be prepended by a key_prefix)
+    """
+    match doi_prefix:
+        case "10.16904":  # EnviDat DOI prefix
+            if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
+                envicloud_objects = get_envicloud_objects(url)
+
+                if envicloud_objects:
+                    for obj in envicloud_objects:
+                        obj_key, obj_url = obj
+                        full_key = f"{doi_s3_dir}/{obj_key}"
+
+                        click.echo(f"Uploading to bucket '{bucket}': {obj_url}...")
+
+                        stream_url_to_s3(
+                            url=obj_url,
+                            bucket=bucket,
+                            key=full_key,
+                            s3_client=s3_client,
+                        )
+
+                        break
+
+            elif (content := get_url_content(url)) and (
+                file_name := Path(urlparse(url).path).name
+            ):
+                s3_client_put_object(
+                    client=s3_client,
+                    body=content,
+                    bucket=bucket,
+                    key=f"{doi_s3_dir}/{file_name}",
+                )
+
+        case _:
+            CustomWarning(
+                f"CLI does not support exporting S3 objects for "
+                f"DOI prefix: {doi_prefix}. Failed to write file '{url}' locally."
             )

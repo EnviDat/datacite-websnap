@@ -22,7 +22,6 @@ Example bulk-export command:
 import json
 from typing import Literal
 from pathlib import Path
-from urllib.parse import urlparse
 
 import click
 import click_extra
@@ -45,7 +44,6 @@ from .datacite_handler import (
     get_datacite_doi,
     validate_doi_eth_standard,
 )
-from .http_utils import get_url_content
 from .exporter import (
     decode_base64_xml,
     format_xml_file_name,
@@ -54,6 +52,7 @@ from .exporter import (
     s3_client_put_object,
     format_json_file_name,
     write_local_file_data_links,
+    s3_export_data_links,
 )
 
 
@@ -257,6 +256,7 @@ def datacite_bulk_export(
     CustomEcho("**** Finished DataCite bulk export ****")
 
 
+# TODO finish WIP
 # TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
 @cli.command("doi-export")
@@ -337,17 +337,9 @@ def datacite_single_doi_export(
                 bucket=bucket,
                 key=f"{doi_s3_dir}/{doi_stem}.json",
             )
-            # TODO test and extract block to exporter.py and check for doi_prefix
             for url in data_links:
-                if (content := get_url_content(url)) and (
-                    file_name := Path(urlparse(url).path).name
-                ):
-                    s3_client_put_object(
-                        client=s3_client,
-                        body=content,
-                        bucket=bucket,
-                        key=f"{doi_s3_dir}/{file_name}",
-                    )
+                s3_export_data_links(doi_prefix, url, s3_client, bucket, doi_s3_dir)
+                break
 
         case "local":
             xml_filename = format_xml_file_name(doi_bare)
