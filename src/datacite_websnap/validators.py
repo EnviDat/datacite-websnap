@@ -1,6 +1,7 @@
 """Validators for datacite-websnap."""
 
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
 
@@ -35,14 +36,15 @@ def validate_page_size(page_size: int) -> int:
     return page_size
 
 
-def validate_doi(doi: str) -> str:
+def validate_doi(doi: str) -> tuple[str, str]:
     """
-    Validate and return doi (without URL base).
-    Raises BadParameter exception if doi does not have a "/" or if doi prefix is not in
+    Validate and return tuple with doi (without URL base) and doi prefix.
+
+    Raises BadParameter exception if doi does not have a '/' or if doi prefix is not in
     supported DOI prefixes (DATACITE_DOIS_PREFIXES).
 
-    Example input doi with URL base: ""https://www.doi.org/10.16904/envidat.504"
-    Return doi after passing validation: "10.16904/envidat.504"
+    Example input doi with URL base: "https://www.doi.org/10.16904/envidat.504"
+    Return doi after passing validation and doi prefix: ("10.16904/envidat.504", "10.16904")
     """
     if "/" not in doi:
         raise CustomBadParameter(
@@ -57,15 +59,15 @@ def validate_doi(doi: str) -> str:
     else:
         doi_bare = doi
 
-    prefix = doi_bare.split("/")[0]
+    doi_prefix = doi_bare.split("/")[0]
 
-    if prefix not in DATACITE_DOIS_PREFIXES:
+    if doi_prefix not in DATACITE_DOIS_PREFIXES:
         raise CustomBadParameter(
-            f"'{prefix}' is not one of the supported "
+            f"'{doi_prefix}' is not one of the supported "
             f"DOI prefixes: {DATACITE_DOIS_PREFIXES}"
         )
 
-    return doi_bare
+    return doi_bare, doi_prefix
 
 
 def validate_at_least_one_query_param(
@@ -73,6 +75,7 @@ def validate_at_least_one_query_param(
 ) -> None:
     """
     Validate that there is at least one query param value that is truthy.
+
     Raises BadParameter exception if neither "doi_prefix" "client_id"
     (truthy) arguments are provided.
     """
@@ -82,10 +85,10 @@ def validate_at_least_one_query_param(
             "'--doi-prefix' or '--client-id'"
         )
 
-    return
 
-
-def validate_bucket(bucket, destination) -> str | None:
+def validate_bucket(
+    bucket: str | None, destination: Literal["S3", "local"]
+) -> str | None:
     """
     Validate and return bucket.
     Raises BadParameter exception if bucket is not truthy when
@@ -100,7 +103,9 @@ def validate_bucket(bucket, destination) -> str | None:
     return bucket
 
 
-def validate_endpoint_url(endpoint_url, destination) -> str | None:
+def validate_endpoint_url(
+    endpoint_url: str | None, destination: Literal["S3", "local"]
+) -> str | None:
     """
     Validate and return endpoint_url, it must be an http or https URL.
     Raises BadParameter exception if endpoint_url is not truthy when
@@ -126,7 +131,9 @@ def validate_endpoint_url(endpoint_url, destination) -> str | None:
     return endpoint_url
 
 
-def validate_directory_path(directory_path, destination) -> str | None:
+def validate_directory_path(
+    directory_path: str | None, destination: Literal["S3", "local"]
+) -> str | None:
     """
     Validate and return directory_path.
     Raises BadParameter exception if directory_path is not truthy when
@@ -146,7 +153,9 @@ def validate_directory_path(directory_path, destination) -> str | None:
     return directory_path
 
 
-def validate_key_prefix(key_prefix, destination) -> str | None:
+def validate_key_prefix(
+    key_prefix: str | None, destination: Literal["S3", "local"]
+) -> str | None:
     """
     Validate and return key_prefix.
     Raises BadParameter exception it key_prefix is truthy when option '--destination'

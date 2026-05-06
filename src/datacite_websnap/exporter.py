@@ -4,6 +4,7 @@ Process and export DataCite XML metadata records.
 
 import base64
 from pathlib import Path
+from urllib.parse import urlparse, unquote, parse_qs
 import binascii
 
 from botocore.config import Config
@@ -15,7 +16,8 @@ from botocore.exceptions import (
 )
 import boto3
 
-from .logger import CustomClickException, CustomEcho
+from .http_utils import get_url_content
+from .logger import CustomClickException, CustomEcho, CustomWarning
 from .config import TIMEOUT
 
 
@@ -167,19 +169,17 @@ def s3_client_put_object(
     except Exception as err:
         raise CustomClickException(f"{err_msg}Unexpected error: {err}")
 
-    return
-
 
 def write_local_file(
     content_bytes: bytes, filename: str, directory_path: str | None = None
 ) -> None:
     """
-        Write a bytes object to a local file.
-    3
-        Args:
-            content_bytes: bytes object that will be written to a local file
-            filename: name of file to write, be sure to include desired extension
-            directory_path: path to directory to write the file in
+    Write a bytes object to a local file.
+
+    Args:
+        content_bytes: bytes object that will be written to a local file
+        filename: name of file to write, be sure to include desired extension
+        directory_path: path to directory to write the file in
     """
     try:
         if directory_path:
@@ -198,3 +198,80 @@ def write_local_file(
 
     except Exception as err:
         raise CustomClickException(f"Unexpected error: {err}")
+
+
+def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
+    """
+    Parse envicloud URL and return endpoint_url, bucket, and prefix.
+    envicloud is the EnviDat cloud storage portal.
+
+    Args:
+         url: URL that leads to the data content
+    """
+    try:
+        fragment = urlparse(url).fragment
+        query = fragment.split("?", 1)[-1]
+        params = parse_qs(query)
+
+        bucket_url = unquote(params["bucket"][0])
+        prefix = unquote(params["prefix"][0])
+
+        parsed_bucket = urlparse(bucket_url)
+        endpoint_url = f"{parsed_bucket.scheme}://{parsed_bucket.netloc}"
+        bucket = parsed_bucket.path.strip("/")
+
+        return endpoint_url, bucket, prefix
+
+    except KeyError as err:
+        CustomWarning(f"Could not parse envicloud URL '{url}': missing parameter {err}")
+        return None
+
+    except Exception as err:
+        CustomWarning(f"Unexpected error parsing envicloud URL '{url}': {err}")
+        return None
+
+
+# TODO finish WIP
+# TODO handle EnviDat prefix cloud storage
+def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
+    """
+    Write a bytes object to a local file.
+    The content in the local file corresponds a data file resource
+    passed as a URL in the DOI metadata.
+
+    Args:
+        url: URL that leads to the data content
+        doi_directory: local path to directory to write the file in
+        doi_prefix: prefix of the DOI
+    """
+    match doi_prefix:
+        case "10.16904":  # EnviDat DOI prefix
+            envicloud_url = "https://envicloud.wsl.ch/#/?bucket="
+            if url.startswith(envicloud_url):
+                print("")
+                print(url)
+
+                parsed_url = parse_envicloud_url(url)
+                if not parsed_url:
+                    return
+
+                endpoint_url, bucket, prefix = parsed_url
+
+                print(endpoint_url)
+                print(bucket)
+                print(prefix)
+
+            elif (content := get_url_content(url)) and (
+                file_name := Path(urlparse(url).path).name
+            ):
+                write_local_file(
+                    content_bytes=content,
+                    filename=file_name,
+                    directory_path=doi_directory,
+                )
+
+        case _:
+            CustomWarning(
+                f"CLI does not support writing local data files for DOI "
+                f"prefix: {doi_prefix}. Failed to write file '{url}' locally."
+            )
