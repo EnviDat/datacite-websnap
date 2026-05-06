@@ -9,6 +9,7 @@ from datacite_websnap.exporter import (
     CustomClickException,
     format_xml_file_name,
     format_json_file_name,
+    parse_envicloud_url,
     write_local_file,
     s3_client_put_object,
     create_s3_client,
@@ -77,6 +78,63 @@ def test_format_json_file_name_with_prefix():
         format_json_file_name("data/10.16904_envidat.31.xml")
         == "data/10.16904_envidat.31.json"
     )
+
+
+def test_parse_envicloud_url_success():
+    url = (
+        "https://envicloud.wsl.ch/#/"
+        "?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
+        "&prefix=data%2Ffile.csv"
+    )
+    endpoint_url, bucket, prefix = parse_envicloud_url(url)
+    assert endpoint_url == "https://s3.wsl.ch"
+    assert bucket == "envidat"
+    assert prefix == "data/file.csv"
+
+
+def test_parse_envicloud_url_encoded_prefix():
+    url = (
+        "https://envicloud.wsl.ch/#/"
+        "?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
+        "&prefix=folder%2Fsubfolder%2Fdata.csv"
+    )
+    _, _, prefix = parse_envicloud_url(url)
+    assert prefix == "folder/subfolder/data.csv"
+
+
+def test_parse_envicloud_url_missing_bucket():
+    url = "https://envicloud.wsl.ch/#/?prefix=data%2Ffile.csv"
+    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
+        result = parse_envicloud_url(url)
+        assert result is None
+        mock_warning.assert_called_once()
+
+
+def test_parse_envicloud_url_missing_prefix():
+    url = "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
+    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
+        result = parse_envicloud_url(url)
+        assert result is None
+        mock_warning.assert_called_once()
+
+
+def test_parse_envicloud_url_empty_fragment():
+    url = "https://envicloud.wsl.ch/"
+    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
+        result = parse_envicloud_url(url)
+        assert result is None
+        mock_warning.assert_called_once()
+
+
+def test_parse_envicloud_url_unexpected_exception():
+    url = "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat&prefix=data%2Ffile.csv"
+    with patch(
+        "datacite_websnap.exporter.parse_qs", side_effect=ValueError("bad input")
+    ):
+        with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
+            result = parse_envicloud_url(url)
+            assert result is None
+            mock_warning.assert_called_once()
 
 
 @patch("boto3.Session.client")

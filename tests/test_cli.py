@@ -4,7 +4,7 @@ import click.testing
 from unittest.mock import patch, MagicMock
 import pytest
 
-from datacite_websnap.cli import cli, datacite_bulk_export, _write_local_file_data_links
+from datacite_websnap.cli import cli, datacite_bulk_export
 from datacite_websnap.logger import CustomClickException
 
 
@@ -207,25 +207,6 @@ def test_bulk_export_command_error_continue(tmp_path):
 
     assert result.exit_code == 0
     mock_warning.assert_called_once()
-
-
-def test_write_local_file_data_links_success(tmp_path):
-    with patch("datacite_websnap.cli.get_url_content", return_value=b"data") as mock_get:
-        with patch("datacite_websnap.cli.write_local_file") as mock_write:
-            _write_local_file_data_links("https://example.com/files/data.csv", str(tmp_path))
-            mock_get.assert_called_once_with("https://example.com/files/data.csv")
-            mock_write.assert_called_once_with(
-                content_bytes=b"data",
-                filename="data.csv",
-                directory_path=str(tmp_path),
-            )
-
-
-def test_write_local_file_data_links_no_content(tmp_path):
-    with patch("datacite_websnap.cli.get_url_content", return_value=None):
-        with patch("datacite_websnap.cli.write_local_file") as mock_write:
-            _write_local_file_data_links("https://example.com/files/data.csv", str(tmp_path))
-            mock_write.assert_not_called()
 
 
 def test_bulk_export_unsupported_destination():

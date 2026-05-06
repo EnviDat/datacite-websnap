@@ -17,13 +17,13 @@ from datacite_websnap.validators import (
 
 
 def test_validate_doi_bare_doi():
-    assert validate_doi("10.16904/envidat.504") == "10.16904/envidat.504"
+    assert validate_doi("10.16904/envidat.504") == ("10.16904/envidat.504", "10.16904")
 
 
 def test_validate_doi_url():
-    assert (
-        validate_doi("https://www.doi.org/10.16904/envidat.504")
-        == "10.16904/envidat.504"
+    assert validate_doi("https://www.doi.org/10.16904/envidat.504") == (
+        "10.16904/envidat.504",
+        "10.16904",
     )
 
 
