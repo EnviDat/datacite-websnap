@@ -15,7 +15,7 @@ from datacite_websnap.exporter import (
     s3_client_list_bucket_contents,
     create_s3_client,
     create_s3_client_unsigned,
-    get_envicloud_object_links,
+    get_envicloud_objects,
 )
 
 
@@ -365,7 +365,7 @@ def test_s3_client_list_bucket_contents_paginated():
 
     assert len(result) == 2
     assert mock_client.list_objects_v2.call_count == 2
-    second_call_kwargs = mock_client.list_objects_v2.call_args_list[1][1]
+    second_call_kwargs = mock_client.list_objects_v2.call_args_list[1].kwargs
     assert second_call_kwargs["ContinuationToken"] == "token123"
 
 
@@ -396,14 +396,14 @@ def test_s3_client_list_bucket_contents_unexpected_error():
         s3_client_list_bucket_contents(mock_client, "bucket", "data/")
 
 
-# --- get_envicloud_object_links ---
+# --- get_envicloud_objects ---
 
 
 @patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_object_links_parse_fails(mock_parse):
+def test_get_envicloud_objects_parse_fails(mock_parse):
     mock_parse.return_value = None
 
-    result = get_envicloud_object_links("https://envicloud.wsl.ch/#/invalid")
+    result = get_envicloud_objects("https://envicloud.wsl.ch/#/invalid")
 
     assert result is None
 
@@ -411,7 +411,7 @@ def test_get_envicloud_object_links_parse_fails(mock_parse):
 @patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
 @patch("datacite_websnap.exporter.create_s3_client_unsigned")
 @patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_object_links_success(mock_parse, mock_create_client, mock_list):
+def test_get_envicloud_objects_success(mock_parse, mock_create_client, mock_list):
     mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
     mock_create_client.return_value = MagicMock()
     mock_list.return_value = [
@@ -419,20 +419,20 @@ def test_get_envicloud_object_links_success(mock_parse, mock_create_client, mock
         {"Key": "data/file2.nc"},
     ]
 
-    result = get_envicloud_object_links(
+    result = get_envicloud_objects(
         "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
     )
 
     assert result == [
-        "https://s3.wsl.ch/envidat/data/file1.csv",
-        "https://s3.wsl.ch/envidat/data/file2.nc",
+        ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv"),
+        ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc"),
     ]
 
 
 @patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
 @patch("datacite_websnap.exporter.create_s3_client_unsigned")
 @patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_object_links_filters_no_extension(
+def test_get_envicloud_objects_filters_no_extension(
     mock_parse, mock_create_client, mock_list
 ):
     mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
@@ -443,27 +443,25 @@ def test_get_envicloud_object_links_filters_no_extension(
         {"Key": "data/file2.nc"},
     ]
 
-    result = get_envicloud_object_links(
+    result = get_envicloud_objects(
         "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
     )
 
     assert len(result) == 2
-    assert "https://s3.wsl.ch/envidat/data/file1.csv" in result
-    assert "https://s3.wsl.ch/envidat/data/file2.nc" in result
-    assert "https://s3.wsl.ch/envidat/data/subfolder" not in result
+    assert ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv") in result
+    assert ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc") in result
+    assert ("data/subfolder", "https://s3.wsl.ch/envidat/data/subfolder") not in result
 
 
 @patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
 @patch("datacite_websnap.exporter.create_s3_client_unsigned")
 @patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_object_links_empty_bucket(
-    mock_parse, mock_create_client, mock_list
-):
+def test_get_envicloud_objects_empty_bucket(mock_parse, mock_create_client, mock_list):
     mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
     mock_create_client.return_value = MagicMock()
     mock_list.return_value = []
 
-    result = get_envicloud_object_links(
+    result = get_envicloud_objects(
         "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
     )
 
