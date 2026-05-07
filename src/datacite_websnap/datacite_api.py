@@ -1,5 +1,5 @@
 """
-Handles interactions with DataCite API.
+DataCite API data retrieval, validation and processing.
 """
 
 from typing import Any

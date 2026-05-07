@@ -38,7 +38,7 @@ from .validators import (
     validate_doi,
     validate_api_url,
 )
-from .datacite_handler import (
+from .datacite_api import (
     get_datacite_client,
     get_datacite_list_dois_xml,
     get_datacite_doi,
