@@ -4,18 +4,18 @@ import pytest
 from unittest.mock import patch, MagicMock, mock_open
 from botocore.exceptions import ClientError, BotoCoreError
 
+import requests
+
 from datacite_websnap.exporter import (
     decode_base64_xml,
     CustomClickException,
+    _UploadProgress,
     format_xml_file_name,
     format_json_file_name,
-    parse_envicloud_url,
     write_local_file,
     s3_client_put_object,
-    s3_client_list_bucket_contents,
     create_s3_client,
-    create_s3_client_unsigned,
-    get_envicloud_objects,
+    stream_url_to_s3,
 )
 
 
@@ -81,63 +81,6 @@ def test_format_json_file_name_with_prefix():
         format_json_file_name("data/10.16904_envidat.31.xml")
         == "data/10.16904_envidat.31.json"
     )
-
-
-def test_parse_envicloud_url_success():
-    url = (
-        "https://envicloud.wsl.ch/#/"
-        "?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
-        "&prefix=data%2Ffile.csv"
-    )
-    endpoint_url, bucket, prefix = parse_envicloud_url(url)
-    assert endpoint_url == "https://s3.wsl.ch"
-    assert bucket == "envidat"
-    assert prefix == "data/file.csv"
-
-
-def test_parse_envicloud_url_encoded_prefix():
-    url = (
-        "https://envicloud.wsl.ch/#/"
-        "?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
-        "&prefix=folder%2Fsubfolder%2Fdata.csv"
-    )
-    _, _, prefix = parse_envicloud_url(url)
-    assert prefix == "folder/subfolder/data.csv"
-
-
-def test_parse_envicloud_url_missing_bucket():
-    url = "https://envicloud.wsl.ch/#/?prefix=data%2Ffile.csv"
-    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
-        result = parse_envicloud_url(url)
-        assert result is None
-        mock_warning.assert_called_once()
-
-
-def test_parse_envicloud_url_missing_prefix():
-    url = "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
-    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
-        result = parse_envicloud_url(url)
-        assert result is None
-        mock_warning.assert_called_once()
-
-
-def test_parse_envicloud_url_empty_fragment():
-    url = "https://envicloud.wsl.ch/"
-    with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
-        result = parse_envicloud_url(url)
-        assert result is None
-        mock_warning.assert_called_once()
-
-
-def test_parse_envicloud_url_unexpected_exception():
-    url = "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat&prefix=data%2Ffile.csv"
-    with patch(
-        "datacite_websnap.exporter.parse_qs", side_effect=ValueError("bad input")
-    ):
-        with patch("datacite_websnap.exporter.CustomWarning") as mock_warning:
-            result = parse_envicloud_url(url)
-            assert result is None
-            mock_warning.assert_called_once()
 
 
 @patch("boto3.Session.client")
@@ -295,174 +238,122 @@ def test_create_s3_client_invalid_bucket(mock_session_class):
     assert "S3 credentials, endpoint and/or bucket are invalid" in str(exc.value)
 
 
-# --- create_s3_client_unsigned ---
+# --- _UploadProgress ---
 
 
-@patch("boto3.client")
-def test_create_s3_client_unsigned_success(mock_boto3_client):
-    mock_client = MagicMock()
-    mock_boto3_client.return_value = mock_client
+@patch("click.echo")
+def test_upload_progress_with_total_bytes(mock_echo):
+    progress = _UploadProgress(total_bytes=2 * 1024 * 1024)  # 2 MB total
+    progress(1 * 1024 * 1024)  # 1 MB chunk
 
-    result = create_s3_client_unsigned("https://s3.wsl.ch", "envidat")
-
-    mock_boto3_client.assert_called_once()
-    mock_client.head_bucket.assert_called_once_with(Bucket="envidat")
-    assert result == mock_client
+    mock_echo.assert_called_once_with("\r  Progress: 1.0 / 2.0 MB", nl=False)
 
 
-@patch("boto3.client")
-def test_create_s3_client_unsigned_connection_error(mock_boto3_client):
-    mock_boto3_client.side_effect = BotoCoreError()
+@patch("click.echo")
+def test_upload_progress_without_total_bytes(mock_echo):
+    progress = _UploadProgress()
+    progress(512 * 1024)  # 0.5 MB chunk
 
-    with pytest.raises(CustomClickException, match="Failed to create S3 client"):
-        create_s3_client_unsigned("http://invalid", "bucket")
-
-
-@patch("boto3.client")
-def test_create_s3_client_unsigned_invalid_bucket(mock_boto3_client):
-    mock_client = MagicMock()
-    mock_boto3_client.return_value = mock_client
-
-    error_response = {"Error": {"Code": "403", "Message": "Forbidden"}}
-    mock_client.head_bucket.side_effect = ClientError(error_response, "HeadBucket")
-
-    with pytest.raises(CustomClickException, match="S3 endpoint URL and/or bucket"):
-        create_s3_client_unsigned("https://s3.wsl.ch", "private-bucket")
+    mock_echo.assert_called_once_with("\r  Progress: 0.5 MB", nl=False)
 
 
-# --- s3_client_list_bucket_contents ---
+@patch("click.echo")
+def test_upload_progress_accumulates_across_calls(mock_echo):
+    progress = _UploadProgress(total_bytes=3 * 1024 * 1024)  # 3 MB total
+    progress(1 * 1024 * 1024)  # 1 MB chunk
+    progress(1 * 1024 * 1024)  # another 1 MB chunk
+
+    assert mock_echo.call_count == 2
+    first_call, second_call = mock_echo.call_args_list
+    assert first_call == (("\r  Progress: 1.0 / 3.0 MB",), {"nl": False})
+    assert second_call == (("\r  Progress: 2.0 / 3.0 MB",), {"nl": False})
 
 
-def test_s3_client_list_bucket_contents_single_page():
-    mock_client = MagicMock()
-    mock_client.list_objects_v2.return_value = {
-        "Contents": [{"Key": "data/file1.csv"}, {"Key": "data/file2.nc"}],
-        "IsTruncated": False,
-    }
-
-    result = s3_client_list_bucket_contents(mock_client, "bucket", "data/")
-
-    assert len(result) == 2
-    assert result[0]["Key"] == "data/file1.csv"
-    mock_client.list_objects_v2.assert_called_once()
+# --- stream_url_to_s3 ---
 
 
-def test_s3_client_list_bucket_contents_paginated():
-    mock_client = MagicMock()
-    mock_client.list_objects_v2.side_effect = [
-        {
-            "Contents": [{"Key": "data/file1.csv"}],
-            "IsTruncated": True,
-            "NextContinuationToken": "token123",
-        },
-        {
-            "Contents": [{"Key": "data/file2.nc"}],
-            "IsTruncated": False,
-        },
-    ]
+@patch("datacite_websnap.exporter.CustomEcho")
+@patch("click.echo")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_success_with_content_length(mock_get, mock_echo, mock_custom_echo):
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Length": str(2 * 1024 * 1024)}
+    mock_get.return_value = mock_response
 
-    result = s3_client_list_bucket_contents(mock_client, "bucket", "data/")
+    mock_s3 = MagicMock()
 
-    assert len(result) == 2
-    assert mock_client.list_objects_v2.call_count == 2
-    second_call_kwargs = mock_client.list_objects_v2.call_args_list[1].kwargs
-    assert second_call_kwargs["ContinuationToken"] == "token123"
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3)
 
-
-def test_s3_client_list_bucket_contents_empty():
-    mock_client = MagicMock()
-    mock_client.list_objects_v2.return_value = {"IsTruncated": False}
-
-    result = s3_client_list_bucket_contents(mock_client, "bucket", "data/")
-
-    assert result == []
+    mock_get.assert_called_once_with("https://example.com/file.csv", stream=True, timeout=(10, 60))
+    mock_response.raise_for_status.assert_called_once()
+    assert mock_response.raw.decode_content is True
+    mock_s3.upload_fileobj.assert_called_once()
+    call_kwargs = mock_s3.upload_fileobj.call_args.kwargs
+    assert call_kwargs["Bucket"] == "my-bucket"
+    assert call_kwargs["Key"] == "prefix/file.csv"
+    assert isinstance(call_kwargs["Callback"], _UploadProgress)
+    assert call_kwargs["Callback"]._total_bytes == 2 * 1024 * 1024
+    mock_echo.assert_called_once_with()  # progress line terminator
+    mock_custom_echo.assert_called_once()
 
 
-def test_s3_client_list_bucket_contents_client_error():
-    mock_client = MagicMock()
-    mock_client.list_objects_v2.side_effect = ClientError(
-        {"Error": {"Code": "403", "Message": "Forbidden"}}, "ListObjectsV2"
-    )
+@patch("datacite_websnap.exporter.CustomEcho")
+@patch("click.echo")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_success_no_content_length(mock_get, mock_echo, mock_custom_echo):
+    mock_response = MagicMock()
+    mock_response.headers = {}
+    mock_get.return_value = mock_response
 
-    with pytest.raises(CustomClickException, match="Failed to list objects"):
-        s3_client_list_bucket_contents(mock_client, "bucket", "data/")
+    mock_s3 = MagicMock()
 
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3)
 
-def test_s3_client_list_bucket_contents_unexpected_error():
-    mock_client = MagicMock()
-    mock_client.list_objects_v2.side_effect = Exception("something went wrong")
-
-    with pytest.raises(CustomClickException, match="Unexpected error"):
-        s3_client_list_bucket_contents(mock_client, "bucket", "data/")
+    call_kwargs = mock_s3.upload_fileobj.call_args.kwargs
+    assert call_kwargs["Callback"]._total_bytes == 0
 
 
-# --- get_envicloud_objects ---
+@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_timeout(mock_get, mock_warning):
+    mock_get.side_effect = requests.exceptions.Timeout()
+
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
+
+    mock_warning.assert_called_once()
+    assert "timed out" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_objects_parse_fails(mock_parse):
-    mock_parse.return_value = None
+@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_http_error(mock_get, mock_warning):
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404")
+    mock_get.return_value = mock_response
 
-    result = get_envicloud_objects("https://envicloud.wsl.ch/#/invalid")
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
 
-    assert result is None
-
-
-@patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
-@patch("datacite_websnap.exporter.create_s3_client_unsigned")
-@patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_objects_success(mock_parse, mock_create_client, mock_list):
-    mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
-    mock_create_client.return_value = MagicMock()
-    mock_list.return_value = [
-        {"Key": "data/file1.csv"},
-        {"Key": "data/file2.nc"},
-    ]
-
-    result = get_envicloud_objects(
-        "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
-    )
-
-    assert result == [
-        ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv"),
-        ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc"),
-    ]
+    mock_warning.assert_called_once()
+    assert "HTTP error" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
-@patch("datacite_websnap.exporter.create_s3_client_unsigned")
-@patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_objects_filters_no_extension(
-    mock_parse, mock_create_client, mock_list
-):
-    mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
-    mock_create_client.return_value = MagicMock()
-    mock_list.return_value = [
-        {"Key": "data/file1.csv"},
-        {"Key": "data/subfolder"},
-        {"Key": "data/file2.nc"},
-    ]
+@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_request_exception(mock_get, mock_warning):
+    mock_get.side_effect = requests.exceptions.RequestException("connection failed")
 
-    result = get_envicloud_objects(
-        "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
-    )
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
 
-    assert len(result) == 2
-    assert ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv") in result
-    assert ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc") in result
-    assert ("data/subfolder", "https://s3.wsl.ch/envidat/data/subfolder") not in result
+    mock_warning.assert_called_once()
+    assert "Error fetching" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.s3_client_list_bucket_contents")
-@patch("datacite_websnap.exporter.create_s3_client_unsigned")
-@patch("datacite_websnap.exporter.parse_envicloud_url")
-def test_get_envicloud_objects_empty_bucket(mock_parse, mock_create_client, mock_list):
-    mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
-    mock_create_client.return_value = MagicMock()
-    mock_list.return_value = []
+@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_unexpected_exception(mock_get, mock_warning):
+    mock_get.side_effect = Exception("something unexpected")
 
-    result = get_envicloud_objects(
-        "https://envicloud.wsl.ch/#/?bucket=...&prefix=data/"
-    )
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
 
-    assert result == []
+    mock_warning.assert_called_once()
+    assert "Unexpected error" in mock_warning.call_args.args[0]

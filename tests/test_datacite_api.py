@@ -1,11 +1,11 @@
-"""Tests for src/datacite-websnap/datacite_handler.py"""
+"""Tests for src/datacite-websnap/datacite_api.py"""
 
 import pytest
 from unittest.mock import patch, MagicMock
 import requests
 
 from datacite_websnap.http_utils import get_url_json, get_url_content
-from datacite_websnap.datacite_handler import (
+from datacite_websnap.datacite_api import (
     get_datacite_client,
     get_datacite_dois,
     get_datacite_doi,
@@ -179,7 +179,7 @@ def test_get_url_content_unexpected_exception():
 
 
 def test_get_datacite_client():
-    with patch("datacite_websnap.datacite_handler.get_url_json") as mock_get:
+    with patch("datacite_websnap.datacite_api.get_url_json") as mock_get:
         mock_get.return_value = {"client": "data"}
         result = get_datacite_client("https://api.example.org", "client123")
         assert result == {"client": "data"}
@@ -199,7 +199,7 @@ def test_validate_single_doi_response_invalid():
 
 def test_get_datacite_doi_success():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
-    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+    with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
         json_resp, xml, data_links = get_datacite_doi(
             "https://api.example.org", "10.16904/abc"
         )
@@ -210,7 +210,7 @@ def test_get_datacite_doi_success():
 
 def test_get_datacite_doi_none_xml_raises():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": None}}}
-    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+    with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
         with pytest.raises(
             CustomClickException, match="does not have an associated XML"
         ):
@@ -220,7 +220,7 @@ def test_get_datacite_doi_none_xml_raises():
 def test_get_datacite_doi_url_construction():
     raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
     with patch(
-        "datacite_websnap.datacite_handler.get_url_json", return_value=raw
+        "datacite_websnap.datacite_api.get_url_json", return_value=raw
     ) as mock_get:
         get_datacite_doi("https://api.example.org", "10.16904/abc")
         mock_get.assert_called_once_with(
@@ -230,7 +230,7 @@ def test_get_datacite_doi_url_construction():
 
 def test_validate_doi_eth_standard_valid():
     with patch(
-        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(True, None),
     ):
         validate_doi_eth_standard(b"<xml/>")
@@ -238,7 +238,7 @@ def test_validate_doi_eth_standard_valid():
 
 def test_validate_doi_eth_standard_invalid():
     with patch(
-        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(False, None),
     ):
         with pytest.raises(
@@ -249,20 +249,20 @@ def test_validate_doi_eth_standard_invalid():
 
 def test_validate_doi_eth_standard_with_warnings():
     with patch(
-        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(True, ["missing recommended field", "invalid date format"]),
     ):
-        with patch("datacite_websnap.datacite_handler.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
             validate_doi_eth_standard(b"<xml/>")
             assert mock_warning.call_count == 2
 
 
 def test_validate_doi_eth_standard_noncompliant():
     with patch(
-        "datacite_websnap.datacite_handler.validate.validate_datacite_from_string",
+        "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(False, ["missing required field"]),
     ):
-        with patch("datacite_websnap.datacite_handler.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
             with pytest.raises(
                 CustomClickException, match="ETH metadata standard validation"
             ):
@@ -289,7 +289,7 @@ def test_get_datacite_doi_data_links():
             }
         }
     }
-    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+    with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
         _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
         assert data_links == ["https://example.com/data.csv"]
 
@@ -314,7 +314,7 @@ def test_get_datacite_doi_data_links_filtered():
             }
         }
     }
-    with patch("datacite_websnap.datacite_handler.get_url_json", return_value=raw):
+    with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
         _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
         assert data_links == []
 
@@ -347,7 +347,7 @@ def test_extract_doi_xml_missing_xml():
 
 def test_get_datacite_list_dois_xml_invalid_response():
     with patch(
-        "datacite_websnap.datacite_handler.get_datacite_dois",
+        "datacite_websnap.datacite_api.get_datacite_dois",
         return_value={"unexpected": "shape"},
     ):
         with pytest.raises(CustomClickException, match="Unexpected response format"):
@@ -367,9 +367,9 @@ def test_get_datacite_list_dois_xml_single_page():
     }
 
     with patch(
-        "datacite_websnap.datacite_handler.get_url_json", return_value=mock_response
+        "datacite_websnap.datacite_api.get_url_json", return_value=mock_response
     ):
-        with patch("datacite_websnap.datacite_handler.CustomEcho"):
+        with patch("datacite_websnap.datacite_api.CustomEcho"):
             results = get_datacite_list_dois_xml(
                 api_url="https://api.example.org",
                 client_id="client123",
@@ -387,7 +387,7 @@ def test_get_datacite_list_dois_xml_zero_records():
     }
 
     with patch(
-        "datacite_websnap.datacite_handler.get_datacite_dois",
+        "datacite_websnap.datacite_api.get_datacite_dois",
         return_value=mock_response,
     ):
         with pytest.raises(CustomClickException):
@@ -416,10 +416,10 @@ def test_get_datacite_list_dois_xml_multiple_pages():
     }
 
     with patch(
-        "datacite_websnap.datacite_handler.get_datacite_dois", return_value=first_page
+        "datacite_websnap.datacite_api.get_datacite_dois", return_value=first_page
     ):
         with patch(
-            "datacite_websnap.datacite_handler.get_url_json", return_value=second_page
+            "datacite_websnap.datacite_api.get_url_json", return_value=second_page
         ):
             result = get_datacite_list_dois_xml(
                 api_url="https://api.example.org", client_id="test-client"
@@ -446,7 +446,7 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
     }
 
     with patch(
-        "datacite_websnap.datacite_handler.get_datacite_dois", return_value=first_page
+        "datacite_websnap.datacite_api.get_datacite_dois", return_value=first_page
     ):
         with pytest.raises(CustomClickException):
             get_datacite_list_dois_xml(
