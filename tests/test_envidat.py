@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError, BotoCoreError
 
-from datacite_websnap.exporter import CustomClickException
+from datacite_websnap.logger import CustomClickException
 from datacite_websnap.repositories.envidat import (
     parse_envicloud_url,
     create_s3_client_unsigned,
@@ -196,8 +196,8 @@ def test_get_envicloud_objects_success(mock_parse, mock_create_client, mock_list
     mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
     mock_create_client.return_value = MagicMock()
     mock_list.return_value = [
-        {"Key": "data/file1.csv"},
-        {"Key": "data/file2.nc"},
+        {"Key": "data/file1.csv", "Size": 1024},
+        {"Key": "data/file2.nc", "Size": 2048},
     ]
 
     result = get_envicloud_objects(
@@ -205,8 +205,8 @@ def test_get_envicloud_objects_success(mock_parse, mock_create_client, mock_list
     )
 
     assert result == [
-        ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv"),
-        ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc"),
+        ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv", 1024),
+        ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc", 2048),
     ]
 
 
@@ -219,9 +219,9 @@ def test_get_envicloud_objects_filters_no_extension(
     mock_parse.return_value = ("https://s3.wsl.ch", "envidat", "data/")
     mock_create_client.return_value = MagicMock()
     mock_list.return_value = [
-        {"Key": "data/file1.csv"},
+        {"Key": "data/file1.csv", "Size": 512},
         {"Key": "data/subfolder"},
-        {"Key": "data/file2.nc"},
+        {"Key": "data/file2.nc", "Size": 256},
     ]
 
     result = get_envicloud_objects(
@@ -229,9 +229,13 @@ def test_get_envicloud_objects_filters_no_extension(
     )
 
     assert len(result) == 2
-    assert ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv") in result
-    assert ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc") in result
-    assert ("data/subfolder", "https://s3.wsl.ch/envidat/data/subfolder") not in result
+    assert ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv", 512) in result
+    assert ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc", 256) in result
+    assert (
+        "data/subfolder",
+        "https://s3.wsl.ch/envidat/data/subfolder",
+        0,
+    ) not in result
 
 
 @patch("datacite_websnap.repositories.envidat.s3_client_list_bucket_contents")

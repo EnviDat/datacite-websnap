@@ -6,16 +6,20 @@ from botocore.exceptions import ClientError, BotoCoreError
 
 import requests
 
+from datacite_websnap.logger import CustomClickException
 from datacite_websnap.exporter import (
     decode_base64_xml,
-    CustomClickException,
     _UploadProgress,
     format_xml_file_name,
     format_json_file_name,
+    format_size,
     write_local_file,
     s3_client_put_object,
     create_s3_client,
     stream_url_to_s3,
+    resolve_data_link,
+    echo_resolved_data_links,
+    upload_data_link,
 )
 
 
@@ -81,6 +85,29 @@ def test_format_json_file_name_with_prefix():
         format_json_file_name("data/10.16904_envidat.31.xml")
         == "data/10.16904_envidat.31.json"
     )
+
+
+# --- format_size ---
+
+
+def test_format_size_zero():
+    assert format_size(0) == "size unknown"
+
+
+def test_format_size_mb():
+    assert format_size(512 * 1024) == "0.5 MB"
+
+
+def test_format_size_mb_boundary():
+    assert format_size(1024**3 - 1) == "1024.0 MB"
+
+
+def test_format_size_gb_exact():
+    assert format_size(1024**3) == "1.0 GB"
+
+
+def test_format_size_gb():
+    assert format_size(int(2.5 * 1024**3)) == "2.5 GB"
 
 
 @patch("boto3.Session.client")
@@ -275,16 +302,22 @@ def test_upload_progress_accumulates_across_calls(mock_echo):
 @patch("datacite_websnap.exporter.CustomEcho")
 @patch("click.echo")
 @patch("datacite_websnap.exporter.requests.get")
-def test_stream_url_to_s3_success_with_content_length(mock_get, mock_echo, mock_custom_echo):
+def test_stream_url_to_s3_success_with_content_length(
+    mock_get, mock_echo, mock_custom_echo
+):
     mock_response = MagicMock()
     mock_response.headers = {"Content-Length": str(2 * 1024 * 1024)}
     mock_get.return_value = mock_response
 
     mock_s3 = MagicMock()
 
-    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3)
+    stream_url_to_s3(
+        "https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3
+    )
 
-    mock_get.assert_called_once_with("https://example.com/file.csv", stream=True, timeout=(10, 60))
+    mock_get.assert_called_once_with(
+        "https://example.com/file.csv", stream=True, timeout=(10, 60)
+    )
     mock_response.raise_for_status.assert_called_once()
     assert mock_response.raw.decode_content is True
     mock_s3.upload_fileobj.assert_called_once()
@@ -300,14 +333,18 @@ def test_stream_url_to_s3_success_with_content_length(mock_get, mock_echo, mock_
 @patch("datacite_websnap.exporter.CustomEcho")
 @patch("click.echo")
 @patch("datacite_websnap.exporter.requests.get")
-def test_stream_url_to_s3_success_no_content_length(mock_get, mock_echo, mock_custom_echo):
+def test_stream_url_to_s3_success_no_content_length(
+    mock_get, mock_echo, mock_custom_echo
+):
     mock_response = MagicMock()
     mock_response.headers = {}
     mock_get.return_value = mock_response
 
     mock_s3 = MagicMock()
 
-    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3)
+    stream_url_to_s3(
+        "https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3
+    )
 
     call_kwargs = mock_s3.upload_fileobj.call_args.kwargs
     assert call_kwargs["Callback"]._total_bytes == 0
@@ -357,3 +394,163 @@ def test_stream_url_to_s3_unexpected_exception(mock_get, mock_warning):
 
     mock_warning.assert_called_once()
     assert "Unexpected error" in mock_warning.call_args.args[0]
+
+
+# --- resolve_data_link ---
+
+
+@patch("datacite_websnap.exporter.get_envicloud_objects")
+def test_resolve_data_link_envicloud(mock_get_envicloud):
+    mock_get_envicloud.return_value = [
+        ("data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv", 1024),
+        ("data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc", 2048),
+    ]
+
+    result = resolve_data_link(
+        "10.16904",
+        "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat&prefix=data%2F",
+        "doi_dir",
+    )
+
+    assert result == [
+        ("doi_dir/data/file1.csv", "https://s3.wsl.ch/envidat/data/file1.csv", 1024),
+        ("doi_dir/data/file2.nc", "https://s3.wsl.ch/envidat/data/file2.nc", 2048),
+    ]
+
+
+@patch("datacite_websnap.exporter.get_envicloud_objects")
+def test_resolve_data_link_envicloud_empty(mock_get_envicloud):
+    mock_get_envicloud.return_value = []
+
+    result = resolve_data_link(
+        "10.16904",
+        "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat&prefix=data%2F",
+        "doi_dir",
+    )
+
+    assert result == []
+
+
+@patch("datacite_websnap.exporter.get_url_content_length", return_value=4096)
+def test_resolve_data_link_regular_url_with_content_length(mock_size):
+    result = resolve_data_link(
+        "10.16904", "https://example.com/data/report.csv", "doi_dir"
+    )
+
+    assert result == [
+        ("doi_dir/report.csv", "https://example.com/data/report.csv", 4096)
+    ]
+    mock_size.assert_called_once_with("https://example.com/data/report.csv")
+
+
+@patch("datacite_websnap.exporter.get_url_content_length", return_value=0)
+def test_resolve_data_link_regular_url_no_content_length(mock_size):
+    result = resolve_data_link(
+        "10.16904", "https://example.com/data/report.csv", "doi_dir"
+    )
+
+    assert result == [("doi_dir/report.csv", "https://example.com/data/report.csv", 0)]
+
+
+@patch("datacite_websnap.exporter.get_url_content_length", return_value=0)
+def test_resolve_data_link_regular_url_head_fails(mock_size):
+    result = resolve_data_link(
+        "10.16904", "https://example.com/data/report.csv", "doi_dir"
+    )
+
+    assert result == [("doi_dir/report.csv", "https://example.com/data/report.csv", 0)]
+
+
+@patch("datacite_websnap.exporter.get_url_content_length", return_value=0)
+def test_resolve_data_link_regular_url_no_filename(mock_size):
+    # URL with no filename in path (e.g. bare domain) returns empty list
+    result = resolve_data_link("10.16904", "https://example.com/", "doi_dir")
+
+    assert result == []
+
+
+@patch("datacite_websnap.exporter.CustomWarning")
+def test_resolve_data_link_unsupported_prefix(mock_warning):
+    result = resolve_data_link(
+        "10.99999", "https://example.com/data/file.csv", "doi_dir"
+    )
+
+    assert result == []
+    mock_warning.assert_called_once()
+    assert "10.99999" in mock_warning.call_args.args[0]
+
+
+# --- echo_resolved_data_links ---
+
+
+@patch("click.echo")
+def test_echo_resolved_data_links_single_file(mock_echo):
+    resolved = [("doi_dir/file.csv", "https://s3.wsl.ch/envidat/file.csv", 1024 * 1024)]
+
+    echo_resolved_data_links("10.16904/abc", resolved)
+
+    calls = [str(c) for c in mock_echo.call_args_list]
+    output = " ".join(calls)
+    assert "1 data file(s)" in output
+    assert "10.16904/abc" in output
+    assert "1.0 MB" in output
+    assert "doi_dir/file.csv" in output
+
+
+@patch("click.echo")
+def test_echo_resolved_data_links_multiple_files(mock_echo):
+    resolved = [
+        ("doi_dir/file1.csv", "https://s3.wsl.ch/file1.csv", 512 * 1024 * 1024),
+        ("doi_dir/file2.nc", "https://s3.wsl.ch/file2.nc", 512 * 1024 * 1024),
+    ]
+
+    echo_resolved_data_links("10.16904/abc", resolved)
+
+    calls = [str(c) for c in mock_echo.call_args_list]
+    output = " ".join(calls)
+    assert "2 data file(s)" in output
+    assert "1.0 GB" in output  # total: 1 GB
+    assert "512.0 MB" in output  # per-file size
+
+
+@patch("click.echo")
+def test_echo_resolved_data_links_unknown_size(mock_echo):
+    resolved = [("doi_dir/file.csv", "https://s3.wsl.ch/file.csv", 0)]
+
+    echo_resolved_data_links("10.16904/abc", resolved)
+
+    calls = [str(c) for c in mock_echo.call_args_list]
+    output = " ".join(calls)
+    assert "size unknown" in output
+
+
+@patch("click.echo")
+def test_echo_resolved_data_links_blank_line_first(mock_echo):
+    resolved = [("doi_dir/file.csv", "https://s3.wsl.ch/file.csv", 1024)]
+
+    echo_resolved_data_links("10.16904/abc", resolved)
+
+    # First call should be the blank line separator
+    assert mock_echo.call_args_list[0] == (("",), {})
+
+
+# --- upload_data_link ---
+
+
+@patch("datacite_websnap.exporter.stream_url_to_s3")
+@patch("click.echo")
+def test_upload_data_link(mock_echo, mock_stream):
+    mock_s3 = MagicMock()
+
+    upload_data_link(
+        "doi_dir/file.csv", "https://example.com/file.csv", mock_s3, "my-bucket"
+    )
+
+    mock_echo.assert_called_once()
+    assert "my-bucket" in mock_echo.call_args.args[0]
+    mock_stream.assert_called_once_with(
+        url="https://example.com/file.csv",
+        bucket="my-bucket",
+        key="doi_dir/file.csv",
+        s3_client=mock_s3,
+    )

@@ -66,6 +66,9 @@ def test_validate_page_size_invalid():
         validate_page_size(-5)
 
     with pytest.raises(BadParameter):
+        validate_page_size(0)
+
+    with pytest.raises(BadParameter):
         validate_page_size(1001)
 
 
