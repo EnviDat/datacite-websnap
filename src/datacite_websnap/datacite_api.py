@@ -4,6 +4,7 @@ DataCite API data retrieval, validation and processing.
 
 from typing import Any
 
+import click
 from pydantic import ValidationError
 from validator import validate
 
@@ -191,8 +192,7 @@ def get_datacite_list_dois_xml(
     if total_records != xml_lst_length:
         raise CustomClickException(
             f"Total number of XML records retrieved ({xml_lst_length}) does not match "
-            f"the total number of records expected in 'meta' object: {total_records}, "
-            f"for DataCite API call see {next_link}"
+            f"the total number of records expected in 'meta' object: {total_records}"
         )
 
     return xml_lst
@@ -272,6 +272,7 @@ def validate_doi_eth_standard(xml_decoded: bytes) -> None:
     if warnings:
         for warning in warnings:
             CustomWarning(warning)
+        click.echo("")
 
     if not is_record_valid:
         raise CustomClickException(

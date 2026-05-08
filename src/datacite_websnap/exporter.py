@@ -3,8 +3,6 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
-from pprint import pprint
-
 import binascii
 from pathlib import Path
 from typing import Any
@@ -21,7 +19,7 @@ from botocore.exceptions import (
 )
 import boto3
 
-from .http_utils import get_url_content
+from .http_utils import get_url_content, get_url_content_length
 from .logger import CustomClickException, CustomEcho, CustomWarning
 from .config import TIMEOUT
 from .repositories.envidat import get_envicloud_objects
@@ -202,7 +200,6 @@ def write_local_file(
 
 
 # TODO finish WIP
-# TODO handle EnviDat prefix cloud storage
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
     Write a bytes object to a local file.
@@ -217,7 +214,11 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
     match doi_prefix:
         case "10.16904":  # EnviDat DOI prefix
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
-                pprint(get_envicloud_objects(url))
+                CustomWarning(
+                    f"Failed to write '{url}' locally. CLI "
+                    f"does not support writing local data files for files "
+                    f"that are hosted at 'https://envicloud.wsl.ch'"
+                )
 
             elif (content := get_url_content(url)) and (
                 file_name := Path(urlparse(url).path).name
@@ -293,56 +294,84 @@ def stream_url_to_s3(
         CustomWarning(f"Unexpected error streaming '{url}' to S3: {err}")
 
 
-# TODO finish WIP
-# TODO test
-def s3_export_data_links(
-    doi_prefix: str, url: str, s3_client: Any, bucket: str, doi_s3_dir: str
-) -> None:
+def resolve_data_link(
+    doi_prefix: str, url: str, doi_s3_dir: str
+) -> list[tuple[str, str, int]]:
     """
-    Export a bytes object to an object in a S3 bucket.
-    The content in the S3 object corresponds a data file resource
-    passed as a URL in the DOI metadata.
+    Resolve a data link URL to upload ready (s3_key, download_url, size_bytes) tuples.
+    Returns an empty list if the prefix is unsupported or the URL cannot be resolved.
 
     Args:
         doi_prefix: prefix of the DOI
         url: URL that leads to the data content
-        s3_client: configured Boto3 S3 client
-        bucket: S3 bucket name
-        doi_s3_dir: string with a formatted DOI (can be prepended by a key_prefix)
+        doi_s3_dir: S3 directory prefix for the DOI
     """
     match doi_prefix:
         case "10.16904":  # EnviDat DOI prefix
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
                 envicloud_objects = get_envicloud_objects(url)
-
-                if envicloud_objects:
-                    for obj in envicloud_objects:
-                        obj_key, obj_url = obj
-                        full_key = f"{doi_s3_dir}/{obj_key}"
-
-                        click.echo(f"Uploading to bucket '{bucket}': {obj_url}...")
-
-                        stream_url_to_s3(
-                            url=obj_url,
-                            bucket=bucket,
-                            key=full_key,
-                            s3_client=s3_client,
-                        )
-
-                        break
-
-            elif (content := get_url_content(url)) and (
-                file_name := Path(urlparse(url).path).name
-            ):
-                s3_client_put_object(
-                    client=s3_client,
-                    body=content,
-                    bucket=bucket,
-                    key=f"{doi_s3_dir}/{file_name}",
-                )
-
+                if not envicloud_objects:
+                    return []
+                return [
+                    (f"{doi_s3_dir}/{obj_key}", obj_url, size)
+                    for obj_key, obj_url, size in envicloud_objects
+                ]
+            else:
+                size = get_url_content_length(url)
+                file_name = Path(urlparse(url).path).name
+                if file_name:
+                    return [(f"{doi_s3_dir}/{file_name}", url, size)]
+                return []
         case _:
             CustomWarning(
-                f"CLI does not support exporting S3 objects for "
-                f"DOI prefix: {doi_prefix}. Failed to write file '{url}' locally."
+                f"CLI does not support exporting S3 data files for "
+                f"DOI prefix: {doi_prefix}."
             )
+            return []
+
+
+def format_size(size_bytes: int) -> str:
+    if not size_bytes:
+        return "size unknown"
+    if size_bytes >= 1024**3:
+        return f"{size_bytes / 1024**3:.1f} GB"
+    return f"{size_bytes / 1024**2:.1f} MB"
+
+
+def echo_resolved_data_links(doi: str, resolved: list[tuple[str, str, int]]) -> None:
+    """
+    Log a pre-flight summary of resolved data files pending upload.
+
+    Args:
+        doi: DataCite DOI
+        resolved: list of (s3_key, download_url, size_bytes) tuples
+    """
+    total_size = sum(size for _, _, size in resolved)
+    click.echo("")
+    click.echo(
+        click.style(
+            f"Found {len(resolved)} data file(s) "
+            f"for DataCite DOI '{doi}' "
+            f"to upload ({format_size(total_size)} total):",
+            fg="cyan",
+            bold=True,
+        )
+    )
+    for s3_key, _, size in resolved:
+        click.echo(f"  ({format_size(size)})  {s3_key}")
+
+
+def upload_data_link(
+    s3_key: str, download_url: str, s3_client: Any, bucket: str
+) -> None:
+    """
+    Upload a single resolved data file from download_url to S3.
+
+    Args:
+        s3_key: S3 object key to write to
+        download_url: URL to stream content from
+        s3_client: configured Boto3 S3 client
+        bucket: S3 bucket name
+    """
+    click.echo(f"Uploading to bucket '{bucket}': {download_url}...")
+    stream_url_to_s3(url=download_url, bucket=bucket, key=s3_key, s3_client=s3_client)

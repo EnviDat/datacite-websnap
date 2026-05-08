@@ -52,7 +52,9 @@ from .exporter import (
     s3_client_put_object,
     format_json_file_name,
     write_local_file_data_links,
-    s3_export_data_links,
+    resolve_data_link,
+    echo_resolved_data_links,
+    upload_data_link,
 )
 
 
@@ -259,13 +261,15 @@ def datacite_bulk_export(
 # TODO finish WIP
 # TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
+# TODO review if XML and JSON should still be transferred
+#  if user rejects data files transfer
 @cli.command("doi-export")
 @common_options
 @click.option(
     "--doi",
     required=True,
     help="DataCite DOI XML record, JSON record, and associated resource data files "
-    "that will be exported. Only exports DataCite DOis that pass ETH Zurich "
+    "that will be exported. Only exports DataCite DOIs that pass ETH Zurich "
     "metadata standards.",
 )
 def datacite_single_doi_export(
@@ -306,7 +310,10 @@ def datacite_single_doi_export(
         s3_client = create_s3_client(endpoint_url, bucket, profile_name)
 
     # Log export information
-    CustomEcho("**** Starting DataCite single DOI export... ****")
+    click.echo("")
+    title = "Starting DataCite single DOI export..."
+    click.echo(click.style("─" * len(title), fg="cyan"))
+    CustomEcho(title)
     CustomEcho(f"Export destination: {destination}")
     CustomEcho(f"Querying DataCite API for DOI: {doi_bare}")
 
@@ -337,9 +344,27 @@ def datacite_single_doi_export(
                 bucket=bucket,
                 key=f"{doi_s3_dir}/{doi_stem}.json",
             )
+
+            resolved = []
             for url in data_links:
-                s3_export_data_links(doi_prefix, url, s3_client, bucket, doi_s3_dir)
-                break
+                resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
+
+            if resolved:
+                echo_resolved_data_links(doi_bare, resolved)
+                click.echo("")
+                click.confirm(
+                    click.style(
+                        f"Proceed with uploading data files to bucket '{bucket}'?",
+                        fg="cyan",
+                        bold=True,
+                    ),
+                    abort=True,
+                )
+                click.echo("")
+
+                for s3_key, download_url, _ in resolved:
+                    upload_data_link(s3_key, download_url, s3_client, bucket)
+                    break
 
         case "local":
             xml_filename = format_xml_file_name(doi_bare)

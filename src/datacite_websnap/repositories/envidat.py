@@ -129,10 +129,9 @@ def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
         return None
 
 
-# TODO review S3 and local nesting/prefix structure
-def get_envicloud_objects(url: str) -> list[tuple[str, str]] | None:
+def get_envicloud_objects(url: str) -> list[tuple[str, str, int]] | None:
     """
-    Return a list of envicloud object tuples: (object_key, object_url)
+    Return a list of envicloud object tuples: (object_key, object_url, size_bytes)
     Links must have a suffix extension to be added to the list, for example '.csv'.
 
     Args:
@@ -153,6 +152,6 @@ def get_envicloud_objects(url: str) -> list[tuple[str, str]] | None:
         object_key = obj["Key"]
         object_url = f"{endpoint_url}/{bucket}/{object_key}"
         if Path(object_key).suffix:
-            object_links.append((object_key, object_url))
+            object_links.append((object_key, object_url, obj.get("Size", 0)))
 
     return object_links
