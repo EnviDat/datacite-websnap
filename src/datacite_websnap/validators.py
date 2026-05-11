@@ -1,9 +1,10 @@
 """Validators for datacite-websnap."""
 
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlparse
-from pydantic import AnyHttpUrl, ValidationError, TypeAdapter
+from pydantic import AnyHttpUrl, AnyUrl, ValidationError, TypeAdapter
+from pydantic.networks import UrlConstraints
 
 from .config import DATACITE_DOIS_PREFIXES
 from .logger import CustomBadParameter
@@ -11,15 +12,14 @@ from .logger import CustomBadParameter
 
 def validate_api_url(api_url: str) -> str:
     """
-    Validate and return api_url.
-    Raises BadParameter exception if url does not start with 'https://.'
+    Validate and return api_url. Must be a valid HTTPS URL.
+    Raises BadParameter exception if url is not a valid HTTPS URL.
     """
-    if not api_url.startswith("https://"):
-        raise CustomBadParameter(
-            f"api_url '{api_url}' is invalid because it must start with 'https://'"
-        )
-
-    return api_url
+    try:
+        ta = TypeAdapter(Annotated[AnyUrl, UrlConstraints(allowed_schemes=["https"])])
+        return str(ta.validate_python(api_url))
+    except ValidationError:
+        raise CustomBadParameter(f"api_url '{api_url}' is not a valid HTTPS URL")
 
 
 def validate_page_size(page_size: int) -> int:

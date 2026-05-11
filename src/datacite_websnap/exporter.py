@@ -145,28 +145,25 @@ def s3_client_put_object(client: Any, body: bytes, bucket: str, key: str) -> Non
 
     try:
         response_s3 = client.put_object(Body=body, Bucket=bucket, Key=key)
-
-        status_code = response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
-
-        if status_code is None:
-            raise CustomClickException(
-                f"{err_msg}Missing ResponseMetadata in S3 response for key '{key}'"
-            )
-
-        if status_code != 200:
-            raise CustomClickException(
-                f"{err_msg}S3 client returned unexpected status code "
-                f"{status_code} for key '{key}'"
-            )
-
-        CustomEcho(
-            f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
-        )
-
     except ClientError as err:
         raise CustomClickException(f"{err_msg}boto3 ClientError: {err}")
     except Exception as err:
         raise CustomClickException(f"{err_msg}Unexpected error: {err}")
+
+    status_code = response_s3.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+    if status_code is None:
+        raise CustomClickException(
+            f"{err_msg}Missing ResponseMetadata in S3 response for key '{key}'"
+        )
+
+    if status_code != 200:
+        raise CustomClickException(
+            f"{err_msg}S3 client returned unexpected status code "
+            f"{status_code} for key '{key}'"
+        )
+
+    CustomEcho(f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}")
 
 
 def write_local_file(
@@ -375,3 +372,23 @@ def upload_data_link(
     """
     click.echo(f"Uploading to bucket '{bucket}': {download_url}...")
     stream_url_to_s3(url=download_url, bucket=bucket, key=s3_key, s3_client=s3_client)
+
+
+# TODO implement and test
+def s3_key_exists(s3_client: Any, bucket: str, s3_key: str) -> bool:
+    """
+    Return True if key exists in bucket. Else return False.
+    Raises CustomException if failed to check key.
+
+    Args:
+    s3_client: configured Boto3 S3 client
+    bucket: S3 bucket name
+    s3_key: S3 object key to check
+    """
+    try:
+        s3_client.head_object(Bucket=bucket, Key=s3_key)
+        return True
+    except ClientError as err:
+        if err.response["Error"]["Code"] == "404":
+            return False
+        raise CustomClickException(f"Failed to check key '{s3_key}': {err}")
