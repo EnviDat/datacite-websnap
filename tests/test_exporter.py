@@ -38,12 +38,8 @@ def test_decode_base64_xml_invalid():
 
 
 def test_decode_base64_xml_unexpected_exception():
-    # Patch base64.b64decode to raise an unexpected exception
-    with patch("base64.b64decode") as mock_b64decode:
-        # Set the mock to raise a ValueError when called
+    with patch("datacite_websnap.exporter.base64.b64decode") as mock_b64decode:
         mock_b64decode.side_effect = ValueError("Unexpected ValueError")
-
-        # Call the function with a valid base64 string
         with pytest.raises(CustomClickException):
             decode_base64_xml("some_base64_string")
 
@@ -110,13 +106,9 @@ def test_format_size_gb():
     assert format_size(int(2.5 * 1024**3)) == "2.5 GB"
 
 
-@patch("boto3.Session.client")
-def test_s3_client_put_object_success(mock_boto3_client):
+def test_s3_client_put_object_success():
     mock_client = MagicMock()
-
-    # Simulate a successful response from the S3 client (HTTP status code 200)
     mock_client.put_object.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
-    mock_boto3_client.return_value = mock_client
 
     body = b"<xml>success</xml>"
     bucket = "test-bucket"
@@ -453,15 +445,6 @@ def test_resolve_data_link_regular_url_no_content_length(mock_size):
 
 
 @patch("datacite_websnap.exporter.get_url_content_length", return_value=0)
-def test_resolve_data_link_regular_url_head_fails(mock_size):
-    result = resolve_data_link(
-        "10.16904", "https://example.com/data/report.csv", "doi_dir"
-    )
-
-    assert result == [("doi_dir/report.csv", "https://example.com/data/report.csv", 0)]
-
-
-@patch("datacite_websnap.exporter.get_url_content_length", return_value=0)
 def test_resolve_data_link_regular_url_no_filename(mock_size):
     # URL with no filename in path (e.g. bare domain) returns empty list
     result = resolve_data_link("10.16904", "https://example.com/", "doi_dir")
@@ -489,12 +472,12 @@ def test_echo_resolved_data_links_single_file(mock_echo):
 
     echo_resolved_data_links("10.16904/abc", resolved)
 
-    calls = [str(c) for c in mock_echo.call_args_list]
-    output = " ".join(calls)
-    assert "1 data file(s)" in output
-    assert "10.16904/abc" in output
-    assert "1.0 MB" in output
-    assert "doi_dir/file.csv" in output
+    summary = mock_echo.call_args_list[1].args[0]
+    file_line = mock_echo.call_args_list[2].args[0]
+    assert "1 data file(s)" in summary
+    assert "10.16904/abc" in summary
+    assert "1.0 MB" in summary
+    assert "  (1.0 MB)  doi_dir/file.csv" == file_line
 
 
 @patch("click.echo")
@@ -506,11 +489,13 @@ def test_echo_resolved_data_links_multiple_files(mock_echo):
 
     echo_resolved_data_links("10.16904/abc", resolved)
 
-    calls = [str(c) for c in mock_echo.call_args_list]
-    output = " ".join(calls)
-    assert "2 data file(s)" in output
-    assert "1.0 GB" in output  # total: 1 GB
-    assert "512.0 MB" in output  # per-file size
+    summary = mock_echo.call_args_list[1].args[0]
+    file_line_1 = mock_echo.call_args_list[2].args[0]
+    file_line_2 = mock_echo.call_args_list[3].args[0]
+    assert "2 data file(s)" in summary
+    assert "1.0 GB" in summary  # total
+    assert "  (512.0 MB)  doi_dir/file1.csv" == file_line_1
+    assert "  (512.0 MB)  doi_dir/file2.nc" == file_line_2
 
 
 @patch("click.echo")
@@ -519,9 +504,10 @@ def test_echo_resolved_data_links_unknown_size(mock_echo):
 
     echo_resolved_data_links("10.16904/abc", resolved)
 
-    calls = [str(c) for c in mock_echo.call_args_list]
-    output = " ".join(calls)
-    assert "size unknown" in output
+    summary = mock_echo.call_args_list[1].args[0]
+    file_line = mock_echo.call_args_list[2].args[0]
+    assert "size unknown" in summary
+    assert "  (size unknown)  doi_dir/file.csv" == file_line
 
 
 @patch("click.echo")
@@ -530,8 +516,7 @@ def test_echo_resolved_data_links_blank_line_first(mock_echo):
 
     echo_resolved_data_links("10.16904/abc", resolved)
 
-    # First call should be the blank line separator
-    assert mock_echo.call_args_list[0] == (("",), {})
+    assert mock_echo.call_args_list[0].args[0] == ""
 
 
 # --- upload_data_link ---

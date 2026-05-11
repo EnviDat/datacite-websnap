@@ -47,7 +47,7 @@ def test_custom_warning_stdout(capsys):
 
 
 def test_custom_warning_log(caplog):
-    with patch.object(logging, "warning") as mock_warning:
-        warning = CustomWarning("Log this warning")
-        warning._log_warning("Log this warning")
-        mock_warning.assert_called_with("Log this warning")
+    with patch("datacite_websnap.logger._has_file_handler", return_value=True):
+        with caplog.at_level(logging.WARNING):
+            CustomWarning("Log this warning")
+            assert "Log this warning" in caplog.text
