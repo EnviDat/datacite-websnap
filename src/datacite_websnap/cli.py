@@ -50,6 +50,7 @@ from .exporter import (
     write_local_file,
     create_s3_client,
     s3_client_put_object,
+    s3_key_exists,
     format_json_file_name,
     write_local_file_data_links,
     resolve_data_link,
@@ -258,11 +259,146 @@ def datacite_bulk_export(
     CustomEcho("**** Finished DataCite bulk export ****")
 
 
+def _export_doi_s3(
+    doi_bare: str,
+    doi_prefix: str,
+    xml_decoded: bytes,
+    json_resp: dict,
+    data_links: list[str],
+    s3_client,
+    bucket: str,
+    key_prefix: str | None,
+) -> None:
+    doi_stem = doi_bare.replace("/", "_").replace(":", "_")
+    doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
+
+    xml_key = f"{doi_s3_dir}/{doi_stem}.xml"
+    json_key = f"{doi_s3_dir}/{doi_stem}.json"
+
+    existing_metadata = [
+        k for k in (xml_key, json_key) if s3_key_exists(s3_client, bucket, k)
+    ]
+
+    if existing_metadata:
+        click.echo("")
+        click.echo(
+            click.style(
+                f"The following metadata object(s) already exist in bucket '{bucket}':",
+                fg="yellow",
+                bold=True,
+            )
+        )
+        for k in existing_metadata:
+            click.echo(f"  {k}")
+        should_overwrite_metadata = click.confirm(
+            click.style(
+                "Overwrite existing metadata object(s)?", fg="yellow", bold=True
+            )
+        )
+        click.echo("")
+
+        if should_overwrite_metadata:
+            s3_client_put_object(
+                client=s3_client, body=xml_decoded, bucket=bucket, key=xml_key
+            )
+            s3_client_put_object(
+                client=s3_client,
+                body=json.dumps(json_resp, indent=2, ensure_ascii=False).encode(
+                    "utf-8"
+                ),
+                bucket=bucket,
+                key=json_key,
+            )
+
+    resolved = []
+    for url in data_links:
+        resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
+
+    if not resolved:
+        return
+
+    existing_data = [
+        (s3_key, download_url, size)
+        for s3_key, download_url, size in resolved
+        if s3_key_exists(s3_client, bucket, s3_key)
+    ]
+    new_data = [
+        (s3_key, download_url, size)
+        for s3_key, download_url, size in resolved
+        if not s3_key_exists(s3_client, bucket, s3_key)
+    ]
+
+    to_upload = []
+
+    if new_data:
+        echo_resolved_data_links(doi_bare, new_data)
+        if click.confirm(
+            click.style(
+                f"Proceed with uploading new data object(s) to bucket '{bucket}'?",
+                fg="cyan",
+                bold=True,
+            )
+        ):
+            to_upload.extend(new_data)
+        click.echo("")
+
+    if existing_data:
+        echo_resolved_data_links(doi_bare, existing_data, "yellow")
+        click.echo("")
+        if click.confirm(
+            click.style(
+                f"The {len(existing_data)} data object(s) already exist in "
+                f"bucket '{bucket}'. Overwrite?",
+                fg="yellow",
+                bold=True,
+            )
+        ):
+            to_upload.extend(existing_data)
+        click.echo("")
+
+    for s3_key, download_url, _ in to_upload:
+        upload_data_link(s3_key, download_url, s3_client, bucket)
+        # break  TODO reimplement for testing envicloud
+
+
+# TODO consider writing confirm statements
+# TODO write docstring
+def _export_doi_local(
+    doi_bare: str,
+    doi_prefix: str,
+    xml_decoded: bytes,
+    json_resp: dict,
+    data_links: list[str],
+    directory_path: str,
+) -> None:
+    xml_filename = format_xml_file_name(doi_bare)
+    json_filename = format_json_file_name(xml_filename)
+
+    doi_dir = Path(directory_path) / Path(xml_filename).stem
+    doi_dir.mkdir(exist_ok=True)
+    doi_directory = str(doi_dir)
+
+    write_local_file(
+        content_bytes=xml_decoded,
+        filename=xml_filename,
+        directory_path=doi_directory,
+    )
+    write_local_file(
+        content_bytes=json.dumps(json_resp, indent=2, ensure_ascii=False).encode(
+            "utf-8"
+        ),
+        filename=json_filename,
+        directory_path=doi_directory,
+    )
+    for url in data_links:
+        write_local_file_data_links(url, doi_directory, doi_prefix)
+
+
 # TODO finish WIP
 # TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
-# TODO review if XML and JSON should still be transferred
-#  if user rejects data files transfer
+# TODO review if data files should still be transferred
+#  if user rejects metadata transfer
 @cli.command("doi-export")
 @common_options
 @click.option(
@@ -327,66 +463,24 @@ def datacite_single_doi_export(
     # Export record and data files
     match destination:
         case "S3":
-            doi_stem = doi_bare.replace("/", "_").replace(":", "_")
-            doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
-
-            s3_client_put_object(
-                client=s3_client,
-                body=xml_decoded,
+            _export_doi_s3(
+                doi_bare=doi_bare,
+                doi_prefix=doi_prefix,
+                xml_decoded=xml_decoded,
+                json_resp=json_resp,
+                data_links=data_links,
+                s3_client=s3_client,
                 bucket=bucket,
-                key=f"{doi_s3_dir}/{doi_stem}.xml",
+                key_prefix=key_prefix,
             )
-            s3_client_put_object(
-                client=s3_client,
-                body=json.dumps(json_resp, indent=2, ensure_ascii=False).encode(
-                    "utf-8"
-                ),
-                bucket=bucket,
-                key=f"{doi_s3_dir}/{doi_stem}.json",
-            )
-
-            resolved = []
-            for url in data_links:
-                resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
-
-            if resolved:
-                echo_resolved_data_links(doi_bare, resolved)
-                click.echo("")
-                click.confirm(
-                    click.style(
-                        f"Proceed with uploading data files to bucket '{bucket}'?",
-                        fg="cyan",
-                        bold=True,
-                    ),
-                    abort=True,
-                )
-                click.echo("")
-
-                for s3_key, download_url, _ in resolved:
-                    upload_data_link(s3_key, download_url, s3_client, bucket)
-                    break
-
         case "local":
-            xml_filename = format_xml_file_name(doi_bare)
-            json_filename = format_json_file_name(xml_filename)
-
-            doi_dir = Path(directory_path) / Path(xml_filename).stem
-            doi_dir.mkdir(exist_ok=True)
-            doi_directory = str(doi_dir)
-
-            write_local_file(
-                content_bytes=xml_decoded,
-                filename=xml_filename,
-                directory_path=doi_directory,
+            _export_doi_local(
+                doi_bare=doi_bare,
+                doi_prefix=doi_prefix,
+                xml_decoded=xml_decoded,
+                json_resp=json_resp,
+                data_links=data_links,
+                directory_path=directory_path,
             )
-            write_local_file(
-                content_bytes=json.dumps(
-                    json_resp, indent=2, ensure_ascii=False
-                ).encode("utf-8"),
-                filename=json_filename,
-                directory_path=doi_directory,
-            )
-            for url in data_links:
-                write_local_file_data_links(url, doi_directory, doi_prefix)
         case _:
             raise CustomClickException(f"Unsupported destination: {destination}")

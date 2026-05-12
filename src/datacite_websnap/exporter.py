@@ -279,7 +279,8 @@ def stream_url_to_s3(
         )
         click.echo()  # terminate progress line
 
-        CustomEcho(f"Successfully exported to bucket '{bucket}' data file: {key}")
+        CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
+        click.echo("")
 
     except requests.exceptions.Timeout:
         CustomWarning(f"Request timed out fetching URL: '{url}'")
@@ -332,25 +333,31 @@ def format_size(size_bytes: int) -> str:
         return "size unknown"
     if size_bytes >= 1024**3:
         return f"{size_bytes / 1024**3:.1f} GB"
-    return f"{size_bytes / 1024**2:.1f} MB"
+    if size_bytes >= 1024**2:
+        return f"{size_bytes / 1024**2:.1f} MB"
+    return f"{size_bytes / 1024:.1f} KB"
 
 
-def echo_resolved_data_links(doi: str, resolved: list[tuple[str, str, int]]) -> None:
+def echo_resolved_data_links(
+    doi: str, resolved: list[tuple[str, str, int]], fg_color: str = "cyan"
+) -> None:
     """
     Log a pre-flight summary of resolved data files pending upload.
 
     Args:
         doi: DataCite DOI
         resolved: list of (s3_key, download_url, size_bytes) tuples
+        fg_color: color for fg for informational message
     """
     total_size = sum(size for _, _, size in resolved)
     click.echo("")
+
     click.echo(
         click.style(
-            f"Found {len(resolved)} data file(s) "
+            f"Found {len(resolved)} data object(s) "
             f"for DataCite DOI '{doi}' "
             f"to upload ({format_size(total_size)} total):",
-            fg="cyan",
+            fg=fg_color,
             bold=True,
         )
     )
@@ -374,7 +381,6 @@ def upload_data_link(
     stream_url_to_s3(url=download_url, bucket=bucket, key=s3_key, s3_client=s3_client)
 
 
-# TODO implement and test
 def s3_key_exists(s3_client: Any, bucket: str, s3_key: str) -> bool:
     """
     Return True if key exists in bucket. Else return False.
