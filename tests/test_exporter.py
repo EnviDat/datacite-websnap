@@ -90,8 +90,12 @@ def test_format_size_zero():
     assert format_size(0) == "size unknown"
 
 
+def test_format_size_kb():
+    assert format_size(512) == "0.5 KB"
+
+
 def test_format_size_mb():
-    assert format_size(512 * 1024) == "0.5 MB"
+    assert format_size(512 * 1024**2) == "512.0 MB"
 
 
 def test_format_size_mb_boundary():
@@ -292,7 +296,7 @@ def test_upload_progress_accumulates_across_calls(mock_echo):
 
 
 @patch("datacite_websnap.exporter.CustomEcho")
-@patch("click.echo")
+@patch("datacite_websnap.exporter.click.echo")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_success_with_content_length(
     mock_get, mock_echo, mock_custom_echo
@@ -318,7 +322,9 @@ def test_stream_url_to_s3_success_with_content_length(
     assert call_kwargs["Key"] == "prefix/file.csv"
     assert isinstance(call_kwargs["Callback"], _UploadProgress)
     assert call_kwargs["Callback"]._total_bytes == 2 * 1024 * 1024
-    mock_echo.assert_called_once_with()  # progress line terminator
+    from unittest.mock import call
+
+    assert call() in mock_echo.call_args_list  # progress line terminator
     mock_custom_echo.assert_called_once()
 
 
@@ -474,7 +480,7 @@ def test_echo_resolved_data_links_single_file(mock_echo):
 
     summary = mock_echo.call_args_list[1].args[0]
     file_line = mock_echo.call_args_list[2].args[0]
-    assert "1 data file(s)" in summary
+    assert "1 data object(s)" in summary
     assert "10.16904/abc" in summary
     assert "1.0 MB" in summary
     assert "  (1.0 MB)  doi_dir/file.csv" == file_line
@@ -492,7 +498,7 @@ def test_echo_resolved_data_links_multiple_files(mock_echo):
     summary = mock_echo.call_args_list[1].args[0]
     file_line_1 = mock_echo.call_args_list[2].args[0]
     file_line_2 = mock_echo.call_args_list[3].args[0]
-    assert "2 data file(s)" in summary
+    assert "2 data object(s)" in summary
     assert "1.0 GB" in summary  # total
     assert "  (512.0 MB)  doi_dir/file1.csv" == file_line_1
     assert "  (512.0 MB)  doi_dir/file2.nc" == file_line_2
