@@ -88,7 +88,7 @@ def test_validate_doi_eth_standard_valid():
         "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(True, None),
     ):
-        validate_doi_eth_standard(b"<xml/>")
+        validate_doi_eth_standard(b"<xml/>", "10.123/test")
 
 
 def test_validate_doi_eth_standard_invalid():
@@ -99,7 +99,7 @@ def test_validate_doi_eth_standard_invalid():
         with pytest.raises(
             CustomClickException, match="ETH metadata standard validation"
         ):
-            validate_doi_eth_standard(b"<xml/>")
+            validate_doi_eth_standard(b"<xml/>", "10.123/test")
 
 
 def test_validate_doi_eth_standard_with_warnings():
@@ -108,7 +108,7 @@ def test_validate_doi_eth_standard_with_warnings():
         return_value=(True, ["missing recommended field", "invalid date format"]),
     ):
         with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
-            validate_doi_eth_standard(b"<xml/>")
+            validate_doi_eth_standard(b"<xml/>", "10.123/test")
             assert mock_warning.call_count == 2
 
 
@@ -121,7 +121,7 @@ def test_validate_doi_eth_standard_noncompliant():
             with pytest.raises(
                 CustomClickException, match="ETH metadata standard validation"
             ):
-                validate_doi_eth_standard(b"<xml/>")
+                validate_doi_eth_standard(b"<xml/>", "10.123/test")
             assert mock_warning.call_count == 1
 
 

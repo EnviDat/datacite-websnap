@@ -14,12 +14,14 @@ from datacite_websnap.exporter import (
     format_json_file_name,
     format_size,
     write_local_file,
+    write_local_file_data_links,
     s3_client_put_object,
     create_s3_client,
     stream_url_to_s3,
     resolve_data_link,
     echo_resolved_data_links,
     upload_data_link,
+    s3_key_exists,
 )
 
 
@@ -269,7 +271,7 @@ def test_upload_progress_with_total_bytes(mock_echo):
     progress = _UploadProgress(total_bytes=2 * 1024 * 1024)  # 2 MB total
     progress(1 * 1024 * 1024)  # 1 MB chunk
 
-    mock_echo.assert_called_once_with("\r  Progress: 1.0 / 2.0 MB", nl=False)
+    mock_echo.assert_called_once_with("\r  Progress: 1.0 MB / 2.0 MB", nl=False)
 
 
 @patch("click.echo")
@@ -277,7 +279,7 @@ def test_upload_progress_without_total_bytes(mock_echo):
     progress = _UploadProgress()
     progress(512 * 1024)  # 0.5 MB chunk
 
-    mock_echo.assert_called_once_with("\r  Progress: 0.5 MB", nl=False)
+    mock_echo.assert_called_once_with("\r  Progress: 512.0 KB", nl=False)
 
 
 @patch("click.echo")
@@ -288,8 +290,8 @@ def test_upload_progress_accumulates_across_calls(mock_echo):
 
     assert mock_echo.call_count == 2
     first_call, second_call = mock_echo.call_args_list
-    assert first_call == (("\r  Progress: 1.0 / 3.0 MB",), {"nl": False})
-    assert second_call == (("\r  Progress: 2.0 / 3.0 MB",), {"nl": False})
+    assert first_call == (("\r  Progress: 1.0 MB / 3.0 MB",), {"nl": False})
+    assert second_call == (("\r  Progress: 2.0 MB / 3.0 MB",), {"nl": False})
 
 
 # --- stream_url_to_s3 ---
@@ -308,7 +310,11 @@ def test_stream_url_to_s3_success_with_content_length(
     mock_s3 = MagicMock()
 
     stream_url_to_s3(
-        "https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3
+        "https://example.com/file.csv",
+        "my-bucket",
+        "prefix/file.csv",
+        mock_s3,
+        show_upload_progress=True,
     )
 
     mock_get.assert_called_once_with(
@@ -341,7 +347,11 @@ def test_stream_url_to_s3_success_no_content_length(
     mock_s3 = MagicMock()
 
     stream_url_to_s3(
-        "https://example.com/file.csv", "my-bucket", "prefix/file.csv", mock_s3
+        "https://example.com/file.csv",
+        "my-bucket",
+        "prefix/file.csv",
+        mock_s3,
+        show_upload_progress=True,
     )
 
     call_kwargs = mock_s3.upload_fileobj.call_args.kwargs
@@ -534,7 +544,11 @@ def test_upload_data_link(mock_echo, mock_stream):
     mock_s3 = MagicMock()
 
     upload_data_link(
-        "doi_dir/file.csv", "https://example.com/file.csv", mock_s3, "my-bucket"
+        "doi_dir/file.csv",
+        "https://example.com/file.csv",
+        mock_s3,
+        "my-bucket",
+        show_upload_progress=True,
     )
 
     mock_echo.assert_called_once()
@@ -544,4 +558,73 @@ def test_upload_data_link(mock_echo, mock_stream):
         bucket="my-bucket",
         key="doi_dir/file.csv",
         s3_client=mock_s3,
+        show_upload_progress=True,
     )
+
+
+# --- s3_key_exists ---
+
+
+def test_s3_key_exists_returns_true():
+    mock_s3 = MagicMock()
+    assert s3_key_exists(mock_s3, "my-bucket", "prefix/file.xml") is True
+    mock_s3.head_object.assert_called_once_with(
+        Bucket="my-bucket", Key="prefix/file.xml"
+    )
+
+
+def test_s3_key_exists_returns_false_on_404():
+    mock_s3 = MagicMock()
+    mock_s3.head_object.side_effect = ClientError(
+        {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+    )
+    assert s3_key_exists(mock_s3, "my-bucket", "prefix/missing.xml") is False
+
+
+def test_s3_key_exists_raises_on_other_client_error():
+    mock_s3 = MagicMock()
+    mock_s3.head_object.side_effect = ClientError(
+        {"Error": {"Code": "403", "Message": "Forbidden"}}, "HeadObject"
+    )
+    with pytest.raises(CustomClickException, match="Failed to check key"):
+        s3_key_exists(mock_s3, "my-bucket", "prefix/file.xml")
+
+
+# --- write_local_file_data_links ---
+
+
+@patch("datacite_websnap.exporter.CustomWarning")
+def test_write_local_file_data_links_envicloud_url_warns(mock_warning):
+    write_local_file_data_links(
+        url="https://envicloud.wsl.ch/#/?bucket=test",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.16904",
+    )
+    mock_warning.assert_called_once()
+    assert "envicloud.wsl.ch" in mock_warning.call_args.args[0]
+
+
+@patch("datacite_websnap.exporter.write_local_file")
+@patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
+def test_write_local_file_data_links_regular_url_writes_file(mock_content, mock_write):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.16904",
+    )
+    mock_write.assert_called_once_with(
+        content_bytes=b"data",
+        filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter.CustomWarning")
+def test_write_local_file_data_links_unsupported_prefix_warns(mock_warning):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.99999",
+    )
+    mock_warning.assert_called_once()
+    assert "10.99999" in mock_warning.call_args.args[0]
