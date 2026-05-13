@@ -110,6 +110,7 @@ def create_s3_client(
                 connect_timeout=5,
                 read_timeout=TIMEOUT,
                 retries={"max_attempts": 3},
+                max_pool_connections=50,
             ),
         )
 
@@ -187,7 +188,7 @@ def write_local_file(
             f.write(content_bytes)
 
         posix_file_path = file_path.as_posix()
-        CustomEcho(f"Wrote file: {posix_file_path}")
+        CustomEcho(f"Wrote local file: {posix_file_path}")
 
     except IOError as io_err:
         raise CustomClickException(f"IOError: {io_err}")
@@ -196,12 +197,13 @@ def write_local_file(
         raise CustomClickException(f"Unexpected error: {err}")
 
 
-# TODO finish WIP
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
     Write a bytes object to a local file.
     The content in the local file corresponds a data file resource
     passed as a URL in the DOI metadata.
+
+    Currently only supports writing EnviDat files (that are not in envicloud).
 
     Args:
         url: URL that leads to the data content
@@ -237,17 +239,22 @@ class _UploadProgress:
     def __init__(self, total_bytes: int = 0) -> None:
         self._transferred = 0
         self._total_bytes = total_bytes
+        self._use_mb = total_bytes >= 1024**2
+
+    def _fmt(self, size_bytes: int) -> str:
+        if self._use_mb:
+            return f"{size_bytes / 1024**2:.1f} MB"
+        return f"{size_bytes / 1024:.1f} KB"
 
     def __call__(self, bytes_transferred: int) -> None:
         self._transferred += bytes_transferred
-        transferred_mb = self._transferred / 1024 / 1024
         if self._total_bytes:
-            total_mb = self._total_bytes / 1024 / 1024
             click.echo(
-                f"\r  Progress: {transferred_mb:.1f} / {total_mb:.1f} MB", nl=False
+                f"\r  Progress: {self._fmt(self._transferred)} / {self._fmt(self._total_bytes)}",
+                nl=False,
             )
         else:
-            click.echo(f"\r  Progress: {transferred_mb:.1f} MB", nl=False)
+            click.echo(f"\r  Progress: {self._fmt(self._transferred)}", nl=False)
 
 
 def stream_url_to_s3(
@@ -255,6 +262,7 @@ def stream_url_to_s3(
     bucket: str,
     key: str,
     s3_client: Any,
+    show_upload_progress: bool = False,
 ) -> None:
     """
     Streams content from a URL directly to an S3 bucket without loading into memory.
@@ -264,6 +272,8 @@ def stream_url_to_s3(
         bucket: S3 bucket name.
         key: S3 object key.
         s3_client: configured Boto3 S3 client.
+        show_upload_progress: if True display an upload progress bar,
+                           default value is False
     """
     try:
         response = requests.get(url, stream=True, timeout=(10, 60))
@@ -271,16 +281,19 @@ def stream_url_to_s3(
         response.raw.decode_content = True
 
         total_bytes = int(response.headers.get("Content-Length", 0))
+        callback = _UploadProgress(total_bytes) if show_upload_progress else None
+
         s3_client.upload_fileobj(
             Fileobj=response.raw,
             Bucket=bucket,
             Key=key,
-            Callback=_UploadProgress(total_bytes),
+            Callback=callback,
         )
-        click.echo()  # terminate progress line
+
+        if show_upload_progress:
+            click.echo()  # terminate progress line
 
         CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
-        click.echo("")
 
     except requests.exceptions.Timeout:
         CustomWarning(f"Request timed out fetching URL: '{url}'")
@@ -347,7 +360,7 @@ def echo_resolved_data_links(
     Args:
         doi: DataCite DOI
         resolved: list of (s3_key, download_url, size_bytes) tuples
-        fg_color: color for fg for informational message
+        fg_color: color for fg for informational message, default color is cyan
     """
     total_size = sum(size for _, _, size in resolved)
     click.echo("")
@@ -366,7 +379,11 @@ def echo_resolved_data_links(
 
 
 def upload_data_link(
-    s3_key: str, download_url: str, s3_client: Any, bucket: str
+    s3_key: str,
+    download_url: str,
+    s3_client: Any,
+    bucket: str,
+    show_upload_progress: bool = False,
 ) -> None:
     """
     Upload a single resolved data file from download_url to S3.
@@ -376,9 +393,19 @@ def upload_data_link(
         download_url: URL to stream content from
         s3_client: configured Boto3 S3 client
         bucket: S3 bucket name
+        show_upload_progress: if True display an upload progress bar and upload message,
+                              default value is False
     """
-    click.echo(f"Uploading to bucket '{bucket}': {download_url}...")
-    stream_url_to_s3(url=download_url, bucket=bucket, key=s3_key, s3_client=s3_client)
+    if show_upload_progress:
+        click.echo(f"Uploading to bucket '{bucket}': {download_url}")
+
+    stream_url_to_s3(
+        url=download_url,
+        bucket=bucket,
+        key=s3_key,
+        s3_client=s3_client,
+        show_upload_progress=show_upload_progress,
+    )
 
 
 def s3_key_exists(s3_client: Any, bucket: str, s3_key: str) -> bool:

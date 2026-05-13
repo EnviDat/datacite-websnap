@@ -20,7 +20,8 @@ Example bulk-export command:
 """
 
 import json
-from typing import Literal
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Literal, Any
 from pathlib import Path
 
 import click
@@ -265,10 +266,25 @@ def _export_doi_s3(
     xml_decoded: bytes,
     json_resp: dict,
     data_links: list[str],
-    s3_client,
+    s3_client: Any,
     bucket: str,
     key_prefix: str | None,
 ) -> None:
+    """
+    Export DOI metadata records and data files to S3 storage.
+
+    Args:
+        doi_bare: DOI (without URL base), example: "10.16904/envidat.504"
+        doi_prefix: DOI prefix, example: "10.16904"
+        xml_decoded: DataCite DOI "xml" value decoded and represented as a bytes object
+        json_resp: JSON response for DOI from DataCite API
+        data_links: list of links to data files for DOI from DataCite API
+        s3_client: validated Boto3 S3 client created using a shared AWS credentials file
+        bucket: name of S3 bucket that DataCite records (as S3 objects) will be written
+                in, must have access to bucket with configured S3 credentials
+        key_prefix: name of a key prefix for objects in S3 bucket, if omitted then
+                    objects are written in S3 bucket without a prefix
+    """
     doi_stem = doi_bare.replace("/", "_").replace(":", "_")
     doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
 
@@ -279,6 +295,7 @@ def _export_doi_s3(
         k for k in (xml_key, json_key) if s3_key_exists(s3_client, bucket, k)
     ]
 
+    should_put_metadata = True
     if existing_metadata:
         click.echo("")
         click.echo(
@@ -290,25 +307,23 @@ def _export_doi_s3(
         )
         for k in existing_metadata:
             click.echo(f"  {k}")
-        should_overwrite_metadata = click.confirm(
+        should_put_metadata = click.confirm(
             click.style(
                 "Overwrite existing metadata object(s)?", fg="yellow", bold=True
             )
         )
         click.echo("")
 
-        if should_overwrite_metadata:
-            s3_client_put_object(
-                client=s3_client, body=xml_decoded, bucket=bucket, key=xml_key
-            )
-            s3_client_put_object(
-                client=s3_client,
-                body=json.dumps(json_resp, indent=2, ensure_ascii=False).encode(
-                    "utf-8"
-                ),
-                bucket=bucket,
-                key=json_key,
-            )
+    if should_put_metadata:
+        s3_client_put_object(
+            client=s3_client, body=xml_decoded, bucket=bucket, key=xml_key
+        )
+        s3_client_put_object(
+            client=s3_client,
+            body=json.dumps(json_resp, indent=2, ensure_ascii=False).encode("utf-8"),
+            bucket=bucket,
+            key=json_key,
+        )
 
     resolved = []
     for url in data_links:
@@ -317,15 +332,19 @@ def _export_doi_s3(
     if not resolved:
         return
 
+    key_exists = {
+        s3_key: s3_key_exists(s3_client, bucket, s3_key)
+        for s3_key, download_url, size in resolved
+    }
     existing_data = [
         (s3_key, download_url, size)
         for s3_key, download_url, size in resolved
-        if s3_key_exists(s3_client, bucket, s3_key)
+        if key_exists[s3_key]
     ]
     new_data = [
         (s3_key, download_url, size)
         for s3_key, download_url, size in resolved
-        if not s3_key_exists(s3_client, bucket, s3_key)
+        if not key_exists[s3_key]
     ]
 
     to_upload = []
@@ -340,11 +359,9 @@ def _export_doi_s3(
             )
         ):
             to_upload.extend(new_data)
-        click.echo("")
 
     if existing_data:
         echo_resolved_data_links(doi_bare, existing_data, "yellow")
-        click.echo("")
         if click.confirm(
             click.style(
                 f"The {len(existing_data)} data object(s) already exist in "
@@ -356,13 +373,25 @@ def _export_doi_s3(
             to_upload.extend(existing_data)
         click.echo("")
 
-    for s3_key, download_url, _ in to_upload:
-        upload_data_link(s3_key, download_url, s3_client, bucket)
-        # break  TODO reimplement for testing envicloud
+    _PARALLEL_THRESHOLD = 10
+    if len(to_upload) > _PARALLEL_THRESHOLD:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(
+                    upload_data_link, s3_key, download_url, s3_client, bucket
+                ): s3_key
+                for s3_key, download_url, _ in to_upload
+            }
+            for future in as_completed(futures):
+                future.result()
+    else:
+        for s3_key, download_url, _ in to_upload:
+            upload_data_link(
+                s3_key, download_url, s3_client, bucket, show_upload_progress=True
+            )
+            click.echo("")
 
 
-# TODO consider writing confirm statements
-# TODO write docstring
 def _export_doi_local(
     doi_bare: str,
     doi_prefix: str,
@@ -371,6 +400,18 @@ def _export_doi_local(
     data_links: list[str],
     directory_path: str,
 ) -> None:
+    """
+    Export DOI metadata records and data files to local machine.
+
+    Args:
+        doi_bare: DOI (without URL base), example: "10.16904/envidat.504"
+        doi_prefix: DOI prefix, example: "10.16904"
+        xml_decoded: DataCite DOI "xml" value decoded and represented as a bytes object
+        json_resp: JSON response for DOI from DataCite API
+        data_links: list of links to data files for DOI from DataCite API
+        directory_path: path of the local directory that DataCite records will be
+                        written in
+    """
     xml_filename = format_xml_file_name(doi_bare)
     json_filename = format_json_file_name(xml_filename)
 
@@ -394,11 +435,8 @@ def _export_doi_local(
         write_local_file_data_links(url, doi_directory, doi_prefix)
 
 
-# TODO finish WIP
 # TODO investigate how to extract filenames for Materials Cloud resources
 # TODO possibly wrap in try except, review error handling for helpers
-# TODO review if data files should still be transferred
-#  if user rejects metadata transfer
 @cli.command("doi-export")
 @common_options
 @click.option(
@@ -458,7 +496,7 @@ def datacite_single_doi_export(
 
     # Check if DataCite DOI metadata record passes validation
     xml_decoded = decode_base64_xml(xml_encoded)
-    validate_doi_eth_standard(xml_decoded)
+    validate_doi_eth_standard(xml_decoded, doi_bare)
 
     # Export record and data files
     match destination:

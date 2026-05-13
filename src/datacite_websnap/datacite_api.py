@@ -219,8 +219,8 @@ def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     https://support.datacite.org/reference/get_dois-id
 
     Args:
-        api_url: The DataCite base URL to call the API with.
-        doi: The DOI that will be used to query DataCite DOIs.
+        api_url: DataCite base URL to call the API with
+        doi: DOI that will be used to query DataCite DOIs
     """
     json_resp = get_url_json(url=f"{api_url}{DATACITE_API_DOIS_ENDPOINT}/{doi}")
 
@@ -247,8 +247,7 @@ def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
     return json_resp, xml_encoded, data_links
 
 
-# TODO test with a non-compliant DOI
-def validate_doi_eth_standard(xml_decoded: bytes) -> None:
+def validate_doi_eth_standard(xml_decoded: bytes, doi: str) -> None:
     """
     Validate DataCite DOI XML value is compliant with ETH metadata standard.
     Logs warnings regarding recommended values in DOI
@@ -264,17 +263,27 @@ def validate_doi_eth_standard(xml_decoded: bytes) -> None:
 
     Args:
         xml_decoded: DataCite DOI XML string in decoded format
+        doi: DOI that will be used to query DataCite DOIs
     """
     is_record_valid, warnings = validate.validate_datacite_from_string(
         xml_decoded=xml_decoded, give_warning=True, result_only=False
     )
 
     if warnings:
+        click.echo("")
+        click.echo(
+            click.style(
+                f"The following warnings occurred while validating the DOI "
+                f"'{doi}' using the ETH metadata standard:",
+                fg="yellow",
+                bold=True,
+            )
+        )
         for warning in warnings:
             CustomWarning(warning)
         click.echo("")
 
     if not is_record_valid:
         raise CustomClickException(
-            "DOI failed to pass ETH metadata standard validation."
+            f"DOI '{doi}' failed to pass ETH metadata standard validation."
         )
