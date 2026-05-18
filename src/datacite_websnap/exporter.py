@@ -219,14 +219,16 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                     f"that are hosted at 'https://envicloud.wsl.ch'"
                 )
 
-            elif (content := get_url_content(url)) and (
-                file_name := Path(urlparse(url).path).name
-            ):
-                write_local_file(
-                    content_bytes=content,
-                    filename=file_name,
-                    directory_path=doi_directory,
-                )
+            elif content := get_url_content(url):
+                file_name = Path(urlparse(url).path).name
+                if file_name:
+                    write_local_file(
+                        content_bytes=content,
+                        filename=file_name,
+                        directory_path=doi_directory,
+                    )
+                else:
+                    CustomWarning(f"Could not determine filename from URL: '{url}'")
 
         case _:
             CustomWarning(

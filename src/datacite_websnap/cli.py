@@ -3,20 +3,32 @@ CLI tool that bulk exports DataCite metadata records for a specific repository t
 
 Also supports exporting repository records to a local machine.
 
-*NOTE*: To use CLI in development run (installs dependencies and scripts in development mode):
+
+**** NOTE *****
+To use CLI in development run (installs dependencies and scripts in development mode):
     pdm install --dev
 
+
+# ---- General Commands ----
+    datacite-websnap bulk-export --help
 To access general CLI help in terminal execute:
     datacite-websnap --help
 
+
+# ---- bulk-export command ----
 To access more detailed bulk-export command help in terminal execute:
     datacite-websnap bulk-export --help
 
 Example bulk-export command:
-    datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --key-prefix ethz.wsl --file-logs
+    datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --key-prefix wsl --file-logs
 
 
-# TODO add examples for doi-export
+# ---- doi-export command ----
+To access more detailed doi-export command help in terminal execute:
+    datacite-websnap doi-export --help
+
+Example doi-export command:
+     datacite-websnap doi-export  --doi "https://www.doi.org/10.16904/envidat.692" --file-logs --bucket metadata --endpoint-url "https://examplecloud.com"  --key-prefix wsl
 """
 
 import json
@@ -60,7 +72,6 @@ from .exporter import (
 )
 
 
-# TODO update docstring with doi-export command info
 @click_extra.group(
     params=[],
     context_settings={
@@ -76,6 +87,9 @@ def cli():
 
     To learn more about the 'bulk-export' command run:
     datacite-websnap bulk-export --help
+
+    To learn more about the 'doi-export' command run:
+    datacite-websnap doi-export --help
     """
     pass
 
@@ -260,6 +274,95 @@ def datacite_bulk_export(
     CustomEcho("**** Finished DataCite bulk export ****")
 
 
+def _upload_data_links_s3(
+    doi_bare: str,
+    doi_prefix: str,
+    data_links: list[str],
+    doi_s3_dir: str,
+    s3_client: Any,
+    bucket: str,
+) -> None:
+    """
+    Export DOI data files to S3 storage.
+    Confirm with users if they want to overwrite existing S3 objects.
+
+    Args:
+        doi_bare: DOI (without URL base), example: "10.16904/envidat.504"
+        doi_prefix: DOI prefix, example: "10.16904"
+        data_links: list of links to data files for DOI from DataCite API
+        doi_s3_dir: key_prefix if passed as argument prepended to formatted DOI string
+        s3_client: validated Boto3 S3 client created using a shared AWS credentials file
+        bucket: name of S3 bucket that DataCite records (as S3 objects) will be written
+                in, must have access to bucket with configured S3 credentials
+    """
+    resolved = []
+    for url in data_links:
+        resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
+
+    if not resolved:
+        return
+
+    key_exists = {
+        s3_key: s3_key_exists(s3_client, bucket, s3_key)
+        for s3_key, download_url, size in resolved
+    }
+    existing_data = [
+        (s3_key, download_url, size)
+        for s3_key, download_url, size in resolved
+        if key_exists[s3_key]
+    ]
+    new_data = [
+        (s3_key, download_url, size)
+        for s3_key, download_url, size in resolved
+        if not key_exists[s3_key]
+    ]
+
+    to_upload = []
+
+    if new_data:
+        echo_resolved_data_links(doi_bare, new_data)
+        if click.confirm(
+            click.style(
+                f"Proceed with uploading new data object(s) to bucket '{bucket}'?",
+                fg="cyan",
+                bold=True,
+            )
+        ):
+            to_upload.extend(new_data)
+        click.echo("")
+
+    if existing_data:
+        echo_resolved_data_links(doi_bare, existing_data, "yellow")
+        if click.confirm(
+            click.style(
+                f"The {len(existing_data)} data object(s) already exist in "
+                f"bucket '{bucket}'. Overwrite?",
+                fg="yellow",
+                bold=True,
+            )
+        ):
+            to_upload.extend(existing_data)
+        click.echo("")
+
+    _PARALLEL_THRESHOLD = 10
+    if len(to_upload) > _PARALLEL_THRESHOLD:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(
+                    upload_data_link, s3_key, download_url, s3_client, bucket
+                ): s3_key
+                for s3_key, download_url, _ in to_upload
+            }
+            for future in as_completed(futures):
+                future.result()
+    else:
+        for s3_key, download_url, _ in to_upload:
+            upload_data_link(
+                s3_key, download_url, s3_client, bucket, show_upload_progress=True
+            )
+            click.echo("")
+
+
 def _export_doi_s3(
     doi_bare: str,
     doi_prefix: str,
@@ -325,71 +428,9 @@ def _export_doi_s3(
             key=json_key,
         )
 
-    resolved = []
-    for url in data_links:
-        resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
-
-    if not resolved:
-        return
-
-    key_exists = {
-        s3_key: s3_key_exists(s3_client, bucket, s3_key)
-        for s3_key, download_url, size in resolved
-    }
-    existing_data = [
-        (s3_key, download_url, size)
-        for s3_key, download_url, size in resolved
-        if key_exists[s3_key]
-    ]
-    new_data = [
-        (s3_key, download_url, size)
-        for s3_key, download_url, size in resolved
-        if not key_exists[s3_key]
-    ]
-
-    to_upload = []
-
-    if new_data:
-        echo_resolved_data_links(doi_bare, new_data)
-        if click.confirm(
-            click.style(
-                f"Proceed with uploading new data object(s) to bucket '{bucket}'?",
-                fg="cyan",
-                bold=True,
-            )
-        ):
-            to_upload.extend(new_data)
-
-    if existing_data:
-        echo_resolved_data_links(doi_bare, existing_data, "yellow")
-        if click.confirm(
-            click.style(
-                f"The {len(existing_data)} data object(s) already exist in "
-                f"bucket '{bucket}'. Overwrite?",
-                fg="yellow",
-                bold=True,
-            )
-        ):
-            to_upload.extend(existing_data)
-        click.echo("")
-
-    _PARALLEL_THRESHOLD = 10
-    if len(to_upload) > _PARALLEL_THRESHOLD:
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = {
-                executor.submit(
-                    upload_data_link, s3_key, download_url, s3_client, bucket
-                ): s3_key
-                for s3_key, download_url, _ in to_upload
-            }
-            for future in as_completed(futures):
-                future.result()
-    else:
-        for s3_key, download_url, _ in to_upload:
-            upload_data_link(
-                s3_key, download_url, s3_client, bucket, show_upload_progress=True
-            )
-            click.echo("")
+    _upload_data_links_s3(
+        doi_bare, doi_prefix, data_links, doi_s3_dir, s3_client, bucket
+    )
 
 
 def _export_doi_local(
@@ -435,8 +476,6 @@ def _export_doi_local(
         write_local_file_data_links(url, doi_directory, doi_prefix)
 
 
-# TODO investigate how to extract filenames for Materials Cloud resources
-# TODO possibly wrap in try except, review error handling for helpers
 @cli.command("doi-export")
 @common_options
 @click.option(

@@ -14,7 +14,7 @@ def setup_logging(log_level: str = "INFO", file_logs: bool = False):
     """Set up the logging configuration."""
     root = logging.getLogger()
     root.setLevel(getattr(logging, log_level, logging.INFO))
-    if file_logs and not _has_file_handler():
+    if file_logs and not _has_file_handler():  # pragma: no cover
         handler = logging.FileHandler(LOG_NAME)
         handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATE_FORMAT))
         root.addHandler(handler)

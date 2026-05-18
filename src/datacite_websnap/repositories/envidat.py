@@ -4,7 +4,7 @@ EnviDat repository module for fetching and processing data from the EnviDat port
 
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse, unquote, parse_qs
+from urllib.parse import urlparse, unquote, parse_qs, quote
 
 import boto3
 from botocore import UNSIGNED
@@ -150,7 +150,7 @@ def get_envicloud_objects(url: str) -> list[tuple[str, str, int]] | None:
 
     for obj in bucket_contents:
         object_key = obj["Key"]
-        object_url = f"{endpoint_url}/{bucket}/{object_key}"
+        object_url = f"{endpoint_url}/{bucket}/{quote(object_key, safe='/')}"
         if Path(object_key).suffix:
             object_links.append((object_key, object_url, obj.get("Size", 0)))
 

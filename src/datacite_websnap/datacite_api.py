@@ -191,7 +191,7 @@ def get_datacite_list_dois_xml(
     xml_lst_length = len(xml_lst)
     if total_records != xml_lst_length:
         raise CustomClickException(
-            f"Total number of XML records retrieved ({xml_lst_length}) does not match "
+            f"Total number of XML records processed ({xml_lst_length}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}"
         )
 
