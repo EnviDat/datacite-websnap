@@ -16,7 +16,7 @@ from datacite_websnap.models import DoisResponse
 
 
 def test_get_datacite_dois_pagination_params():
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"data": [], "meta": {}, "links": {}}
         mock_resp.raise_for_status.return_value = None

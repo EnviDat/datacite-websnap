@@ -628,3 +628,15 @@ def test_write_local_file_data_links_unsupported_prefix_warns(mock_warning):
     )
     mock_warning.assert_called_once()
     assert "10.99999" in mock_warning.call_args.args[0]
+
+
+@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
+def test_write_local_file_data_links_empty_filename_warns(mock_content, mock_warning):
+    write_local_file_data_links(
+        url="https://example.com/",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.16904",
+    )
+    mock_warning.assert_called_once()
+    assert "https://example.com/" in mock_warning.call_args.args[0]
