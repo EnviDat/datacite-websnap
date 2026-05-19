@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import ClientError, BotoCoreError, NoCredentialsError
 
 import requests
 
@@ -214,7 +214,7 @@ def test_write_local_file_generic_exception(mock_open_fn):
     assert "Unexpected error" in str(exc.value)
 
 
-@patch("boto3.Session")
+@patch("datacite_websnap.exporter.boto3.Session")
 def test_create_s3_client_success(mock_session_class):
     # Setup mocks
     mock_session_inst = MagicMock()
@@ -234,7 +234,7 @@ def test_create_s3_client_success(mock_session_class):
     assert result == mock_client
 
 
-@patch("boto3.Session")
+@patch("datacite_websnap.exporter.boto3.Session")
 def test_create_s3_client_connection_error(mock_session_class):
     # Simulate a BotoCoreError during session/client creation
     mock_session_class.side_effect = BotoCoreError()
@@ -245,7 +245,7 @@ def test_create_s3_client_connection_error(mock_session_class):
     assert "Failed to create S3 client" in str(exc.value)
 
 
-@patch("boto3.Session")
+@patch("datacite_websnap.exporter.boto3.Session")
 def test_create_s3_client_invalid_bucket(mock_session_class):
     # Setup mocks to fail at head_bucket
     mock_session_inst = MagicMock()
@@ -261,6 +261,18 @@ def test_create_s3_client_invalid_bucket(mock_session_class):
         create_s3_client("http://valid", "nonexistent-bucket")
 
     assert "S3 credentials, endpoint and/or bucket are invalid" in str(exc.value)
+
+
+@patch("datacite_websnap.exporter.boto3.Session")
+def test_create_s3_client_no_credentials(mock_session_class):
+    mock_session_inst = MagicMock()
+    mock_client = MagicMock()
+    mock_session_class.return_value = mock_session_inst
+    mock_session_inst.client.return_value = mock_client
+    mock_client.head_bucket.side_effect = NoCredentialsError()
+
+    with pytest.raises(CustomClickException, match="S3 credentials are missing"):
+        create_s3_client("http://valid", "bucket")
 
 
 # --- _UploadProgress ---
@@ -335,7 +347,7 @@ def test_stream_url_to_s3_success_with_content_length(
 
 
 @patch("datacite_websnap.exporter.CustomEcho")
-@patch("click.echo")
+@patch("datacite_websnap.exporter.click.echo")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_success_no_content_length(
     mock_get, mock_echo, mock_custom_echo

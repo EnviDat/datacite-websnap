@@ -16,7 +16,7 @@ from datacite_websnap.logger import CustomClickException
 
 
 def test_get_url_json_success():
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"key": "value"}
         mock_resp.raise_for_status.return_value = None
@@ -27,7 +27,7 @@ def test_get_url_json_success():
 
 
 def test_get_url_json_http_error():
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = requests.exceptions.HTTPError("404")
         mock_get.return_value = mock_resp
@@ -36,7 +36,7 @@ def test_get_url_json_http_error():
             get_url_json("http://example.com")
 
 
-@patch("requests.get")
+@patch("datacite_websnap.http_utils.requests.get")
 def test_get_url_json_decode_error(mock_get):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -53,25 +53,36 @@ def test_get_url_json_decode_error(mock_get):
 
 
 def test_get_url_json_connection_error():
-    with patch("requests.get", side_effect=requests.exceptions.ConnectionError):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.ConnectionError,
+    ):
         with pytest.raises(CustomClickException):
             get_url_json("http://example.com")
 
 
 def test_get_url_json_timeout():
-    with patch("requests.get", side_effect=requests.exceptions.Timeout):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.Timeout,
+    ):
         with pytest.raises(CustomClickException):
             get_url_json("http://example.com")
 
 
 def test_get_url_json_request_exception():
-    with patch("requests.get", side_effect=requests.exceptions.RequestException):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.RequestException,
+    ):
         with pytest.raises(CustomClickException):
             get_url_json("http://example.com")
 
 
 def test_get_url_json_generic_error():
-    with patch("requests.get", side_effect=Exception("unexpected")):
+    with patch(
+        "datacite_websnap.http_utils.requests.get", side_effect=Exception("unexpected")
+    ):
         with pytest.raises(CustomClickException):
             get_url_json("http://example.com")
 
@@ -80,7 +91,7 @@ def test_get_url_json_generic_error():
 
 
 def test_get_url_content_success():
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.content = b"file content"
         mock_resp.raise_for_status.return_value = None
@@ -89,7 +100,7 @@ def test_get_url_content_success():
 
 
 def test_get_url_content_http_error():
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = requests.exceptions.HTTPError("404")
         mock_get.return_value = mock_resp
@@ -103,7 +114,7 @@ def test_get_url_content_401_returns_none_and_warns():
     http_error = requests.exceptions.HTTPError("401 Unauthorized")
     http_error.response = mock_response
 
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_resp
@@ -120,7 +131,7 @@ def test_get_url_content_non_401_http_error_raises():
     http_error = requests.exceptions.HTTPError("403 Forbidden")
     http_error.response = mock_response
 
-    with patch("requests.get") as mock_get:
+    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_resp
@@ -130,25 +141,36 @@ def test_get_url_content_non_401_http_error_raises():
 
 
 def test_get_url_content_connection_error():
-    with patch("requests.get", side_effect=requests.exceptions.ConnectionError):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.ConnectionError,
+    ):
         with pytest.raises(CustomClickException, match="Network error"):
             get_url_content("https://example.com/file.csv")
 
 
 def test_get_url_content_timeout():
-    with patch("requests.get", side_effect=requests.exceptions.Timeout):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.Timeout,
+    ):
         with pytest.raises(CustomClickException, match="Request timeout"):
             get_url_content("https://example.com/file.csv")
 
 
 def test_get_url_content_request_exception():
-    with patch("requests.get", side_effect=requests.exceptions.RequestException):
+    with patch(
+        "datacite_websnap.http_utils.requests.get",
+        side_effect=requests.exceptions.RequestException,
+    ):
         with pytest.raises(CustomClickException, match="Request failed"):
             get_url_content("https://example.com/file.csv")
 
 
 def test_get_url_content_unexpected_exception():
-    with patch("requests.get", side_effect=Exception("unexpected")):
+    with patch(
+        "datacite_websnap.http_utils.requests.get", side_effect=Exception("unexpected")
+    ):
         with pytest.raises(CustomClickException, match="Unexpected error"):
             get_url_content("https://example.com/file.csv")
 
@@ -159,20 +181,21 @@ def test_get_url_content_unexpected_exception():
 def test_get_url_content_length_with_header():
     mock_response = MagicMock()
     mock_response.headers = {"Content-Length": "2048"}
-    with patch("requests.head", return_value=mock_response):
+    with patch("datacite_websnap.http_utils.requests.head", return_value=mock_response):
         assert get_url_content_length("https://example.com/file.csv") == 2048
 
 
 def test_get_url_content_length_no_header():
     mock_response = MagicMock()
     mock_response.headers = {}
-    with patch("requests.head", return_value=mock_response):
+    with patch("datacite_websnap.http_utils.requests.head", return_value=mock_response):
         assert get_url_content_length("https://example.com/file.csv") == 0
 
 
 def test_get_url_content_length_request_exception():
     with patch(
-        "requests.head", side_effect=requests.exceptions.RequestException("timeout")
+        "datacite_websnap.http_utils.requests.head",
+        side_effect=requests.exceptions.RequestException("timeout"),
     ):
         assert get_url_content_length("https://example.com/file.csv") == 0
 
@@ -180,7 +203,9 @@ def test_get_url_content_length_request_exception():
 def test_get_url_content_length_custom_timeout():
     mock_response = MagicMock()
     mock_response.headers = {"Content-Length": "512"}
-    with patch("requests.head", return_value=mock_response) as mock_head:
+    with patch(
+        "datacite_websnap.http_utils.requests.head", return_value=mock_response
+    ) as mock_head:
         get_url_content_length("https://example.com/file.csv", timeout=(3, 30))
         mock_head.assert_called_once_with(
             "https://example.com/file.csv", timeout=(3, 30), allow_redirects=True
