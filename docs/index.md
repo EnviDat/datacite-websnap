@@ -4,9 +4,9 @@ CLI tool that exports DataCite records to an S3 bucket. Also supports exporting 
 
 ## Purpose
 
-`datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland.
-
-`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage. This tool also supports exporting a single DataCite DOI XML record, JSON record, and associated resource data files.
+- Developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland.
+- Empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage. 
+- Tool also supports exporting a single DataCite DOI XML record, JSON record, and associated resource data files.
 
 ## Installation
 
@@ -29,10 +29,10 @@ datacite-websnap doi-export --help
 
 ## Author
 
-[Rebecca Buchholz](http://www.linkedin.com/in/rebeccabuchholz), EnviDat Software Engineer
+[Rebecca Buchholz](http://www.linkedin.com/in/rebeccabuchholz)
 
 [EnviDat](https://www.envidat.ch) is the environmental data portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WSL.
 
 ## License
 
-[MIT License](https://github.com/EnviDat/datacite-websnap/blob/main/LICENSE)
+[MIT License](https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE)
