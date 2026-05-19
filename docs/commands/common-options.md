@@ -1,0 +1,15 @@
+# Common Options
+
+Options shared by both `bulk-export` and `doi-export`.
+
+| Option             | Default                      | Description                                                                                                                                                                                                    |
+|--------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--destination`    | `S3`                         | Export destination. `S3` for an S3 bucket, `local` for the local file system.                                                                                                                                  |
+| `--profile-name`   | `None`                       | Name of a profile to use for the S3 shared credentials file. If omitted the default profile is used.<br>*Example*: `--profile-name dev`                                                                        |
+| `--endpoint-url`   | `None`                       | Complete URL to use for the constructed S3 client.<br>*Example*: `--endpoint-url "https://examplecloud.com"`                                                                                                   |
+| `--bucket`         | `None`                       | Name of S3 bucket that DataCite XML records will be written in. Configured S3 credentials must have access to the bucket.<br>*Example*: `--bucket opendata`                                                    |
+| `--key-prefix`     | `None`                       | Name of a key prefix for objects in the S3 bucket. If omitted, objects are written without a prefix.<br>*Example*: `--key-prefix wsl`                                                                          |
+| `--directory-path` | `None`                       | Path of the local directory to write records to. Only used if `--destination local`.<br>*Example*: `--directory-path "opendata/wsl"`                                                                            |
+| `--file-logs`      | `False`                      | Enables logging info messages and errors to a file log.                                                                                                                                                         |
+| `--log-level`      | `INFO`                       | Log level for file logging. Valid values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.<br>[Python logging levels](https://docs.python.org/3/library/logging.html#logging-levels)                           |
+| `--api-url`        | `https://api.datacite.org`   | DataCite API base URL. Can be changed to query the test API, e.g. `https://api.test.datacite.org`. Can also be set via a DataCite API configuration variable.                                                  |

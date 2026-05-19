@@ -45,6 +45,16 @@ test-tox:
       - PYTHON_VERSION: [ "3.11", "3.12", "3.13", "3.14"]
   when: manual
 
+pages:
+  stage: deploy
+  script:
+    - pip install mkdocs mkdocs-material
+    - mkdocs build --site-dir public
+  artifacts:
+    paths:
+      - public
+  when: manual
+
 deploy:
   stage: deploy
   variables:
