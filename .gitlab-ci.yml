@@ -24,7 +24,7 @@ test:
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
-    - pdm run pytest --cov=datacite_websnap --cov-report=term
+    - pdm run pytest --cov=datacite_websnap --cov-report=term --cov-fail-under=90
 
 test-tox:
   stage: test
