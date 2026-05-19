@@ -49,9 +49,9 @@ keywords = [
 ]
 
 [project.urls]
-documentation = "https://github.com/EnviDat/datacite-websnap/blob/main/README.md"
-repository = "https://github.com/EnviDat/datacite-websnap"
-changelog = "https://github.com/EnviDat/datacite-websnap/blob/main/CHANGELOG.md"
+documentation = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/README.md"
+repository = "https://git.wsl.ch/EnviDat/datacite-websnap"
+changelog = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["pdm-backend"]
@@ -70,4 +70,6 @@ dev = [
     "pytest-cov>=6.1.1",
     "tox>=4.25.0",
     "tox-pdm>=0.7.2",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
 ]
