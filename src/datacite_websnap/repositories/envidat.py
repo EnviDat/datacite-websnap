@@ -12,7 +12,6 @@ from botocore.config import Config
 from botocore.exceptions import (
     ClientError,
     BotoCoreError,
-    NoCredentialsError,
     EndpointConnectionError,
 )
 
@@ -45,7 +44,7 @@ def create_s3_client_unsigned(endpoint_url: str, bucket: str) -> Any:
             ),
         )
 
-    except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
+    except (BotoCoreError, EndpointConnectionError) as e:
         raise CustomClickException(f"Failed to create S3 client: {e}")
 
     try:

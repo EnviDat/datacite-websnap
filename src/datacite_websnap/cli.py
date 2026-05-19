@@ -69,6 +69,7 @@ from .exporter import (
     resolve_data_link,
     echo_resolved_data_links,
     upload_data_link,
+    format_doi_stem,
 )
 
 
@@ -388,7 +389,7 @@ def _export_doi_s3(
         key_prefix: name of a key prefix for objects in S3 bucket, if omitted then
                     objects are written in S3 bucket without a prefix
     """
-    doi_stem = doi_bare.replace("/", "_").replace(":", "_")
+    doi_stem = format_doi_stem(doi_bare)
     doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
 
     xml_key = f"{doi_s3_dir}/{doi_stem}.xml"

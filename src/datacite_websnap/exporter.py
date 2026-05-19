@@ -40,10 +40,20 @@ def decode_base64_xml(encoded_xml: str) -> bytes:
         raise CustomClickException(f"Unexpected error: {err}")
 
 
+def format_doi_stem(doi: str) -> str:
+    """
+    Return formatted "doi" value: "/" and ":" replaced with "_"
+
+    Args:
+        doi: "doi" string, example "10.16904/envidat.31"
+    """
+    return doi.replace("/", "_").replace(":", "_")
+
+
 def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
     """
     Format "doi" value into an XML filename.
-    "/" replaced with "_" and ".xml" appended to the filename.
+    "/" and ":" replaced with "_" and ".xml" appended to the filename.
 
     Also supports formatting a "doi" value with an S3 key prefix.
 
@@ -54,7 +64,7 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
         doi: "doi" string, example "10.16904/envidat.31"
         key_prefix: Optional key prefix for objects in S3 bucket.
     """
-    doi_format = doi.replace("/", "_").replace(":", "_")
+    doi_format = format_doi_stem(doi)
 
     if not key_prefix:
         return f"{doi_format}.xml"
@@ -114,17 +124,18 @@ def create_s3_client(
             ),
         )
 
-    except (BotoCoreError, NoCredentialsError, EndpointConnectionError) as e:
+    except (BotoCoreError, EndpointConnectionError) as e:
         raise CustomClickException(f"Failed to create S3 client: {e}")
 
     try:
         # Validate credentials, endpoint and access to an existing bucket
         client.head_bucket(Bucket=bucket)
+    except NoCredentialsError as e:
+        raise CustomClickException(f"S3 credentials are missing: {e}")
     except (ClientError, EndpointConnectionError) as e:
         raise CustomClickException(
-            f"S3 credentials, endpoint and/or bucket are "
-            f"invalid (or credentials are not valid for bucket):"
-            f" {e}"
+            f"S3 credentials, endpoint and/or bucket are invalid "
+            f"(or credentials are not valid for bucket): {e}"
         )
 
     return client
