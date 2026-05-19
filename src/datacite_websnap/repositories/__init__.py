@@ -1,3 +1,3 @@
 """
-DataCite repository specific logic.
+DataCite repository specific logic for datacite-websnap commands.
 """

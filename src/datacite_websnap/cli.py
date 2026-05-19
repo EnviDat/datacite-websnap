@@ -1,7 +1,7 @@
 """
-CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket.
+CLI tool that exports DataCite records to an S3 bucket.
 
-Also supports exporting repository records to a local machine.
+Also supports exporting records to a local machine.
 
 
 **** NOTE *****
@@ -482,9 +482,9 @@ def _export_doi_local(
 @click.option(
     "--doi",
     required=True,
-    help="DataCite DOI XML record, JSON record, and associated resource data files "
-    "that will be exported. Only exports DataCite DOIs that pass ETH Zurich "
-    "metadata standards.",
+    help="DOI that corresponds to DataCite DOI XML record, JSON record, and associated "
+         "resource data files that will be exported. Only exports DataCite DOIs that "
+         "pass ETH Zurich metadata standards.",
 )
 def datacite_single_doi_export(
     doi: str,

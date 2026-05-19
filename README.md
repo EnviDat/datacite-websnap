@@ -11,8 +11,8 @@
     <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
 </div>
 
-### CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket. 
-#### Also supports exporting repository records to a local machine.
+### CLI tool that exports DataCite records to an S3 bucket. 
+#### Also supports exporting records to a local machine.
 
 ---
 
@@ -21,7 +21,8 @@
 
 `datacite-websnap` was developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland. 
 
-`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.  
+`datacite-websnap` empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage. This 
+tool also supports exporting a single DataCite DOI XML record, JSON record, and associated resource data files.
 
 
 ## Installation
@@ -33,31 +34,67 @@ pip install datacite-websnap
 
 ## Terminal Documentation
 
-To access CLI documentation:
+To access general CLI documentation:
 ```bash
 datacite-websnap --help
 ```
 
-To access more detailed documentation for the `bulk-export` command:
+###
+Detailed documentation for the `bulk-export` command:
 ```bash
 datacite-websnap bulk-export --help
 ```
 
-## CLI Options
+###
+Detailed documentation for the `doi-export` command:
+```bash
+datacite-websnap doi-export --help
+```
+
+
+## CLI Commands and Options
 
 <details>
   <summary>Click to unfold</summary>
 
 ### Command: `bulk-export`
 
-Bulk export DataCite XML metadata records that correspond to the records for a particular DataCite repository and/or DOI prefix.
+- Bulk export DataCite XML metadata records that correspond to the records for a particular DataCite repository and/or DOI prefix.
+- The default behavior is to export DataCite XML records to an S3 bucket but command also supports exporting the records to a local machine.
 
-The default behavior is to export DataCite XML records to an S3 bucket but command also supports exporting the records to a local machine.
+<details>
+<summary>Click to see <code>bulk-export</code> options</summary>
+
+| Option         | Default | Description                                                                                                                                                                                                                                                                 |
+|----------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--doi-prefix` | `()`    | <ul><li>DataCite DOI prefix used to filter results</li><li>Accepts single or multiple prefix arguments</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul>                                                                                           |
+| `--client-id`  | `None`  | <ul><li>DataCite repository account ID used to filter results</li><li>Referred to as the 'client-id' in the DataCite documentation</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                      |
+| `--early-exit` | `False` | <ul><li>If enabled then terminates program immediately after export error occurs</li><li>Default value is `False` (not enabled)</li><li>If `False` then only logs export error and continues to try to export other DataCite XML records returned by search query</li></ul> |
+| `--page-size`  | `250`   | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                         | 
+
+</details>
+
+
+### Command: `doi-export`
+
+- Export a single DataCite DOI XML record, JSON record, and associated resource data files.
+- Only exports DataCite DOIs that pass ETH Zurich metadata standards.
+- The default behavior is to export DataCite records to an S3 bucket but command also supports downloading the records to a local machine.
+
+<details>
+<summary>Click to see <code>doi-export</code> option</summary>
+
+| Option  | Description                                                                                                                                                                                                                                                                                                                                       |
+|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--doi` | <ul><li>**Required**</li><li>DOI that corresponds to DataCite DOI XML record, JSON record, and associated resource data files that will be exported.</li><li>Only exports DataCite DOIs that pass ETH Zurich metadata standards and that have a prefix listed in the .</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul> |
+
+</details>
+
+
+### Common Options for both `bulk-export` and `doi-export` Commands 
 
 | Option             | Default                    | Description                                                                                                                                                                                                                                                                                                                                           |
-|--------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--doi-prefix`     | `None`                     | <ul><li>DataCite DOI prefix used to filter results</li><li>Accepts single or multiple prefix arguments</li><li>*Example*: `--doi-prefix 10.16904 --doi-prefix 10.25678`</li></ul>                                                                                                                                                                     |
-| `--client-id`      | `None`                     | <ul><li>DataCite repository account ID used to filter results</li><li>*Example*: `--client-id ethz.wsl`</li></ul>                                                                                                                                                                                                                                     |
+|--------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| 
 | `--destination`    | `S3`                       | <ul><li>Export destination for the DataCite XML records</li><li>`S3` (default) for an S3 bucket</li><li>`local` for local file system</li></ul>                                                                                                                                                                                                       |
 | `--profile-name`   | `None`                     | <ul><li>Name of a profile to use for S3 shared credentials file</li><li>If omitted then the default profile is used</li><li>*Example*: `--profile-name dev`</li></ul>                                                                                                                                                                                 |
 | `--endpoint-url`   | `None`                     | <ul><li>Complete URL to use for the constructed S3 client</li><li>*Example*: `--endpoint-url "https://examplecloud.com"`</li></ul>                                                                                                                                                                                                                    |
@@ -66,11 +103,10 @@ The default behavior is to export DataCite XML records to an S3 bucket but comma
 | `--directory-path` | `None`                     | <ul><li>Only used if exporting to `local` destination<li>Path of the local directory that DataCite XML records will be written in </li></ul>                                                                                                                                                                                                          |
 | `--file-logs`      | `False`                    | <ul><li>Enables logging info messages and errors to a file log</li></ul>                                                                                                                                                                                                                                                                              |
 | `--log-level`      | `INFO`                     | <ul><li>Level to use for logging if using `--file-logs` option</li><li>Default value is `INFO`</li><li>Valid logging levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`</li><li><a href="https://docs.python.org/3/library/logging.html#logging-levels" target="_blank">Click here to learn more about Python logging levels</a></li></ul> |
-| `--early-exit`     | `False`                    | <ul><li>If enabled then terminates program immediately after export error occurs</li><li>Default value is `False` (not enabled)</li><li>If `False` then only logs export error and continues to try to export other DataCite XML records returned by search query</li></ul>                                                                           |
-| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                                                                                                                          |
-| `--page-size`      | `250`                      | <ul><li>Number of records returned per page of DataCite API response using pagination</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                                                                                   | |
+| `--api-url`        | `https://api.datacite.org` | <ul><li>DataCite API base URL used for queries</li><li>Can be changed to query test DataCite API, for example `https://api.test.datacite.org`</li><li>Can also be set using a DataCite API configuration variable</li></ul>                                                                                                                           |
 
 </details>
+
 
 ## DataCite Filters
 
