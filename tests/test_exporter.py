@@ -39,6 +39,23 @@ def test_decode_base64_xml_invalid():
         decode_base64_xml(encoded_xml)
 
 
+def test_decode_base64_xml_invalid_xml_structure():
+    # Valid base64 but decodes to malformed XML
+    import base64
+
+    encoded = base64.b64encode(b"not valid xml <<>>").decode()
+    with pytest.raises(CustomClickException, match="Invalid XML structure"):
+        decode_base64_xml(encoded)
+
+
+def test_decode_base64_xml_valid_xml_structure():
+    import base64
+
+    encoded = base64.b64encode(b"<resource><title>Test</title></resource>").decode()
+    result = decode_base64_xml(encoded)
+    assert result == b"<resource><title>Test</title></resource>"
+
+
 def test_decode_base64_xml_unexpected_exception():
     with patch("datacite_websnap.exporter.base64.b64decode") as mock_b64decode:
         mock_b64decode.side_effect = ValueError("Unexpected ValueError")
