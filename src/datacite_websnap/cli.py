@@ -40,7 +40,7 @@ import click
 import click_extra
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
-from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE
+from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE, PARALLEL_UPLOAD_THRESHOLD
 from .validators import (
     validate_at_least_one_query_param,
     validate_page_size,
@@ -345,8 +345,7 @@ def _upload_data_links_s3(
             to_upload.extend(existing_data)
         click.echo("")
 
-    _PARALLEL_THRESHOLD = 10
-    if len(to_upload) > _PARALLEL_THRESHOLD:
+    if len(to_upload) > PARALLEL_UPLOAD_THRESHOLD:
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
                 executor.submit(

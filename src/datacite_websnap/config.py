@@ -19,3 +19,6 @@ DATACITE_DOIS_PREFIXES: tuple[str, ...] = ("10.16904",)
 LOG_NAME: str = "datacite-websnap.log"
 LOG_FORMAT: str = "%(asctime)s | %(levelname)s | %(message)s"
 LOG_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+
+# Threshold for switching from sequential to parallel data uploads
+PARALLEL_UPLOAD_THRESHOLD: int = 10

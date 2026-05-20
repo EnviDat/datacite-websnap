@@ -4,6 +4,7 @@ Process and export DataCite XML metadata records.
 
 import base64
 import binascii
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -33,11 +34,18 @@ def decode_base64_xml(encoded_xml: str) -> bytes:
         encoded_xml: Base64-encoded XML string.
     """
     try:
-        return base64.b64decode(encoded_xml)
+        decoded = base64.b64decode(encoded_xml)
     except binascii.Error:
         raise CustomClickException("binascii Error: Unable to decode XML")
     except Exception as err:
         raise CustomClickException(f"Unexpected error: {err}")
+
+    try:
+        ET.fromstring(decoded)
+    except ET.ParseError as err:
+        raise CustomClickException(f"Invalid XML structure: {err}")
+
+    return decoded
 
 
 def format_doi_stem(doi: str) -> str:
