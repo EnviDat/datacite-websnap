@@ -1,11 +1,12 @@
-# S3 Credentials
+﻿# Credentials
 
 Use a shared credentials file to export records to an S3 bucket.
 
 [Boto3 shared credentials file documentation](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#shared-credentials-file){target="_blank"} describes the expected default location (`~/.aws/credentials`), supported configuration variables, and profiles.
 
-> **Note:** Environment variables take precedence over a shared credentials file!  
-> See [Boto3 credential search order](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials){target="_blank"} for details.
+!!! Warning
+    Environment variables take precedence over a shared credentials file!  
+    See [Boto3 credential search order](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials){target="_blank"} for details.
 
 The CLI uses the `[default]` profile unless `--profile-name` is specified.
 

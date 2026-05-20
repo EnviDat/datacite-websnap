@@ -3,6 +3,10 @@
   white-space: nowrap;
 }
 
+.md-typeset p + ul {
+  margin-top: -0.5rem;
+}
+
 .md-content ul li {
   margin-bottom: 0;
 }

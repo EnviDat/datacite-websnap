@@ -1,4 +1,4 @@
-# DataCite Filters
+﻿# DataCite Filters
 
 Repository account ID and DOI prefix are the supported filters for selecting DataCite records to export. Both filters can be used for S3 and local exports.
 

@@ -1,4 +1,4 @@
-# DataCite API
+﻿# DataCite API
 
 `datacite-websnap` retrieves XML metadata records from the DataCite API.
 

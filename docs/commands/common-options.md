@@ -1,4 +1,4 @@
-# Common Options
+﻿# Common Options
 
 Options shared by both `bulk-export` and `doi-export`.
 

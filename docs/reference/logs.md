@@ -1,4 +1,4 @@
-# Logs
+﻿# Logs
 
 Info messages and errors are always logged to the console.
 
@@ -10,6 +10,8 @@ datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --file-logs
 
 ## Configuration
 
+[Python logging basic configuration documentation](https://docs.python.org/3/library/logging.html#logging.basicConfig){target="_blank"}
+
 Default values are set in `config.py`. Override them there to change log behaviour.
 
 | Variable          | Default                                                                               | Description                        |
@@ -18,4 +20,3 @@ Default values are set in `config.py`. Override them there to change log behavio
 | `LOG_FORMAT`      | `"%(asctime)s \| %(levelname)s \| %(module)s.%(funcName)s:%(lineno)d \| %(message)s"` | Log record format                  |
 | `LOG_DATE_FORMAT` | `"%Y-%m-%d %H:%M:%S"`                                                                 | Timestamp format                   |
 
-[Python logging.basicConfig documentation](https://docs.python.org/3/library/logging.html#logging.basicConfig)

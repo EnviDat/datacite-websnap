@@ -1,4 +1,4 @@
-# Usage: Local Machine
+﻿# Usage: Local Machine
 
 Export DataCite XML metadata records to a local machine.
 
