@@ -4,6 +4,8 @@ Bulk export DataCite XML metadata records that correspond to the records for a p
 
 The default behavior is to export DataCite XML records to an S3 bucket but the command also supports exporting the records to a local machine.
 
+See [S3 Bucket](../usage/s3.md) and [Local Machine](../usage/local.md) for usage examples.
+
 ## Options
 
 | Option         | Default | Description                                                                                                                                                                                                                                                                 |

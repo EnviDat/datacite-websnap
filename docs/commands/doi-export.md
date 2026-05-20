@@ -6,6 +6,23 @@ The default behavior is to export DataCite records to an S3 bucket but the comma
 
 > **Note**: Only exports DataCite DOIs that pass ETH Zurich metadata standards.
 
+See [S3 Bucket](../usage/s3.md) and [Local Machine](../usage/local.md) for usage examples.
+
+
+## Validation
+
+Validates the DOI against ETH Zurich metadata standards before exporting:
+
+- Displays warnings with recommendations for improving metadata quality
+- Exits with an error if validation fails
+
+## S3 Prompts
+
+Requests user confirmation for the following actions while using `doi-export` to export DOI records to an S3 bucket:
+
+- Overwriting existing metadata records (XML and JSON)
+- Uploading new data files
+- Overwriting existing data files
 
 ## Options
 

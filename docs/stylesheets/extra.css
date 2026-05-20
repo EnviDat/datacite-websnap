@@ -2,3 +2,11 @@
 .md-typeset table td:first-child {
   white-space: nowrap;
 }
+
+.md-content ul li {
+  margin-bottom: 0;
+}
+
+.md-content .purpose-list li {
+  margin-bottom: 0.5rem;
+}

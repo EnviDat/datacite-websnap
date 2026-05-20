@@ -6,9 +6,11 @@ Also supports exporting records to a local machine.
 
 ## Purpose
 
-- Developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland.
-- Empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage. 
-- Tool also supports exporting a single DataCite DOI XML record, JSON record, and associated resource data files.
+<ul class="purpose-list">
+  <li>Developed to facilitate interoperability between the data platforms of the ETH research institutions in Switzerland.</li>
+  <li>Empowers research institutions to share their DataCite metadata records by exporting the records to publicly accessible S3 cloud storage.</li>
+  <li>Tool also supports exporting a single DataCite DOI XML record, JSON record, and associated resource data files.</li>
+</ul>
 
 ## Installation
 
