@@ -1,9 +1,31 @@
 site_name: datacite-websnap
-site_url: https://git.wsl.ch/EnviDat/datacite-websnap
+site_url: https://git-pages.wsl.ch/datacite-websnap-5b86d6
 repo_url: https://git.wsl.ch/EnviDat/datacite-websnap
 
 theme:
   name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - content.code.copy
+
+markdown_extensions:
+    - attr_list
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
@@ -15,7 +37,8 @@ nav:
     - S3 Bucket: usage/s3.md
     - Local Machine: usage/local.md
   - Reference:
+    - S3 Credentials: reference/credentials.md
     - DataCite Filters: reference/filters.md
-    - Record Naming: reference/record-naming.md
+    - Metadata Record Naming: reference/record-naming.md
     - Logs: reference/logs.md
     - DataCite API: reference/datacite-api.md

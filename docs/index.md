@@ -1,6 +1,8 @@
 # datacite-websnap
 
-CLI tool that exports DataCite records to an S3 bucket. Also supports exporting records to a local machine.
+CLI tool that exports DataCite records to an S3 bucket. 
+
+Also supports exporting records to a local machine.
 
 ## Purpose
 
@@ -14,25 +16,28 @@ CLI tool that exports DataCite records to an S3 bucket. Also supports exporting 
 pip install datacite-websnap
 ```
 
-## Quick Start
+## Terminal Documentation
+
+### General
+```bash
+datacite-websnap --help
+```
+
+### Commands 
+```bash
+datacite-websnap bulk-export --help
+```
 
 ```bash
-# General help
-datacite-websnap --help
-
-# bulk-export help
-datacite-websnap bulk-export --help
-
-# doi-export help
 datacite-websnap doi-export --help
 ```
 
 ## Author
 
-[Rebecca Buchholz](http://www.linkedin.com/in/rebeccabuchholz)
+[Rebecca Buchholz](http://www.linkedin.com/in/rebeccabuchholz){target="_blank"} 
 
-[EnviDat](https://www.envidat.ch) is the environmental data portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WSL.
+[EnviDat](https://www.envidat.ch){target="_blank"}  is the environmental data portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WSL.
 
 ## License
 
-[MIT License](https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE)
+[MIT License](https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE){target="_blank"} 

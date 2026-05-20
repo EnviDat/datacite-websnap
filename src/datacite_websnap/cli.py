@@ -483,8 +483,8 @@ def _export_doi_local(
     "--doi",
     required=True,
     help="DOI that corresponds to DataCite DOI XML record, JSON record, and associated "
-         "resource data files that will be exported. Only exports DataCite DOIs that "
-         "pass ETH Zurich metadata standards.",
+    "resource data files that will be exported. Only exports DataCite DOIs that "
+    "pass ETH Zurich metadata standards.",
 )
 def datacite_single_doi_export(
     doi: str,

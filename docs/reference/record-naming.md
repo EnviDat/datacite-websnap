@@ -1,12 +1,11 @@
-# Record Naming
+# Metadata Record Naming
 
-Exported DataCite XML records are assigned file names (or S3 keys) derived from their DOI:
+Exported DataCite metadata records are assigned file names (or S3 keys) derived from their DOI:
 
-- `/` is replaced with `_`
-- `.xml` is appended
+- `/` and `:` are replaced with `_`
+- `.xml` or `.json` is appended
 
-## Example
-
-| DOI | File name / S3 key |
-|-----|--------------------|
-| `10.16904/envidat.31` | `10.16904_envidat.31.xml` |
+| DOI                    | Metadata File Name / S3 Key |
+|------------------------|-----------------------------|
+| `10.16904/envidat.518` | `10.16904_envidat.518.xml`  |
+| `10.16904/envidat.518` | `10.16904_envidat.518.json` |
