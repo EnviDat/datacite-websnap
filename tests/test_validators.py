@@ -132,3 +132,8 @@ def test_validate_key_prefix_valid():
 def test_validate_key_prefix_invalid():
     with pytest.raises(CustomBadParameter):
         validate_key_prefix("not-allowed", "local")
+
+
+def test_validate_key_prefix_strips_trailing_slash():
+    assert validate_key_prefix("data/", "S3") == "data"
+    assert validate_key_prefix("wsl//", "S3") == "wsl"

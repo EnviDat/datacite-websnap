@@ -71,15 +71,7 @@ def test_format_xml_file_name_no_prefix():
 
 def test_format_xml_file_name_with_prefix():
     doi = "10.16904/envidat.31"
-    key_prefix = "data/"
-    result = format_xml_file_name(doi, key_prefix)
-    assert result == "data/10.16904_envidat.31.xml"
-
-
-def test_format_xml_file_name_with_prefix_no_trailing_slash():
-    doi = "10.16904/envidat.31"
-    key_prefix = "data"
-    result = format_xml_file_name(doi, key_prefix)
+    result = format_xml_file_name(doi, "data")
     assert result == "data/10.16904_envidat.31.xml"
 
 
@@ -424,10 +416,16 @@ def test_stream_url_to_s3_request_exception(mock_get, mock_warning):
 
 @patch("datacite_websnap.exporter.CustomWarning")
 @patch("datacite_websnap.exporter.requests.get")
-def test_stream_url_to_s3_unexpected_exception(mock_get, mock_warning):
-    mock_get.side_effect = Exception("something unexpected")
+def test_stream_url_to_s3_s3_error(mock_get, mock_warning):
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Length": "100"}
+    mock_response.raw = MagicMock()
+    mock_get.return_value = mock_response
 
-    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
+    s3_client = MagicMock()
+    s3_client.upload_fileobj.side_effect = BotoCoreError()
+
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", s3_client)
 
     mock_warning.assert_called_once()
     assert "Unexpected error" in mock_warning.call_args.args[0]
