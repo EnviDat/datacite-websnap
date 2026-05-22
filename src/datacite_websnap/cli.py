@@ -215,7 +215,7 @@ def datacite_bulk_export(
 
     # Validate arguments
     validate_at_least_one_query_param(doi_prefix, client_id)
-    validate_key_prefix(key_prefix, destination)
+    key_prefix = validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
@@ -537,7 +537,7 @@ def datacite_single_doi_export(
 
     # Validate arguments
     doi_bare, doi_prefix = validate_doi(doi)
-    validate_key_prefix(key_prefix, destination)
+    key_prefix = validate_key_prefix(key_prefix, destination)
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
