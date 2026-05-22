@@ -40,6 +40,13 @@ datacite-websnap doi-export --help
 
 [EnviDat](https://www.envidat.ch){target="_blank"}  is the environmental data portal of the Swiss Federal Institute for Forest, Snow and Landscape Research WSL.
 
+
+## Inspiration
+
+<h3><a href="https://pypi.org/project/websnap" target="_blank">websnap</a></h3>
+
+An EnviDat PyPI package that copies files retrieved from an API to an S3 bucket or a local machine.
+
 ## License
 
 [MIT License](https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/LICENSE){target="_blank"} 

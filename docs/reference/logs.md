@@ -14,9 +14,9 @@ datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --file-logs
 
 Default values are set in `config.py`. Override them there to change log behaviour.
 
-| Variable          | Default                                                                               | Description                        |
-|-------------------|---------------------------------------------------------------------------------------|------------------------------------|
-| `LOG_NAME`        | `"datacite-websnap.log"`                                                              | File log name                      |
-| `LOG_FORMAT`      | `"%(asctime)s \| %(levelname)s \| %(module)s.%(funcName)s:%(lineno)d \| %(message)s"` | Log record format                  |
-| `LOG_DATE_FORMAT` | `"%Y-%m-%d %H:%M:%S"`                                                                 | Timestamp format                   |
+| Variable          | Default                                         | Description       |
+|-------------------|-------------------------------------------------|-------------------|
+| `LOG_NAME`        | `"datacite-websnap.log"`                        | File log name     |
+| `LOG_FORMAT`      | `"%(asctime)s \| %(levelname)s \| %(message)s"` | Log record format |
+| `LOG_DATE_FORMAT` | `"%Y-%m-%d %H:%M:%S"`                           | Timestamp format  |
 

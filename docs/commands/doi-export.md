@@ -7,6 +7,8 @@ The default behavior is to export DataCite records to an S3 bucket but the comma
 !!! note
     Only exports DataCite DOIs that pass ETH Zurich metadata standards.
 
+## Related Documentation
+
 See [S3 Bucket](../usage/s3.md) and [Local Machine](../usage/local.md) for usage examples.
 
 
@@ -14,9 +16,9 @@ See [S3 Bucket](../usage/s3.md) and [Local Machine](../usage/local.md) for usage
 
 See [Common Options](common-options.md) for options shared with `bulk-export`.
 
-| Option  | Default | Description                                                                                                                                                                                                              |
-|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--doi` | —       | <ul><li>**Required**</li><li>DOI of the DataCite record to export</li><li>Only exports DOIs that pass ETH Zurich metadata standards</li><li>*Example*: `--doi 10.16904/envidat.576`</li></ul>                            |
+| Option  | Default | Description                                                                                                                                                                                                                                                                                                                                            |
+|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--doi` | —       | <ul><li>**Required**</li><li>DOI of the DataCite record to export</li><li>Only exports DOIs that pass ETH Zurich metadata standards</li><li>DOI can be passed in the short form (DOI only) or with the full URL form</li><li>*Example*: `--doi "10.16904/envidat.576"`</li><li>*Example*: `--doi "https://www.doi.org/10.16904/envidat.576"`</li></ul> |
 
 
 
