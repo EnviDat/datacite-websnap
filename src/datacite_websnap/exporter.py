@@ -77,10 +77,7 @@ def format_xml_file_name(doi: str, key_prefix: str | None = None) -> str:
     if not key_prefix:
         return f"{doi_format}.xml"
 
-    if key_prefix.endswith("/"):
-        return f"{key_prefix}{doi_format}.xml"
-    else:
-        return f"{key_prefix}/{doi_format}.xml"
+    return f"{key_prefix}/{doi_format}.xml"
 
 
 def format_json_file_name(xml_file_name: str) -> str:
@@ -322,7 +319,7 @@ def stream_url_to_s3(
         CustomWarning(f"HTTP error fetching URL '{url}': {err}")
     except requests.exceptions.RequestException as err:
         CustomWarning(f"Error fetching URL '{url}': {err}")
-    except Exception as err:
+    except (BotoCoreError, ClientError) as err:
         CustomWarning(f"Unexpected error streaming '{url}' to S3: {err}")
 
 

@@ -167,4 +167,4 @@ def validate_key_prefix(
             " '--destination' option is set to 'local'"
         )
 
-    return key_prefix
+    return key_prefix.rstrip("/") if key_prefix else key_prefix

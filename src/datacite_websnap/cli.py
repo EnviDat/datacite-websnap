@@ -40,7 +40,12 @@ import click
 import click_extra
 
 from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
-from .config import DATACITE_API_URL, DATACITE_PAGE_SIZE, PARALLEL_UPLOAD_THRESHOLD
+from .config import (
+    DATACITE_API_URL,
+    DATACITE_PAGE_SIZE,
+    THREADING_UPLOAD_THRESHOLD,
+    THREADING_UPLOAD_MAX_WORKERS,
+)
 from .validators import (
     validate_at_least_one_query_param,
     validate_page_size,
@@ -267,12 +272,48 @@ def datacite_bulk_export(
 
         except CustomClickException as err:
             if early_exit:
-                raise CustomClickException(err.message)
+                raise err
             else:
                 CustomWarning(err.message)
                 continue
 
     CustomEcho("**** Finished DataCite bulk export ****")
+
+
+def _execute_uploads(
+    to_upload: list[tuple[str, str, int]],
+    s3_client: Any,
+    bucket: str,
+) -> None:
+    """
+    Upload data files to S3 bucket.
+
+    Uses a pool of threads to upload data files if
+    the length of to_upload exceeds THREADING_UPLOAD_THRESHOLD.
+
+    Args:
+       to_upload: List of tuples which information about
+                  data files to upload (s3_key, download_url, size)
+        s3_client: validated Boto3 S3 client created using a shared AWS credentials file
+        bucket: name of S3 bucket that DataCite records (as S3 objects) will be written
+                in, must have access to bucket with configured S3 credentials
+    """
+    if len(to_upload) > THREADING_UPLOAD_THRESHOLD:
+        with ThreadPoolExecutor(max_workers=THREADING_UPLOAD_MAX_WORKERS) as executor:
+            futures = {
+                executor.submit(
+                    upload_data_link, s3_key, download_url, s3_client, bucket
+                ): s3_key
+                for s3_key, download_url, _ in to_upload
+            }
+            for future in as_completed(futures):
+                future.result()
+    else:
+        for s3_key, download_url, _ in to_upload:
+            upload_data_link(
+                s3_key, download_url, s3_client, bucket, show_upload_progress=True
+            )
+            click.echo("")
 
 
 def _upload_data_links_s3(
@@ -345,22 +386,7 @@ def _upload_data_links_s3(
             to_upload.extend(existing_data)
         click.echo("")
 
-    if len(to_upload) > PARALLEL_UPLOAD_THRESHOLD:
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = {
-                executor.submit(
-                    upload_data_link, s3_key, download_url, s3_client, bucket
-                ): s3_key
-                for s3_key, download_url, _ in to_upload
-            }
-            for future in as_completed(futures):
-                future.result()
-    else:
-        for s3_key, download_url, _ in to_upload:
-            upload_data_link(
-                s3_key, download_url, s3_client, bucket, show_upload_progress=True
-            )
-            click.echo("")
+    _execute_uploads(to_upload, s3_client, bucket)
 
 
 def _export_doi_s3(
