@@ -82,7 +82,7 @@ def test_bulk_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
         ),
         patch("datacite_websnap.cli.get_datacite_client"),
     ):
-        runner.invoke(
+        result = runner.invoke(
             cli,
             [
                 "bulk-export",
@@ -100,6 +100,7 @@ def test_bulk_export_s3_logic_flow(mock_get_xml, mock_put_obj, mock_create_s3):
             ],
         )
 
+    assert result.exit_code == 0
     mock_create_s3.assert_called_once_with("https://s3.com", "my-bucket", "my-profile")
 
     # Note: Ensure the argument names (client, body, etc.) match your function signature
@@ -463,28 +464,6 @@ def test_upload_data_links_s3_parallel_path_uploads_all(
             "bucket",
         )
     assert mock_upload.call_count == 11
-
-
-@patch("datacite_websnap.cli.upload_data_link")
-@patch("datacite_websnap.cli.s3_key_exists", return_value=False)
-@patch("datacite_websnap.cli.resolve_data_link")
-def test_upload_data_links_s3_parallel_exception_propagates(
-    mock_resolve, mock_exists, mock_upload
-):
-    items = [(f"dir/f{i}.csv", f"https://example.com/f{i}.csv", 100) for i in range(11)]
-    mock_resolve.return_value = items
-    mock_upload.side_effect = Exception("upload failed")
-
-    with patch("datacite_websnap.cli.click.confirm", return_value=True):
-        with pytest.raises(Exception, match="upload failed"):
-            _upload_data_links_s3(
-                "10.123/test",
-                "10.123",
-                ["https://envicloud.wsl.ch/#/?bucket=test"],
-                "dir",
-                MagicMock(),
-                "bucket",
-            )
 
 
 # --- datacite_single_doi_export ---

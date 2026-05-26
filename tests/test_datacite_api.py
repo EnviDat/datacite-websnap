@@ -242,7 +242,7 @@ def test_get_datacite_list_dois_xml_zero_records():
     }
 
     with patch(
-        "datacite_websnap.datacite_api.get_datacite_dois",
+        "datacite_websnap.datacite_api.get_url_json",
         return_value=mock_response,
     ):
         with pytest.raises(CustomClickException):
@@ -271,11 +271,10 @@ def test_get_datacite_list_dois_xml_multiple_pages():
     }
 
     with patch(
-        "datacite_websnap.datacite_api.get_datacite_dois", return_value=first_page
+        "datacite_websnap.datacite_api.get_url_json",
+        side_effect=[first_page, second_page],
     ):
-        with patch(
-            "datacite_websnap.datacite_api.get_url_json", return_value=second_page
-        ):
+        with patch("datacite_websnap.datacite_api.CustomEcho"):
             result = get_datacite_list_dois_xml(
                 api_url="https://api.example.org", client_id="test-client"
             )
@@ -300,9 +299,7 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
         ],
     }
 
-    with patch(
-        "datacite_websnap.datacite_api.get_datacite_dois", return_value=first_page
-    ):
+    with patch("datacite_websnap.datacite_api.get_url_json", return_value=first_page):
         with pytest.raises(CustomClickException):
             get_datacite_list_dois_xml(
                 api_url="https://api.example.org", client_id="test-client"
