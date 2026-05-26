@@ -47,9 +47,12 @@ test-tox:
 
 pages:
   stage: deploy
+  before_script:
+    - pip install pdm
+    - pdm config cache_dir "$PDM_CACHE_DIR"
+    - pdm sync --dev
   script:
-    - pip install mkdocs mkdocs-material
-    - mkdocs build --site-dir public
+    - pdm run mkdocs build --site-dir public
   artifacts:
     paths:
       - public
