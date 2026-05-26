@@ -10,12 +10,12 @@
 
 ## Configuration
 
-Default values are set in `config.py`. Override them there to change API behaviour.
+Default values are set in `config.py`. Override them there if running from source to change API behaviour.
 
-| Variable                        | Default                      | Description                                                                                                         |
-|---------------------------------|------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `TIMEOUT`                       | `32`                         | Timeout of API requests in seconds.                                                                                 |
-| `DATACITE_API_URL`              | `https://api.datacite.org`   | DataCite base URL. Assigned as default to `--api-url`. Use `https://api.test.datacite.org` to use DataCite test API. |
-| `DATACITE_API_CLIENTS_ENDPOINT` | `/clients`                   | Endpoint used to retrieve a client.                                                                                 |
-| `DATACITE_API_DOIS_ENDPOINT`    | `/dois`                      | Endpoint used to retrieve a list of DOIs.                                                                           |
-| `DATACITE_PAGE_SIZE`            | `250`                        | DOIs retrieved per page using pagination. Assigned as default to `--page-size`.                                     |
+| Variable                        | Default                    | Description                                                                                                          |
+|---------------------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `TIMEOUT`                       | `32`                       | Timeout of API requests in seconds.                                                                                  |
+| `DATACITE_API_URL`              | `https://api.datacite.org` | DataCite base URL. Assigned as default to `--api-url`. Use `https://api.test.datacite.org` to use DataCite test API. |
+| `DATACITE_API_CLIENTS_ENDPOINT` | `/clients`                 | Endpoint used to retrieve a client.                                                                                  |
+| `DATACITE_API_DOIS_ENDPOINT`    | `/dois`                    | Endpoint used to retrieve a list of DOIs.                                                                            |
+| `DATACITE_PAGE_SIZE`            | `250`                      | DOIs retrieved per page using pagination. Assigned as default to `--page-size` for the `bulk-export` command.        |

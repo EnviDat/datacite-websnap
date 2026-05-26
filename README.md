@@ -6,7 +6,7 @@
         <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/datacite-websnap">
     </a>
     <a href="https://github.com/EnviDat/datacite-websnap/blob/main/LICENSE" target="_blank">
-      <img alt="License" src="https://img.shields.io/pypi/l/websnap?color=%232780C1">
+      <img alt="License" src="https://img.shields.io/pypi/l/datacite-websnap?color=%232780C1">
     </a>
     <img alt="Code Style - ruff" src="https://img.shields.io/badge/style-ruff-41B5BE?style=flat">
 </div>
