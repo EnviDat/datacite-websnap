@@ -12,7 +12,7 @@ datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --file-logs
 
 [Python logging basic configuration documentation](https://docs.python.org/3/library/logging.html#logging.basicConfig){target="_blank"}
 
-Default values are set in `config.py`. Override them there to change log behaviour.
+Default values are set in `config.py`. Override them there if running from source to change log behaviour.
 
 | Variable          | Default                                         | Description       |
 |-------------------|-------------------------------------------------|-------------------|

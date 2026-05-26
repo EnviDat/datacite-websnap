@@ -11,11 +11,11 @@ Both filters can be used for S3 and local exports.
 
 Can be combined with `--doi-prefix` options.
 
-Each DataCite repository has a unique account ID. To confirm the correct ID, call the [DataCite API client endpoint](https://support.datacite.org/reference/get_clients-id).
+Each DataCite repository has a unique account ID. To confirm the correct ID, call the [DataCite API client endpoint](https://support.datacite.org/reference/get_clients-id){target="_blank"}.
 
 If you know a DOI but not the repository ID:
 
-1. Go to [DataCite Commons](https://commons.datacite.org/)
+1. Go to [DataCite Commons](https://commons.datacite.org/){target="_blank"}
 2. Search for the DOI, e.g. `10.16904/envidat.576`
 3. Click the record → **Download Metadata** → **DataCite JSON**
 4. The `"clientId"` value is the repository account ID. For `10.16904/envidat.576` it is `"ethz.wsl"`.
@@ -27,7 +27,7 @@ If you know a DOI but not the repository ID:
 ## DOI Prefix (`--doi-prefix`)
 
 !!! Note
-    Applying this filter exports **all** records for the specified DOI prefix.
+    Applying this filter exports **all** records for the specified DOI prefix(es).
 
 Can be combined with `--client-id` option.
 

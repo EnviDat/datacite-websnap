@@ -10,13 +10,13 @@ Exported DataCite metadata records are assigned file names (or S3 keys) derived 
 | DOI                    | Metadata File Name / S3 Key |
 |------------------------|-----------------------------|
 | `10.16904/envidat.518` | `10.16904_envidat.518.xml`  |
-| `10.16904/envidat.518` | `10.16904_envidat.518.json` |
+
 
 ## `doi-export`
 
-Metadata records are nested under a prefix named after the formatted DOI.
+Metadata records are nested under a directory/prefix named after the formatted DOI.
 
-| DOI                    | Metadata S3 Key                                    |
+| DOI                    | Metadata File Name / S3 Key                        |
 |------------------------|----------------------------------------------------|
 | `10.16904/envidat.518` | `10.16904_envidat.518/10.16904_envidat.518.xml`    |
 | `10.16904/envidat.518` | `10.16904_envidat.518/10.16904_envidat.518.json`   |

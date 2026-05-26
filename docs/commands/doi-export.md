@@ -42,9 +42,9 @@ Validates the DOI against ETH Zurich metadata standards before exporting:
 
 Requests user confirmation for the following actions while using `doi-export` to export DOI records to an S3 bucket:
 
-- Overwriting existing metadata records (XML and JSON)
-- Uploading new data files
-- Overwriting existing data files
+- Overwrite existing metadata records (XML and JSON)
+- Upload new data files
+- Overwrite existing data files
 
 ## Record and Data Naming
 
