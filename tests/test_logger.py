@@ -12,10 +12,18 @@ from datacite_websnap.logger import (
 )
 
 
-def test_custom_click_exception_logs_error(caplog):
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(CustomClickException):
-            raise CustomClickException("Something went wrong")
+def test_custom_click_exception_can_be_raised():
+    with pytest.raises(CustomClickException, match="Something went wrong"):
+        raise CustomClickException("Something went wrong")
+
+
+def test_custom_click_exception_show_logs_when_file_handler(capsys):
+    with patch("datacite_websnap.logger._has_file_handler", return_value=True):
+        with patch("datacite_websnap.logger.logging.error") as mock_log:
+            exc = CustomClickException("Something went wrong")
+            exc.show()
+            mock_log.assert_called_once_with("Something went wrong")
+    assert "Something went wrong" in capsys.readouterr().err
 
 
 def test_custom_click_exception_format_message():
@@ -34,10 +42,11 @@ def test_custom_bad_parameter_format_message():
     assert "Bad param" in exc.format_message()
 
 
-def test_custom_echo_logs_info(caplog):
-    with caplog.at_level(logging.INFO):
-        CustomEcho("Hello world")
-        assert "Hello world" in caplog.text
+def test_custom_echo_logs_info():
+    with patch("datacite_websnap.logger._has_file_handler", return_value=True):
+        with patch("datacite_websnap.logger.logging.info") as mock_log:
+            CustomEcho("Hello world")
+            mock_log.assert_called_once_with("Hello world")
 
 
 def test_custom_warning_stdout(capsys):
@@ -47,7 +56,7 @@ def test_custom_warning_stdout(capsys):
 
 
 def test_custom_warning_log(caplog):
-    with patch.object(logging, "warning") as mock_warning:
-        warning = CustomWarning("Log this warning")
-        warning._log_warning("Log this warning")
-        mock_warning.assert_called_with("Log this warning")
+    with patch("datacite_websnap.logger._has_file_handler", return_value=True):
+        with caplog.at_level(logging.WARNING):
+            CustomWarning("Log this warning")
+            assert "Log this warning" in caplog.text

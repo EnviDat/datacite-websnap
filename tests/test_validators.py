@@ -4,7 +4,8 @@ import pytest
 from click import BadParameter
 
 from datacite_websnap.validators import (
-    validate_url,
+    validate_doi,
+    validate_api_url,
     validate_page_size,
     validate_at_least_one_query_param,
     validate_bucket,
@@ -15,27 +16,65 @@ from datacite_websnap.validators import (
 )
 
 
-# --- validate_url ---
-def test_validate_url_valid():
-    assert validate_url(None, None, "https://example.com") == "https://example.com"
+def test_validate_doi_bare_doi():
+    assert validate_doi("10.16904/envidat.504") == ("10.16904/envidat.504", "10.16904")
 
 
-def test_validate_url_invalid():
+def test_validate_doi_url():
+    assert validate_doi("https://www.doi.org/10.16904/envidat.504") == (
+        "10.16904/envidat.504",
+        "10.16904",
+    )
+
+
+def test_validate_doi_missing_slash():
+    with pytest.raises(BadParameter, match="does not have a '/'"):
+        validate_doi("10.16904")
+
+
+def test_validate_doi_invalid_url():
+    with pytest.raises(BadParameter, match="not a valid URL"):
+        validate_doi("http:///10.16904/envidat.504")
+
+
+def test_validate_doi_leading_slash():
+    with pytest.raises(BadParameter, match="leading slash"):
+        validate_doi("/10.16904/envidat.504")
+
+
+def test_validate_doi_unsupported_prefix():
+    with pytest.raises(BadParameter, match="not one of the supported"):
+        validate_doi("10.9999/some-record")
+
+
+def test_validate_doi_unsupported_prefix_url():
+    with pytest.raises(BadParameter, match="not one of the supported"):
+        validate_doi("https://doi.org/10.9999/some-record")
+
+
+def test_validate_api_url_valid():
+    assert validate_api_url("https://example.com") == "https://example.com/"
+
+
+def test_validate_api_url_invalid():
     with pytest.raises(BadParameter):
-        validate_url(None, None, "http://example.com")
+        validate_api_url("http://example.com")
 
 
 def test_validate_page_size_valid():
-    assert validate_page_size(None, None, 10) == 10
-    assert validate_page_size(None, None, 1000) == 1000
+    assert validate_page_size(10) == 10
+    assert validate_page_size(1000) == 1000
 
 
 def test_validate_page_size_invalid():
     with pytest.raises(BadParameter):
-        validate_page_size(None, None, -5)
+        validate_page_size(-5)
 
     with pytest.raises(BadParameter):
-        validate_page_size(None, None, 1001)
+        validate_page_size(0)
+
+    with pytest.raises(BadParameter):
+        validate_page_size(1001)
 
 
 def test_validate_at_least_one_query_param_valid():
@@ -73,14 +112,21 @@ def test_validate_endpoint_url_invalid_url():
         validate_endpoint_url("abc", "S3")
 
 
-def test_validate_directory_path_valid():
-    assert validate_directory_path("samples/abc", "local") == "samples/abc"
+def test_validate_directory_path_valid(tmp_path):
+    assert validate_directory_path(str(tmp_path), "local") == str(tmp_path)
     assert validate_directory_path(None, "S3") is None
 
 
 def test_validate_directory_path_invalid():
     with pytest.raises(CustomBadParameter):
         validate_directory_path(None, "local")
+
+
+def test_validate_directory_path_nonexistent():
+    with pytest.raises(
+        CustomBadParameter, match="does not exist or is not a directory"
+    ):
+        validate_directory_path("/nonexistent/path/abc", "local")
 
 
 def test_validate_key_prefix_valid():
@@ -91,3 +137,8 @@ def test_validate_key_prefix_valid():
 def test_validate_key_prefix_invalid():
     with pytest.raises(CustomBadParameter):
         validate_key_prefix("not-allowed", "local")
+
+
+def test_validate_key_prefix_strips_trailing_slash():
+    assert validate_key_prefix("data/", "S3") == "data"
+    assert validate_key_prefix("wsl//", "S3") == "wsl"

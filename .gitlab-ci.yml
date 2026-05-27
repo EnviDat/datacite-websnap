@@ -24,7 +24,7 @@ test:
     - pdm config cache_dir "$PDM_CACHE_DIR"
     - pdm sync --dev
   script:
-    - pdm run pytest --cov=datacite_websnap --cov-report=term
+    - pdm run pytest --cov=datacite_websnap --cov-report=term --cov-fail-under=90
 
 test-tox:
   stage: test
@@ -43,6 +43,19 @@ test-tox:
   parallel:
     matrix:
       - PYTHON_VERSION: [ "3.11", "3.12", "3.13", "3.14"]
+  when: manual
+
+pages:
+  stage: deploy
+  before_script:
+    - pip install pdm
+    - pdm config cache_dir "$PDM_CACHE_DIR"
+    - pdm sync --dev
+  script:
+    - pdm run mkdocs build --site-dir public
+  artifacts:
+    paths:
+      - public
   when: manual
 
 deploy:

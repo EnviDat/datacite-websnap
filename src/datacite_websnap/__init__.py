@@ -1,3 +1,3 @@
 """
-Package that bulk exports DataCite metadata records from a repository to an S3 bucket.
+Package that exports DataCite records to an S3 bucket or local machine.
 """

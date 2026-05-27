@@ -1,7 +1,7 @@
 [project]
 name = "datacite-websnap"
 version = "2.0.2"
-description = "CLI tool that bulk exports DataCite metadata records for a specific repository to an S3 bucket."
+description = "CLI tool that exports DataCite records to an S3 bucket."
 authors = [
     {name = "Rebecca Buchholz"},
 ]
@@ -9,10 +9,12 @@ maintainers = [
     {name = "EnviDat", email="envidat@wsl.ch"}
 ]
 dependencies = [
-    "click>=8.3.2",
+    "click>=8.3.3",
     "requests>=2.33.1",
     "pydantic>=2.13.0",
-    "boto3>=1.42.89"
+    "boto3>=1.43.4",
+    "click-extra>=7.14.1",
+    "eth-datacite-validator>=0.1.4",
 ]
 requires-python = ">=3.11"
 classifiers = [
@@ -47,9 +49,9 @@ keywords = [
 ]
 
 [project.urls]
-documentation = "https://github.com/EnviDat/datacite-websnap/blob/main/README.md"
-repository = "https://github.com/EnviDat/datacite-websnap"
-changelog = "https://github.com/EnviDat/datacite-websnap/blob/main/CHANGELOG.md"
+documentation = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/README.md"
+repository = "https://git.wsl.ch/EnviDat/datacite-websnap"
+changelog = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["pdm-backend"]
@@ -68,4 +70,6 @@ dev = [
     "pytest-cov>=6.1.1",
     "tox>=4.25.0",
     "tox-pdm>=0.7.2",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
 ]

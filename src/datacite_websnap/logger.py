@@ -6,11 +6,15 @@ import logging
 from .config import LOG_FORMAT, LOG_DATE_FORMAT, LOG_NAME
 
 
+def _has_file_handler() -> bool:
+    return any(isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers)
+
+
 def setup_logging(log_level: str = "INFO", file_logs: bool = False):
     """Set up the logging configuration."""
     root = logging.getLogger()
     root.setLevel(getattr(logging, log_level, logging.INFO))
-    if file_logs:
+    if file_logs and not _has_file_handler():  # pragma: no cover
         handler = logging.FileHandler(LOG_NAME)
         handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATE_FORMAT))
         root.addHandler(handler)
@@ -38,10 +42,7 @@ class CustomClickException(click.ClickException):
         return click.style(super().format_message(), fg="red")
 
     def show(self, file=None):
-        should_log = any(
-            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
-        )
-        if should_log:
+        if _has_file_handler():
             self._log_error(self.message)
 
         click.echo(f"ERROR: {self.format_message()}", err=True)
@@ -76,10 +77,7 @@ class CustomEcho:
         """
         click.echo(message)
 
-        should_log = any(
-            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
-        )
-        if should_log:
+        if _has_file_handler():
             self._log_info(message)
 
     @staticmethod
@@ -101,10 +99,7 @@ class CustomWarning:
         """
         click.secho(f"WARNING: {message}", fg="yellow", err=True)
 
-        should_log = any(
-            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
-        )
-        if should_log:
+        if _has_file_handler():
             self._log_warning(message)
 
     @staticmethod
