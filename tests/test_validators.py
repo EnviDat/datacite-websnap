@@ -37,6 +37,11 @@ def test_validate_doi_invalid_url():
         validate_doi("http:///10.16904/envidat.504")
 
 
+def test_validate_doi_leading_slash():
+    with pytest.raises(BadParameter, match="leading slash"):
+        validate_doi("/10.16904/envidat.504")
+
+
 def test_validate_doi_unsupported_prefix():
     with pytest.raises(BadParameter, match="not one of the supported"):
         validate_doi("10.9999/some-record")

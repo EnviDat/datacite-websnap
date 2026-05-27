@@ -79,7 +79,7 @@ def test_parse_envicloud_url_unexpected_exception():
 # --- create_s3_client_unsigned ---
 
 
-@patch("boto3.client")
+@patch("datacite_websnap.repositories.envidat.boto3.client")
 def test_create_s3_client_unsigned_success(mock_boto3_client):
     mock_client = MagicMock()
     mock_boto3_client.return_value = mock_client
@@ -91,7 +91,7 @@ def test_create_s3_client_unsigned_success(mock_boto3_client):
     assert result == mock_client
 
 
-@patch("boto3.client")
+@patch("datacite_websnap.repositories.envidat.boto3.client")
 def test_create_s3_client_unsigned_connection_error(mock_boto3_client):
     mock_boto3_client.side_effect = BotoCoreError()
 
@@ -99,7 +99,7 @@ def test_create_s3_client_unsigned_connection_error(mock_boto3_client):
         create_s3_client_unsigned("http://invalid", "bucket")
 
 
-@patch("boto3.client")
+@patch("datacite_websnap.repositories.envidat.boto3.client")
 def test_create_s3_client_unsigned_invalid_bucket(mock_boto3_client):
     mock_client = MagicMock()
     mock_boto3_client.return_value = mock_client

@@ -1,7 +1,7 @@
 """Tests for src/datacite-websnap/datacite_api.py"""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from datacite_websnap.datacite_api import (
     get_datacite_client,
@@ -16,11 +16,8 @@ from datacite_websnap.models import DoisResponse
 
 
 def test_get_datacite_dois_pagination_params():
-    with patch("datacite_websnap.http_utils.requests.get") as mock_get:
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {"data": [], "meta": {}, "links": {}}
-        mock_resp.raise_for_status.return_value = None
-        mock_get.return_value = mock_resp
+    with patch("datacite_websnap.datacite_api.get_url_json") as mock_get_url_json:
+        mock_get_url_json.return_value = {"data": [], "meta": {}, "links": {}}
 
         get_datacite_dois(
             api_url="https://api.example.org",
@@ -29,7 +26,7 @@ def test_get_datacite_dois_pagination_params():
             page_size=100,
         )
 
-        _, kwargs = mock_get.call_args
+        _, kwargs = mock_get_url_json.call_args
         params = kwargs["params"]
         assert "page[size]" in params
         assert params["page[size]"] == 100
@@ -185,8 +182,9 @@ def test_extract_doi_xml_valid():
             "links": {},
         }
     )
-    expected = [{"10.123/abc": "<xml1>"}, {"10.123/def": "<xml2>"}]
-    assert extract_doi_xml(resp) == expected
+    doi_xml, skipped = extract_doi_xml(resp)
+    assert doi_xml == [{"10.123/abc": "<xml1>"}, {"10.123/def": "<xml2>"}]
+    assert skipped == []
 
 
 def test_extract_doi_xml_missing_xml():
@@ -197,7 +195,9 @@ def test_extract_doi_xml_missing_xml():
             "links": {},
         }
     )
-    assert extract_doi_xml(resp) == []
+    doi_xml, skipped = extract_doi_xml(resp)
+    assert doi_xml == []
+    assert skipped == ["10.123/abc"]
 
 
 def test_get_datacite_list_dois_xml_invalid_response():
@@ -273,10 +273,12 @@ def test_get_datacite_list_dois_xml_multiple_pages():
     with patch(
         "datacite_websnap.datacite_api.get_url_json",
         side_effect=[first_page, second_page],
-    ):
+    ) as mock_get:
         with patch("datacite_websnap.datacite_api.CustomEcho"):
             result = get_datacite_list_dois_xml(
-                api_url="https://api.example.org", client_id="test-client"
+                api_url="https://api.example.org",
+                client_id="test-client",
+                page_size=100,
             )
 
     expected = [
@@ -287,6 +289,10 @@ def test_get_datacite_list_dois_xml_multiple_pages():
     ]
 
     assert result == expected
+
+    # Verify page[size] is forwarded on the second-page request
+    _, second_call_kwargs = mock_get.call_args_list[1]
+    assert second_call_kwargs["params"]["page[size]"] == 100
 
 
 def test_get_datacite_list_dois_xml_mismatched_total_records():
@@ -300,7 +306,37 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
     }
 
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=first_page):
-        with pytest.raises(CustomClickException):
-            get_datacite_list_dois_xml(
-                api_url="https://api.example.org", client_id="test-client"
-            )
+        with patch("datacite_websnap.datacite_api.CustomEcho"):
+            with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+                result = get_datacite_list_dois_xml(
+                    api_url="https://api.example.org", client_id="test-client"
+                )
+
+    mock_warning.assert_called_once()
+    assert "3" in mock_warning.call_args[0][0]
+    assert result == [{"10.123/abc": "<xml1>"}, {"10.123/def": "<xml2>"}]
+
+
+def test_get_datacite_list_dois_xml_skips_null_xml_with_warning():
+    mock_response = {
+        "meta": {"total": 3, "totalPages": 1},
+        "links": {},
+        "data": [
+            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
+            {"attributes": {"doi": "10.123/no-xml"}},
+            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+        ],
+    }
+
+    with patch(
+        "datacite_websnap.datacite_api.get_url_json", return_value=mock_response
+    ):
+        with patch("datacite_websnap.datacite_api.CustomEcho"):
+            with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+                result = get_datacite_list_dois_xml(
+                    api_url="https://api.example.org", client_id="test-client"
+                )
+
+    assert result == [{"10.123/abc": "<xml1>"}, {"10.123/def": "<xml2>"}]
+    mock_warning.assert_called_once()
+    assert "10.123/no-xml" in mock_warning.call_args[0][0]

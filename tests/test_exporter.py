@@ -1,5 +1,7 @@
 """Tests for src/datacite-websnap/exporter.py"""
 
+import binascii
+
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 from botocore.exceptions import ClientError, BotoCoreError, NoCredentialsError
@@ -33,10 +35,20 @@ def test_decode_base64_xml_valid():
 
 
 def test_decode_base64_xml_invalid():
-    # Given an invalid base64 string that will raise UnicodeDecodeError
+    # _ is stripped as a non-base64 char, leaving 19 chars with incorrect padding
     encoded_xml = "invalid_base64_string"
-    with pytest.raises(CustomClickException):
+    with pytest.raises(CustomClickException, match="binascii Error"):
         decode_base64_xml(encoded_xml)
+
+
+def test_decode_base64_xml_binascii_error():
+    # Directly exercise the except binascii.Error handler via mock
+    with patch(
+        "datacite_websnap.exporter.base64.b64decode",
+        side_effect=binascii.Error("bad decode"),
+    ):
+        with pytest.raises(CustomClickException, match="binascii Error"):
+            decode_base64_xml("anything")
 
 
 def test_decode_base64_xml_invalid_xml_structure():
@@ -326,6 +338,7 @@ def test_stream_url_to_s3_success_with_content_length(
 ):
     mock_response = MagicMock()
     mock_response.headers = {"Content-Length": str(2 * 1024 * 1024)}
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
     mock_get.return_value = mock_response
 
     mock_s3 = MagicMock()
@@ -363,6 +376,7 @@ def test_stream_url_to_s3_success_no_content_length(
 ):
     mock_response = MagicMock()
     mock_response.headers = {}
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
     mock_get.return_value = mock_response
 
     mock_s3 = MagicMock()
@@ -395,6 +409,7 @@ def test_stream_url_to_s3_timeout(mock_get, mock_warning):
 def test_stream_url_to_s3_http_error(mock_get, mock_warning):
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404")
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
     mock_get.return_value = mock_response
 
     stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", MagicMock())
@@ -420,6 +435,7 @@ def test_stream_url_to_s3_s3_error(mock_get, mock_warning):
     mock_response = MagicMock()
     mock_response.headers = {"Content-Length": "100"}
     mock_response.raw = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
     mock_get.return_value = mock_response
 
     s3_client = MagicMock()
