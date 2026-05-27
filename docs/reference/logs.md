@@ -5,7 +5,7 @@ Info messages and errors are always logged to the console.
 To also write logs to a file, enable `--file-logs`:
 
 ```bash
-datacite-websnap bulk-export --client-id ethz.wsl --bucket opendata --file-logs
+datacite-websnap bulk-export --file-logs --client-id ethz.wsl --endpoint-url "https://examplecloud.com" --bucket opendata 
 ```
 
 ## Configuration

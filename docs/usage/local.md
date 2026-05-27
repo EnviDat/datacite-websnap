@@ -1,6 +1,6 @@
 ﻿# Local Machine
 
-Export DataCite XML metadata records to a local machine.
+Export DataCite records to a local machine.
 
 ## Required Options
 
