@@ -2,6 +2,10 @@
 
 Export DataCite records to a local machine.
 
+## Related Documentation
+
+See [bulk-export](../commands/bulk-export.md) and [doi-export](../commands/doi-export.md) for command descriptions and options.
+
 ## Required Options
 
 - `--destination local`
