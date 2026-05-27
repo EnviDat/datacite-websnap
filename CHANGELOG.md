@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 3.0.0 (2026-05-27)
+### Feat
+- created new `doi-export` command that exports a single DataCite DOI XML record, JSON record, and associated resource data files
+- retrieved DOI metadata must pass ETH metadata validation standard
+- supports exporting DOIs for the EnviDat prefix (`10.16904`)
+### Refactor
+- Renamed `export` command to `bulk-export`
+- Refactored logic including extracting options common to both commands
+### Docs
+- Created new GitLab pages for project documentation
+- Shortened README and linked to GitLab pages
+### CI/CD
+- Created a new `pages` job in `gitlab-ci.yml`
+### Tests
+- Added tests for new functions and classes
+
 
 ## 2.0.2 (2026-04-27)
 ### Refactor
