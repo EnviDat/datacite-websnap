@@ -57,6 +57,12 @@ def validate_doi(doi: str) -> tuple[str, str]:
             raise CustomBadParameter(f"'{doi}' is not a valid URL.")
         doi_bare = parsed.path.lstrip("/")
     else:
+        if doi.startswith("/"):
+            raise CustomBadParameter(
+                f"'{doi}' is invalid because it starts with '/'. "
+                f"Provide the DOI without a leading slash, "
+                f"e.g. '10.16904/envidat.504'."
+            )
         doi_bare = doi
 
     doi_prefix = doi_bare.split("/")[0]

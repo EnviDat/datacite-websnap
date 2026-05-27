@@ -294,24 +294,24 @@ def stream_url_to_s3(
                            default value is False
     """
     try:
-        response = requests.get(url, stream=True, timeout=(10, 60))
-        response.raise_for_status()
-        response.raw.decode_content = True
+        with requests.get(url, stream=True, timeout=(10, 60)) as response:
+            response.raise_for_status()
+            response.raw.decode_content = True
 
-        total_bytes = int(response.headers.get("Content-Length", 0))
-        callback = _UploadProgress(total_bytes) if show_upload_progress else None
+            total_bytes = int(response.headers.get("Content-Length", 0))
+            callback = _UploadProgress(total_bytes) if show_upload_progress else None
 
-        s3_client.upload_fileobj(
-            Fileobj=response.raw,
-            Bucket=bucket,
-            Key=key,
-            Callback=callback,
-        )
+            s3_client.upload_fileobj(
+                Fileobj=response.raw,
+                Bucket=bucket,
+                Key=key,
+                Callback=callback,
+            )
 
-        if show_upload_progress:
-            click.echo()  # terminate progress line
+            if show_upload_progress:
+                click.echo()  # terminate progress line
 
-        CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
+            CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
 
     except requests.exceptions.Timeout:
         CustomWarning(f"Request timed out fetching URL: '{url}'")

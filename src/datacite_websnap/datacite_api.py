@@ -86,15 +86,17 @@ def _validate_dois_response(raw: dict) -> DoisResponse:
         ) from err
 
 
-def extract_doi_xml(datacite_response: DoisResponse) -> list[dict]:
+def extract_doi_xml(datacite_response: DoisResponse) -> tuple[list[dict], list[str]]:
     """
-    Returns a list of dictionaries with DOIs and extracted XML strings from a
-    DataCite API data response object.
+    Returns a tuple of (doi_xml, skipped_dois) extracted from a DataCite API
+    data response object.
 
-    The format of the dictionary is the values for the response keys:
-      {"doi": "xml"}
+    doi_xml is a list of dictionaries in the format {"doi": "xml"} for records
+    that have an associated XML string.
       "doi" is the DataCite DOI "doi" value, for example "10.16904/envidat.27"
       "xml" is the DataCite DOI as a Base64 encoded XML string
+
+    skipped_dois is a list of DOI strings for records where the "xml" value is None.
 
     For more information about the expected DataCite data response object see
     DataCite API documentation: https://support.datacite.org/reference/get_dois
@@ -103,12 +105,15 @@ def extract_doi_xml(datacite_response: DoisResponse) -> list[dict]:
         datacite_response: Validated DataCite API data response object.
     """
     doi_xml = []
+    skipped_dois = []
 
     for obj in datacite_response.data:
         if obj.attributes.xml is not None:
             doi_xml.append({obj.attributes.doi: obj.attributes.xml})
+        else:
+            skipped_dois.append(obj.attributes.doi)
 
-    return doi_xml
+    return doi_xml, skipped_dois
 
 
 def get_datacite_list_dois_xml(
@@ -166,8 +171,10 @@ def get_datacite_list_dois_xml(
 
     # Extract DOIs and XML strings for first page
     xml_lst = []
-    if resp_xml_lst := extract_doi_xml(resp):
-        xml_lst.extend(resp_xml_lst)
+    skipped_dois = []
+    resp_xml_lst, resp_skipped = extract_doi_xml(resp)
+    xml_lst.extend(resp_xml_lst)
+    skipped_dois.extend(resp_skipped)
 
     # Extract DOIs and XML strings for subsequent pages
     while True:
@@ -180,19 +187,31 @@ def get_datacite_list_dois_xml(
             break
 
         resp = _validate_dois_response(
-            get_url_json(next_link, params={"detail": "true"}, timeout=TIMEOUT)
+            get_url_json(
+                next_link,
+                params={"detail": "true", "page[size]": page_size},
+                timeout=TIMEOUT,
+            )
         )
-        if resp_xml_lst := extract_doi_xml(resp):
-            xml_lst.extend(resp_xml_lst)
+        resp_xml_lst, resp_skipped = extract_doi_xml(resp)
+        xml_lst.extend(resp_xml_lst)
+        skipped_dois.extend(resp_skipped)
 
         pages += 1
 
-    # Validate processed output matches number of records in response "meta" object
-    xml_lst_length = len(xml_lst)
-    if total_records != xml_lst_length:
-        raise CustomClickException(
-            f"Total number of XML records processed ({xml_lst_length}) does not match "
+    # Warn if total fetched does not match total reported by DataCite
+    total_fetched = len(xml_lst) + len(skipped_dois)
+    if total_records != total_fetched:
+        CustomWarning(
+            f"Total number of records processed ({total_fetched}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}"
+        )
+
+    # Warn for any DOIs that had no associated XML and were skipped
+    for doi in skipped_dois:
+        CustomWarning(
+            f"DOI '{doi}' does not have an associated XML metadata record "
+            f"and was skipped."
         )
 
     return xml_lst
