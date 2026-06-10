@@ -7,8 +7,8 @@ from unittest.mock import patch
 from datacite_websnap.logger import (
     CustomClickException,
     CustomBadParameter,
-    CustomEcho,
-    CustomWarning,
+    custom_echo,
+    custom_warning,
 )
 
 
@@ -45,12 +45,12 @@ def test_custom_bad_parameter_format_message():
 def test_custom_echo_logs_info():
     with patch("datacite_websnap.logger._has_file_handler", return_value=True):
         with patch("datacite_websnap.logger.logging.info") as mock_log:
-            CustomEcho("Hello world")
+            custom_echo("Hello world")
             mock_log.assert_called_once_with("Hello world")
 
 
 def test_custom_warning_stdout(capsys):
-    CustomWarning("Something might be wrong")
+    custom_warning("Something might be wrong")
     captured = capsys.readouterr()
     assert "WARNING: Something might be wrong" in captured.err
 
@@ -58,5 +58,5 @@ def test_custom_warning_stdout(capsys):
 def test_custom_warning_log(caplog):
     with patch("datacite_websnap.logger._has_file_handler", return_value=True):
         with caplog.at_level(logging.WARNING):
-            CustomWarning("Log this warning")
+            custom_warning("Log this warning")
             assert "Log this warning" in caplog.text

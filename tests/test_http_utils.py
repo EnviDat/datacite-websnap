@@ -119,7 +119,7 @@ def test_get_url_content_401_returns_none_and_warns():
         mock_resp.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_resp
 
-        with patch("datacite_websnap.http_utils.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.http_utils.custom_warning") as mock_warning:
             result = get_url_content("https://example.com/file.csv")
             assert result is None
             mock_warning.assert_called_once()

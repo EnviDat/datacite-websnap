@@ -40,7 +40,7 @@ def test_parse_envicloud_url_encoded_prefix():
 
 def test_parse_envicloud_url_missing_bucket():
     url = "https://envicloud.wsl.ch/#/?prefix=data%2Ffile.csv"
-    with patch("datacite_websnap.repositories.envidat.CustomWarning") as mock_warning:
+    with patch("datacite_websnap.repositories.envidat.custom_warning") as mock_warning:
         result = parse_envicloud_url(url)
         assert result is None
         mock_warning.assert_called_once()
@@ -48,7 +48,7 @@ def test_parse_envicloud_url_missing_bucket():
 
 def test_parse_envicloud_url_missing_prefix():
     url = "https://envicloud.wsl.ch/#/?bucket=https%3A%2F%2Fs3.wsl.ch%2Fenvidat"
-    with patch("datacite_websnap.repositories.envidat.CustomWarning") as mock_warning:
+    with patch("datacite_websnap.repositories.envidat.custom_warning") as mock_warning:
         result = parse_envicloud_url(url)
         assert result is None
         mock_warning.assert_called_once()
@@ -56,7 +56,7 @@ def test_parse_envicloud_url_missing_prefix():
 
 def test_parse_envicloud_url_empty_fragment():
     url = "https://envicloud.wsl.ch/"
-    with patch("datacite_websnap.repositories.envidat.CustomWarning") as mock_warning:
+    with patch("datacite_websnap.repositories.envidat.custom_warning") as mock_warning:
         result = parse_envicloud_url(url)
         assert result is None
         mock_warning.assert_called_once()
@@ -69,7 +69,7 @@ def test_parse_envicloud_url_unexpected_exception():
         side_effect=ValueError("bad input"),
     ):
         with patch(
-            "datacite_websnap.repositories.envidat.CustomWarning"
+            "datacite_websnap.repositories.envidat.custom_warning"
         ) as mock_warning:
             result = parse_envicloud_url(url)
             assert result is None
@@ -186,7 +186,7 @@ def test_get_envicloud_objects_parse_fails(mock_parse):
 
     result = get_envicloud_objects("https://envicloud.wsl.ch/#/invalid")
 
-    assert result is None
+    assert result == []
 
 
 @patch("datacite_websnap.repositories.envidat.s3_client_list_bucket_contents")
