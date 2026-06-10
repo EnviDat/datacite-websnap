@@ -49,7 +49,7 @@ keywords = [
 ]
 
 [project.urls]
-documentation = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/README.md"
+documentation = "https://git-pages.wsl.ch/datacite-websnap-5b86d6"
 repository = "https://git.wsl.ch/EnviDat/datacite-websnap"
 changelog = "https://git.wsl.ch/EnviDat/datacite-websnap/-/blob/main/CHANGELOG.md"
 
