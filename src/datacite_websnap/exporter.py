@@ -21,7 +21,7 @@ from botocore.exceptions import (
 import boto3
 
 from .http_utils import get_url_content, get_url_content_length
-from .logger import CustomClickException, CustomEcho, CustomWarning
+from .logger import CustomClickException, custom_echo, custom_warning
 from .config import TIMEOUT
 from .repositories.envidat import get_envicloud_objects
 
@@ -180,7 +180,9 @@ def s3_client_put_object(client: Any, body: bytes, bucket: str, key: str) -> Non
             f"{status_code} for key '{key}'"
         )
 
-    CustomEcho(f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}")
+    custom_echo(
+        f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
+    )
 
 
 def write_local_file(
@@ -204,7 +206,7 @@ def write_local_file(
             f.write(content_bytes)
 
         posix_file_path = file_path.as_posix()
-        CustomEcho(f"Wrote local file: {posix_file_path}")
+        custom_echo(f"Wrote local file: {posix_file_path}")
 
     except IOError as io_err:
         raise CustomClickException(f"IOError: {io_err}")
@@ -229,7 +231,7 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
     match doi_prefix:
         case "10.16904":  # EnviDat DOI prefix
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
-                CustomWarning(
+                custom_warning(
                     f"Failed to write '{url}' locally. CLI "
                     f"does not support writing local data files for files "
                     f"that are hosted at 'https://envicloud.wsl.ch'"
@@ -244,10 +246,10 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                         directory_path=doi_directory,
                     )
                 else:
-                    CustomWarning(f"Could not determine filename from URL: '{url}'")
+                    custom_warning(f"Could not determine filename from URL: '{url}'")
 
         case _:
-            CustomWarning(
+            custom_warning(
                 f"CLI does not support writing local data files for DOI "
                 f"prefix: {doi_prefix}. Failed to write file '{url}' locally."
             )
@@ -311,16 +313,18 @@ def stream_url_to_s3(
             if show_upload_progress:
                 click.echo()  # terminate progress line
 
-            CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
+            custom_echo(
+                f"Successfully exported to bucket '{bucket}' data object: {key}"
+            )
 
     except requests.exceptions.Timeout:
-        CustomWarning(f"Request timed out fetching URL: '{url}'")
+        custom_warning(f"Request timed out fetching URL: '{url}'")
     except requests.exceptions.HTTPError as err:
-        CustomWarning(f"HTTP error fetching URL '{url}': {err}")
+        custom_warning(f"HTTP error fetching URL '{url}': {err}")
     except requests.exceptions.RequestException as err:
-        CustomWarning(f"Error fetching URL '{url}': {err}")
+        custom_warning(f"Error fetching URL '{url}': {err}")
     except (BotoCoreError, ClientError) as err:
-        CustomWarning(f"Unexpected error streaming '{url}' to S3: {err}")
+        custom_warning(f"Unexpected error streaming '{url}' to S3: {err}")
 
 
 def resolve_data_link(
@@ -352,7 +356,7 @@ def resolve_data_link(
                     return [(f"{doi_s3_dir}/{file_name}", url, size)]
                 return []
         case _:
-            CustomWarning(
+            custom_warning(
                 f"CLI does not support exporting S3 data files for "
                 f"DOI prefix: {doi_prefix}."
             )

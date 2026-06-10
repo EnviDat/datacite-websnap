@@ -7,7 +7,7 @@ from typing import Any
 import requests
 
 from .config import TIMEOUT
-from .logger import CustomClickException, CustomWarning
+from .logger import CustomClickException, custom_warning
 
 
 def get_url_json(
@@ -88,7 +88,7 @@ def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes | None:
 
     except requests.exceptions.HTTPError as http_err:
         if http_err.response is not None and http_err.response.status_code == 401:
-            CustomWarning(f"401 Unauthorized for URL '{url}': {http_err}")
+            custom_warning(f"401 Unauthorized for URL '{url}': {http_err}")
             return None
         raise CustomClickException(f"HTTP error while calling URL '{url}': {http_err}")
 

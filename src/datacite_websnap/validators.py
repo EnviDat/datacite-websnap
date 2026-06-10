@@ -17,7 +17,7 @@ def validate_api_url(api_url: str) -> str:
     """
     try:
         ta = TypeAdapter(Annotated[AnyUrl, UrlConstraints(allowed_schemes=["https"])])
-        return str(ta.validate_python(api_url))
+        return str(ta.validate_python(api_url)).rstrip("/")
     except ValidationError:
         raise CustomBadParameter(f"api_url '{api_url}' is not a valid HTTPS URL")
 

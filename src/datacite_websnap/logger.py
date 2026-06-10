@@ -64,45 +64,15 @@ class CustomBadParameter(click.BadParameter):
         return click.style(super().format_message(), fg="red")
 
 
-class CustomEcho:
-    """Custom Echo that conditionally logs echo statements."""
-
-    def __init__(self, message: str):
-        """
-        Custom echo class that conditionally logs echo statements to a log
-        if --file-log option has been enabled and FileHandler setup.
-
-        Args:
-            message: Message to display.
-        """
-        click.echo(message)
-
-        if _has_file_handler():
-            self._log_info(message)
-
-    @staticmethod
-    def _log_info(message):
-        """Log the 'INFO' message."""
+def custom_echo(message: str) -> None:
+    """Print message and log to file if file handler is active."""
+    click.echo(message)
+    if _has_file_handler():
         logging.info(message)
 
 
-class CustomWarning:
-    """
-    Custom stylized echo class that conditionally logs warning statements
-    if --file-log option has been enabled and FileHandler setup.
-    """
-
-    def __init__(self, message: str):
-        """
-        Args:
-            message: Message to display.
-        """
-        click.secho(f"WARNING: {message}", fg="yellow", err=True)
-
-        if _has_file_handler():
-            self._log_warning(message)
-
-    @staticmethod
-    def _log_warning(message):
-        """Log the 'WARNING' message to the log file."""
+def custom_warning(message: str) -> None:
+    """Print styled warning to stderr and log to file if file handler is active."""
+    click.secho(f"WARNING: {message}", fg="yellow", err=True)
+    if _has_file_handler():
         logging.warning(message)

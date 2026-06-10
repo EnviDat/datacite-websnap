@@ -39,7 +39,7 @@ from pathlib import Path
 import click
 import click_extra
 
-from .logger import setup_logging, CustomEcho, CustomClickException, CustomWarning
+from .logger import setup_logging, custom_echo, CustomClickException, custom_warning
 from .config import (
     DATACITE_API_URL,
     DATACITE_PAGE_SIZE,
@@ -219,7 +219,7 @@ def datacite_bulk_export(
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
-    validate_api_url(api_url)
+    api_url = validate_api_url(api_url)
     validate_page_size(page_size)
 
     # Validate S3 credentials and return S3 client
@@ -228,9 +228,9 @@ def datacite_bulk_export(
         s3_client = create_s3_client(endpoint_url, bucket, profile_name)
 
     # Log export information
-    CustomEcho("**** Starting DataCite bulk export... ****")
-    CustomEcho(f"Export destination: {destination}")
-    CustomEcho(
+    custom_echo("**** Starting DataCite bulk export... ****")
+    custom_echo(f"Export destination: {destination}")
+    custom_echo(
         f"Querying DataCite API for DOIs with repository account ID: "
         f"'{client_id}' and/or prefix(es): {doi_prefix}"
     )
@@ -274,10 +274,10 @@ def datacite_bulk_export(
             if early_exit:
                 raise err
             else:
-                CustomWarning(err.message)
+                custom_warning(err.message)
                 continue
 
-    CustomEcho("**** Finished DataCite bulk export ****")
+    custom_echo("**** Finished DataCite bulk export ****")
 
 
 def _execute_uploads(
@@ -541,7 +541,7 @@ def datacite_single_doi_export(
     validate_bucket(bucket, destination)
     validate_endpoint_url(endpoint_url, destination)
     validate_directory_path(directory_path, destination)
-    validate_api_url(api_url)
+    api_url = validate_api_url(api_url)
 
     # Validate S3 credentials and return S3 client
     s3_client = None
@@ -552,9 +552,9 @@ def datacite_single_doi_export(
     click.echo("")
     title = "Starting DataCite single DOI export..."
     click.echo(click.style("─" * len(title), fg="cyan"))
-    CustomEcho(title)
-    CustomEcho(f"Export destination: {destination}")
-    CustomEcho(f"Querying DataCite API for DOI: {doi_bare}")
+    custom_echo(title)
+    custom_echo(f"Export destination: {destination}")
+    custom_echo(f"Querying DataCite API for DOI: {doi_bare}")
 
     # Retrieve a DataCite DOI record
     json_resp, xml_encoded, data_links = get_datacite_doi(api_url, doi_bare)
