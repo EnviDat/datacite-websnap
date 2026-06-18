@@ -3,9 +3,8 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
-import hashlib
-
 import binascii
+import hashlib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -221,14 +220,13 @@ def _extract_filename(url: str) -> str:
     """Extract filename from url.
     Returns parent part of path for urls that end in "/content".
 
-     Args:
+    Args:
         url: url that should have filename extracted
 
     Returns:
         The extracted filename, or a 16-character SHA-1 hash of the
         url if a filename cannot be determined.
     """
-
     path_obj = Path(urlparse(url).path)
 
     if path_obj.name == "content":
@@ -239,8 +237,7 @@ def _extract_filename(url: str) -> str:
         filename = path_obj.name
 
     if not filename:
-        url_hash = hashlib.sha1(url.encode()).hexdigest()[:16]
-        filename = f"{url_hash}"
+        filename = hashlib.sha1(url.encode()).hexdigest()[:16]
 
     return filename
 
