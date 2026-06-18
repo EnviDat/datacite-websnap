@@ -3,6 +3,8 @@ Process and export DataCite XML metadata records.
 """
 
 import base64
+import hashlib
+
 import binascii
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -215,6 +217,34 @@ def write_local_file(
         raise CustomClickException(f"Unexpected error: {err}")
 
 
+def _extract_filename(url: str) -> str:
+    """Extract filename from url.
+    Returns parent part of path for urls that end in "/content".
+
+     Args:
+        url: url that should have filename extracted
+
+    Returns:
+        The extracted filename, or a 16-character SHA-1 hash of the
+        url if a filename cannot be determined.
+    """
+
+    path_obj = Path(urlparse(url).path)
+
+    if path_obj.name == "content":
+        # URL ends with "/content" -> the real filename is assumed to be one level up
+        filename = path_obj.parent.name
+    else:
+        # Normal case -> last path segment is the filename
+        filename = path_obj.name
+
+    if not filename:
+        url_hash = hashlib.sha1(url.encode()).hexdigest()[:16]
+        filename = f"{url_hash}"
+
+    return filename
+
+
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
     Write a bytes object to a local file.
@@ -246,7 +276,17 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                         directory_path=doi_directory,
                     )
                 else:
+                    # Logs warning for EnviDat filenames that could not be extracted
+                    #  from url (rather than assigning a random string as filename)
                     custom_warning(f"Could not determine filename from URL: '{url}'")
+
+        case "10.24435":  # Materials Cloud DOI prefix
+            if content := get_url_content(url):
+                write_local_file(
+                    content_bytes=content,
+                    filename=_extract_filename(url),
+                    directory_path=doi_directory,
+                )
 
         case _:
             custom_warning(
