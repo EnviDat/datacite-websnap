@@ -220,6 +220,27 @@ def write_local_file(
         raise CustomClickException(f"Unexpected error: {err}")
 
 
+def _stream_url_to_local_file(url: str, filename: str, directory_path: str) -> None:
+    """Stream URL content directly to a local file without buffering in memory."""
+    file_path = Path(directory_path) / filename
+    try:
+        with requests.get(url, stream=True, timeout=(10, 60)) as response:
+            response.raise_for_status()
+            with open(file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        custom_echo(f"Wrote local file: {file_path.as_posix()}")
+    except requests.exceptions.HTTPError as http_err:
+        if http_err.response is not None and http_err.response.status_code == 401:
+            custom_warning(f"401 Unauthorized for URL '{url}': {http_err}")
+        else:
+            raise CustomClickException(
+                f"HTTP error while calling URL '{url}': {http_err}"
+            )
+    except requests.exceptions.RequestException as err:
+        raise CustomClickException(f"Request failed for URL '{url}': {err}")
+
+
 def _extract_filename(url: str) -> str:
     """Extract filename from url.
     Returns parent part of path for urls that end in "/content".
@@ -241,6 +262,7 @@ def _extract_filename(url: str) -> str:
         filename = path_obj.name
 
     if not filename:
+        custom_warning(f"Could not determine filename from URL: '{url}'")
         filename = hashlib.sha1(url.encode()).hexdigest()[:16]
 
     return filename
@@ -248,11 +270,11 @@ def _extract_filename(url: str) -> str:
 
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
-    Write a bytes object to a local file.
+    Write URL content to a local file.
     The content in the local file corresponds a data file resource
     passed as a URL in the DOI metadata.
 
-    Currently only supports writing EnviDat files (that are not in envicloud).
+    Currently only supports writing EnviDat and Materials Cloud data files.
 
     Args:
         url: URL that leads to the data content
@@ -260,7 +282,8 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
         doi_prefix: prefix of the DOI
     """
     match doi_prefix:
-        case "10.16904":  # EnviDat DOI prefix
+        # EnviDat DOI prefix
+        case "10.16904":
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
                 custom_warning(
                     f"Failed to write '{url}' locally. CLI "
@@ -268,6 +291,7 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                     f"that are hosted at 'https://envicloud.wsl.ch'"
                 )
 
+            # content is assigned to None if the url is a restricted EnviDat data link
             elif content := get_url_content(url):
                 file_name = Path(urlparse(url).path).name
                 if file_name:
@@ -281,13 +305,13 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                     #  from url (rather than assigning a random string as filename)
                     custom_warning(f"Could not determine filename from URL: '{url}'")
 
-        case "10.24435":  # Materials Cloud DOI prefix
-            if content := get_url_content(url):
-                write_local_file(
-                    content_bytes=content,
-                    filename=_extract_filename(url),
-                    directory_path=doi_directory,
-                )
+        # Materials Cloud DOI prefix
+        case "10.24435":
+            _stream_url_to_local_file(
+                url=url,
+                filename=_extract_filename(url),
+                directory_path=doi_directory,
+            )
 
         case _:
             custom_warning(

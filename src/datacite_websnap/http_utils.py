@@ -72,7 +72,7 @@ def get_url_content_length_stream(url: str, timeout: tuple[int, int] = (5, 10)) 
             url, stream=True, timeout=timeout, allow_redirects=True
         ) as response:
             return int(response.headers.get("Content-Length", 0))
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         return 0
 
 
@@ -88,7 +88,7 @@ def get_url_content_length(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
     try:
         response = requests.head(url, timeout=timeout, allow_redirects=True)
         return int(response.headers.get("Content-Length", 0))
-    except requests.exceptions.RequestException:
+    except (requests.exceptions.RequestException, ValueError):
         return 0
 
 
