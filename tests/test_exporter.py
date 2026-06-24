@@ -11,7 +11,7 @@ import requests
 from datacite_websnap.logger import CustomClickException
 from datacite_websnap.exporter import (
     decode_base64_xml,
-    _UploadProgress,
+    _UploadProgress,  # noqa
     format_xml_file_name,
     format_json_file_name,
     format_size,
@@ -511,6 +511,18 @@ def test_resolve_data_link_regular_url_no_filename(mock_size):
     assert result == []
 
 
+@patch("datacite_websnap.exporter.get_url_content_length_stream", return_value=4096)
+def test_resolve_data_link_regular_url_materials_cloud_prefix(mock_size):
+    result = resolve_data_link(
+        "10.24435", "https://example.com/data/report.csv", "doi_dir"
+    )
+
+    assert result == [
+        ("doi_dir/report.csv", "https://example.com/data/report.csv", 4096)
+    ]
+    mock_size.assert_called_once_with("https://example.com/data/report.csv")
+
+
 @patch("datacite_websnap.exporter.custom_warning")
 def test_resolve_data_link_unsupported_prefix(mock_warning):
     result = resolve_data_link(
@@ -633,9 +645,6 @@ def test_s3_key_exists_raises_on_other_client_error():
         s3_key_exists(mock_s3, "my-bucket", "prefix/file.xml")
 
 
-# --- write_local_file_data_links ---
-
-
 @patch("datacite_websnap.exporter.custom_warning")
 def test_write_local_file_data_links_envicloud_url_warns(mock_warning):
     write_local_file_data_links(
@@ -658,6 +667,55 @@ def test_write_local_file_data_links_regular_url_writes_file(mock_content, mock_
     mock_write.assert_called_once_with(
         content_bytes=b"data",
         filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter.write_local_file")
+@patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
+def test_write_local_file_data_links_content_url_writes_file(mock_content, mock_write):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv/content",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_write.assert_called_once_with(
+        content_bytes=b"data",
+        filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter.write_local_file")
+@patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
+def test_write_local_file_data_links_materials_cloud_prefix_writes_file(
+    mock_content, mock_write
+):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_write.assert_called_once_with(
+        content_bytes=b"data",
+        filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter.write_local_file")
+@patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
+def test_write_local_file_data_links_materials_cloud_prefix_no_filename_writes_file(
+    mock_content, mock_write
+):
+    write_local_file_data_links(
+        url="https://example.com",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_write.assert_called_once_with(
+        content_bytes=b"data",
+        filename="327c3fda87ce2868",
         directory_path="/tmp/doi",
     )
 
