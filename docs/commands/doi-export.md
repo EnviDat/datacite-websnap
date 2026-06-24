@@ -22,14 +22,14 @@ See [Common Options](common-options.md) for options shared with `bulk-export`.
 
 
 
-## Supported DOI Prefix
+## Supported DOI Prefixes
 
-Supports exporting DOIs with the following prefix.
+Supports exporting DOIs with the following prefixes.
 
-| Repository | DOI Prefix  |
-|------------|-------------|
-| EnviDat    | `10.16904`  |
-
+| Repository                                                         | DOI Prefix |
+|--------------------------------------------------------------------|------------|
+| [EnviDat](https://envidat.ch){target="_blank"}                     | `10.16904` |
+| [Materials Cloud](https://www.materialscloud.org){target="_blank"} | `10.24435` |
 
 ## Validation
 
