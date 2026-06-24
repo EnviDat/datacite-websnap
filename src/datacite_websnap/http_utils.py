@@ -57,6 +57,25 @@ def get_url_json(
         ) from err
 
 
+def get_url_content_length_stream(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
+    """
+    Return the Content-Length of the resource at url via a GET request, or 0 if
+    the header is absent or the request fails. Uses the "stream=True" parameter because
+    some URLs are expected to not allow HEAD requests.
+
+    Args:
+        url: URL to send the GET request to.
+        timeout: (connect_timeout, read_timeout) in seconds.
+    """
+    try:
+        with requests.get(
+            url, stream=True, timeout=timeout, allow_redirects=True
+        ) as response:
+            return int(response.headers.get("Content-Length", 0))
+    except requests.RequestException:
+        return 0
+
+
 def get_url_content_length(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
     """
     Return the Content-Length of the resource at url via a HEAD request, or 0 if

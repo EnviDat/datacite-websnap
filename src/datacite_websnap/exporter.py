@@ -21,7 +21,11 @@ from botocore.exceptions import (
 )
 import boto3
 
-from .http_utils import get_url_content, get_url_content_length
+from .http_utils import (
+    get_url_content,
+    get_url_content_length,
+    get_url_content_length_stream,
+)
 from .logger import CustomClickException, custom_echo, custom_warning
 from .config import TIMEOUT
 from .repositories.envidat import get_envicloud_objects
@@ -368,7 +372,8 @@ def resolve_data_link(
     doi_prefix: str, url: str, doi_s3_dir: str
 ) -> list[tuple[str, str, int]]:
     """
-    Resolve a data link URL to upload ready (s3_key, download_url, size_bytes) tuples.
+    Resolve a data link URL to a list of upload ready
+      (s3_key, download_url, size_bytes) tuple(s).
     Returns an empty list if the prefix is unsupported or the URL cannot be resolved.
 
     Args:
@@ -388,14 +393,25 @@ def resolve_data_link(
                 ]
             else:
                 size = get_url_content_length(url)
-                file_name = Path(urlparse(url).path).name
-                if file_name:
-                    return [(f"{doi_s3_dir}/{file_name}", url, size)]
-                return []
+                filename = Path(urlparse(url).path).name
+                if filename:
+                    return [(f"{doi_s3_dir}/{filename}", url, size)]
+                else:
+                    custom_warning(
+                        f"Unable to extract filename from "
+                        f"EnviDat data link URL: '{url}'"
+                    )
+                    return []
+
+        case "10.24435":  # Materials Cloud DOI prefix
+            size = get_url_content_length_stream(url)
+            filename = _extract_filename(url)
+            return [(f"{doi_s3_dir}/{filename}", url, size)]
+
         case _:
             custom_warning(
-                f"CLI does not support exporting S3 data files for "
-                f"DOI prefix: {doi_prefix}."
+                f"CLI does not support exporting to S3 storage data files for "
+                f"DOI prefix: {doi_prefix}"
             )
             return []
 
