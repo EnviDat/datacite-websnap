@@ -8,6 +8,7 @@ from datacite_websnap.http_utils import (
     get_url_json,
     get_url_content,
     get_url_content_length,
+    get_url_content_length_stream,
 )
 from datacite_websnap.logger import CustomClickException
 
@@ -119,7 +120,7 @@ def test_get_url_content_401_returns_none_and_warns():
         mock_resp.raise_for_status.side_effect = http_error
         mock_get.return_value = mock_resp
 
-        with patch("datacite_websnap.http_utils.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.http_utils.custom_warning") as mock_warning:
             result = get_url_content("https://example.com/file.csv")
             assert result is None
             mock_warning.assert_called_once()
@@ -173,6 +174,63 @@ def test_get_url_content_unexpected_exception():
     ):
         with pytest.raises(CustomClickException, match="Unexpected error"):
             get_url_content("https://example.com/file.csv")
+
+
+# --- get_url_content_stream ---
+
+
+@pytest.fixture
+def mock_get():
+    with patch("datacite_websnap.http_utils.requests.get") as mock:
+        yield mock
+
+
+def make_response(content_length: str | None = None):
+    response = MagicMock()
+    headers = {}
+    if content_length is not None:
+        headers["Content-Length"] = content_length
+    response.headers = headers
+    response.__enter__ = lambda s: s
+    response.__exit__ = MagicMock(return_value=False)
+    return response
+
+
+def test_returns_content_length(mock_get):
+    mock_get.return_value = make_response("1234")
+    assert get_url_content_length_stream("https://example.com/file.zip") == 1234
+
+
+def test_returns_zero_when_header_absent(mock_get):
+    mock_get.return_value = make_response()
+    assert get_url_content_length_stream("https://example.com/file.zip") == 0
+
+
+def test_returns_zero_on_request_exception(mock_get):
+    mock_get.side_effect = requests.RequestException("connection error")
+    assert get_url_content_length_stream("https://example.com/file.zip") == 0
+
+
+def test_default_timeout(mock_get):
+    mock_get.return_value = make_response("100")
+    get_url_content_length_stream("https://example.com/file.zip")
+    mock_get.assert_called_once_with(
+        "https://example.com/file.zip",
+        stream=True,
+        timeout=(5, 10),
+        allow_redirects=True,
+    )
+
+
+def test_custom_timeout(mock_get):
+    mock_get.return_value = make_response("100")
+    get_url_content_length_stream("https://example.com/file.zip", timeout=(1, 2))
+    mock_get.assert_called_once_with(
+        "https://example.com/file.zip",
+        stream=True,
+        timeout=(1, 2),
+        allow_redirects=True,
+    )
 
 
 # --- get_url_content_length ---

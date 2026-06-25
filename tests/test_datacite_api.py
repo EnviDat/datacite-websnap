@@ -104,7 +104,7 @@ def test_validate_doi_eth_standard_with_warnings():
         "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(True, ["missing recommended field", "invalid date format"]),
     ):
-        with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.custom_warning") as mock_warning:
             validate_doi_eth_standard(b"<xml/>", "10.123/test")
             assert mock_warning.call_count == 2
 
@@ -114,7 +114,7 @@ def test_validate_doi_eth_standard_noncompliant():
         "datacite_websnap.datacite_api.validate.validate_datacite_from_string",
         return_value=(False, ["missing required field"]),
     ):
-        with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.custom_warning") as mock_warning:
             with pytest.raises(
                 CustomClickException, match="ETH metadata standard validation"
             ):
@@ -224,7 +224,7 @@ def test_get_datacite_list_dois_xml_single_page():
     with patch(
         "datacite_websnap.datacite_api.get_url_json", return_value=mock_response
     ):
-        with patch("datacite_websnap.datacite_api.CustomEcho"):
+        with patch("datacite_websnap.datacite_api.custom_echo"):
             results = get_datacite_list_dois_xml(
                 api_url="https://api.example.org",
                 client_id="client123",
@@ -274,7 +274,7 @@ def test_get_datacite_list_dois_xml_multiple_pages():
         "datacite_websnap.datacite_api.get_url_json",
         side_effect=[first_page, second_page],
     ) as mock_get:
-        with patch("datacite_websnap.datacite_api.CustomEcho"):
+        with patch("datacite_websnap.datacite_api.custom_echo"):
             result = get_datacite_list_dois_xml(
                 api_url="https://api.example.org",
                 client_id="test-client",
@@ -306,8 +306,8 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
     }
 
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=first_page):
-        with patch("datacite_websnap.datacite_api.CustomEcho"):
-            with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.custom_echo"):
+            with patch("datacite_websnap.datacite_api.custom_warning") as mock_warning:
                 result = get_datacite_list_dois_xml(
                     api_url="https://api.example.org", client_id="test-client"
                 )
@@ -331,8 +331,8 @@ def test_get_datacite_list_dois_xml_skips_null_xml_with_warning():
     with patch(
         "datacite_websnap.datacite_api.get_url_json", return_value=mock_response
     ):
-        with patch("datacite_websnap.datacite_api.CustomEcho"):
-            with patch("datacite_websnap.datacite_api.CustomWarning") as mock_warning:
+        with patch("datacite_websnap.datacite_api.custom_echo"):
+            with patch("datacite_websnap.datacite_api.custom_warning") as mock_warning:
                 result = get_datacite_list_dois_xml(
                     api_url="https://api.example.org", client_id="test-client"
                 )

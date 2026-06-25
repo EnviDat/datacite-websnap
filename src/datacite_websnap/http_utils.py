@@ -7,7 +7,7 @@ from typing import Any
 import requests
 
 from .config import TIMEOUT
-from .logger import CustomClickException, CustomWarning
+from .logger import CustomClickException, custom_warning
 
 
 def get_url_json(
@@ -57,6 +57,25 @@ def get_url_json(
         ) from err
 
 
+def get_url_content_length_stream(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
+    """
+    Return the Content-Length of the resource at url via a GET request, or 0 if
+    the header is absent or the request fails. Uses the "stream=True" parameter because
+    some URLs are expected to not allow HEAD requests.
+
+    Args:
+        url: URL to send the GET request to.
+        timeout: (connect_timeout, read_timeout) in seconds.
+    """
+    try:
+        with requests.get(
+            url, stream=True, timeout=timeout, allow_redirects=True
+        ) as response:
+            return int(response.headers.get("Content-Length", 0))
+    except (requests.RequestException, ValueError):
+        return 0
+
+
 def get_url_content_length(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
     """
     Return the Content-Length of the resource at url via a HEAD request, or 0 if
@@ -69,7 +88,7 @@ def get_url_content_length(url: str, timeout: tuple[int, int] = (5, 10)) -> int:
     try:
         response = requests.head(url, timeout=timeout, allow_redirects=True)
         return int(response.headers.get("Content-Length", 0))
-    except requests.exceptions.RequestException:
+    except (requests.exceptions.RequestException, ValueError):
         return 0
 
 
@@ -88,7 +107,7 @@ def get_url_content(url: str, timeout: int = TIMEOUT) -> bytes | None:
 
     except requests.exceptions.HTTPError as http_err:
         if http_err.response is not None and http_err.response.status_code == 401:
-            CustomWarning(f"401 Unauthorized for URL '{url}': {http_err}")
+            custom_warning(f"401 Unauthorized for URL '{url}': {http_err}")
             return None
         raise CustomClickException(f"HTTP error while calling URL '{url}': {http_err}")
 

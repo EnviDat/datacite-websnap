@@ -53,7 +53,7 @@ def test_validate_doi_unsupported_prefix_url():
 
 
 def test_validate_api_url_valid():
-    assert validate_api_url("https://example.com") == "https://example.com/"
+    assert validate_api_url("https://example.com") == "https://example.com"
 
 
 def test_validate_api_url_invalid():

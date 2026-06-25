@@ -11,7 +11,8 @@ import requests
 from datacite_websnap.logger import CustomClickException
 from datacite_websnap.exporter import (
     decode_base64_xml,
-    _UploadProgress,
+    _UploadProgress,  # noqa
+    _stream_url_to_local_file,
     format_xml_file_name,
     format_json_file_name,
     format_size,
@@ -235,6 +236,101 @@ def test_write_local_file_generic_exception(mock_open_fn):
     assert "Unexpected error" in str(exc.value)
 
 
+# --- _stream_url_to_local_file ---
+
+
+def test_stream_url_to_local_file_success(tmp_path):
+    mock_response = MagicMock()
+    mock_response.__enter__ = lambda s: s
+    mock_response.__exit__ = MagicMock(return_value=False)
+    mock_response.iter_content.return_value = [b"chunk1", b"chunk2"]
+
+    with patch("datacite_websnap.exporter.requests.get", return_value=mock_response):
+        with patch("datacite_websnap.exporter.custom_echo") as mock_echo:
+            _stream_url_to_local_file(
+                url="https://example.com/file.csv",
+                filename="file.csv",
+                directory_path=str(tmp_path),
+            )
+
+    written = (tmp_path / "file.csv").read_bytes()
+    assert written == b"chunk1chunk2"
+    mock_echo.assert_called_once()
+
+
+def test_stream_url_to_local_file_401_warns(tmp_path):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 401
+    http_error = requests.exceptions.HTTPError(response=mock_resp)
+    mock_response = MagicMock()
+    mock_response.__enter__ = lambda s: s
+    mock_response.__exit__ = MagicMock(return_value=False)
+    mock_response.raise_for_status.side_effect = http_error
+
+    with patch("datacite_websnap.exporter.requests.get", return_value=mock_response):
+        with patch("datacite_websnap.exporter.custom_warning") as mock_warning:
+            _stream_url_to_local_file(
+                url="https://example.com/file.csv",
+                filename="file.csv",
+                directory_path=str(tmp_path),
+            )
+
+    mock_warning.assert_called_once()
+    assert "401" in mock_warning.call_args.args[0]
+
+
+def test_stream_url_to_local_file_http_error_raises(tmp_path):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 403
+    http_error = requests.exceptions.HTTPError(response=mock_resp)
+    mock_response = MagicMock()
+    mock_response.__enter__ = lambda s: s
+    mock_response.__exit__ = MagicMock(return_value=False)
+    mock_response.raise_for_status.side_effect = http_error
+
+    with patch("datacite_websnap.exporter.requests.get", return_value=mock_response):
+        with pytest.raises(CustomClickException, match="HTTP error"):
+            _stream_url_to_local_file(
+                url="https://example.com/file.csv",
+                filename="file.csv",
+                directory_path=str(tmp_path),
+            )
+
+
+def test_stream_url_to_local_file_request_exception_raises(tmp_path):
+    with patch(
+        "datacite_websnap.exporter.requests.get",
+        side_effect=requests.exceptions.ConnectionError("unreachable"),
+    ):
+        with pytest.raises(CustomClickException, match="Request failed"):
+            _stream_url_to_local_file(
+                url="https://example.com/file.csv",
+                filename="file.csv",
+                directory_path=str(tmp_path),
+            )
+
+
+def test_stream_url_to_local_file_uses_correct_timeout(tmp_path):
+    mock_response = MagicMock()
+    mock_response.__enter__ = lambda s: s
+    mock_response.__exit__ = MagicMock(return_value=False)
+    mock_response.iter_content.return_value = []
+
+    with patch(
+        "datacite_websnap.exporter.requests.get", return_value=mock_response
+    ) as mock_get:
+        with patch("datacite_websnap.exporter.custom_echo"):
+            _stream_url_to_local_file(
+                url="https://example.com/file.csv",
+                filename="file.csv",
+                directory_path=str(tmp_path),
+            )
+
+    mock_get.assert_called_once_with(
+        "https://example.com/file.csv", stream=True, timeout=(10, 60)
+    )
+
+
 @patch("datacite_websnap.exporter.boto3.Session")
 def test_create_s3_client_success(mock_session_class):
     # Setup mocks
@@ -330,7 +426,7 @@ def test_upload_progress_accumulates_across_calls(mock_echo):
 # --- stream_url_to_s3 ---
 
 
-@patch("datacite_websnap.exporter.CustomEcho")
+@patch("datacite_websnap.exporter.custom_echo")
 @patch("datacite_websnap.exporter.click.echo")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_success_with_content_length(
@@ -368,7 +464,7 @@ def test_stream_url_to_s3_success_with_content_length(
     mock_custom_echo.assert_called_once()
 
 
-@patch("datacite_websnap.exporter.CustomEcho")
+@patch("datacite_websnap.exporter.custom_echo")
 @patch("datacite_websnap.exporter.click.echo")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_success_no_content_length(
@@ -393,7 +489,7 @@ def test_stream_url_to_s3_success_no_content_length(
     assert call_kwargs["Callback"]._total_bytes == 0
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_timeout(mock_get, mock_warning):
     mock_get.side_effect = requests.exceptions.Timeout()
@@ -404,7 +500,7 @@ def test_stream_url_to_s3_timeout(mock_get, mock_warning):
     assert "timed out" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_http_error(mock_get, mock_warning):
     mock_response = MagicMock()
@@ -418,7 +514,7 @@ def test_stream_url_to_s3_http_error(mock_get, mock_warning):
     assert "HTTP error" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_request_exception(mock_get, mock_warning):
     mock_get.side_effect = requests.exceptions.RequestException("connection failed")
@@ -429,7 +525,7 @@ def test_stream_url_to_s3_request_exception(mock_get, mock_warning):
     assert "Error fetching" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 @patch("datacite_websnap.exporter.requests.get")
 def test_stream_url_to_s3_s3_error(mock_get, mock_warning):
     mock_response = MagicMock()
@@ -511,7 +607,19 @@ def test_resolve_data_link_regular_url_no_filename(mock_size):
     assert result == []
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.get_url_content_length_stream", return_value=4096)
+def test_resolve_data_link_regular_url_materials_cloud_prefix(mock_size):
+    result = resolve_data_link(
+        "10.24435", "https://example.com/data/report.csv", "doi_dir"
+    )
+
+    assert result == [
+        ("doi_dir/report.csv", "https://example.com/data/report.csv", 4096)
+    ]
+    mock_size.assert_called_once_with("https://example.com/data/report.csv")
+
+
+@patch("datacite_websnap.exporter.custom_warning")
 def test_resolve_data_link_unsupported_prefix(mock_warning):
     result = resolve_data_link(
         "10.99999", "https://example.com/data/file.csv", "doi_dir"
@@ -633,10 +741,7 @@ def test_s3_key_exists_raises_on_other_client_error():
         s3_key_exists(mock_s3, "my-bucket", "prefix/file.xml")
 
 
-# --- write_local_file_data_links ---
-
-
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 def test_write_local_file_data_links_envicloud_url_warns(mock_warning):
     write_local_file_data_links(
         url="https://envicloud.wsl.ch/#/?bucket=test",
@@ -662,7 +767,51 @@ def test_write_local_file_data_links_regular_url_writes_file(mock_content, mock_
     )
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter._stream_url_to_local_file")
+def test_write_local_file_data_links_content_url_writes_file(mock_stream):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv/content",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_stream.assert_called_once_with(
+        url="https://example.com/data/file.csv/content",
+        filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter._stream_url_to_local_file")
+def test_write_local_file_data_links_materials_cloud_prefix_writes_file(mock_stream):
+    write_local_file_data_links(
+        url="https://example.com/data/file.csv",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_stream.assert_called_once_with(
+        url="https://example.com/data/file.csv",
+        filename="file.csv",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter._stream_url_to_local_file")
+def test_write_local_file_data_links_materials_cloud_prefix_no_filename_writes_file(
+    mock_stream,
+):
+    write_local_file_data_links(
+        url="https://example.com",
+        doi_directory="/tmp/doi",
+        doi_prefix="10.24435",
+    )
+    mock_stream.assert_called_once_with(
+        url="https://example.com",
+        filename="327c3fda87ce2868",
+        directory_path="/tmp/doi",
+    )
+
+
+@patch("datacite_websnap.exporter.custom_warning")
 def test_write_local_file_data_links_unsupported_prefix_warns(mock_warning):
     write_local_file_data_links(
         url="https://example.com/data/file.csv",
@@ -673,7 +822,7 @@ def test_write_local_file_data_links_unsupported_prefix_warns(mock_warning):
     assert "10.99999" in mock_warning.call_args.args[0]
 
 
-@patch("datacite_websnap.exporter.CustomWarning")
+@patch("datacite_websnap.exporter.custom_warning")
 @patch("datacite_websnap.exporter.get_url_content", return_value=b"data")
 def test_write_local_file_data_links_empty_filename_warns(mock_content, mock_warning):
     write_local_file_data_links(

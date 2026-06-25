@@ -15,7 +15,7 @@ from botocore.exceptions import (
     EndpointConnectionError,
 )
 
-from ..logger import CustomClickException, CustomWarning
+from ..logger import CustomClickException, custom_warning
 from ..config import TIMEOUT
 
 
@@ -120,15 +120,17 @@ def parse_envicloud_url(url: str) -> tuple[str, str, str] | None:
         return endpoint_url, bucket, prefix
 
     except KeyError as err:
-        CustomWarning(f"Could not parse envicloud URL '{url}': missing parameter {err}")
+        custom_warning(
+            f"Could not parse envicloud URL '{url}': missing parameter {err}"
+        )
         return None
 
     except Exception as err:
-        CustomWarning(f"Unexpected error parsing envicloud URL '{url}': {err}")
+        custom_warning(f"Unexpected error parsing envicloud URL '{url}': {err}")
         return None
 
 
-def get_envicloud_objects(url: str) -> list[tuple[str, str, int]] | None:
+def get_envicloud_objects(url: str) -> list[tuple[str, str, int]]:
     """
     Return a list of envicloud object tuples: (object_key, object_url, size_bytes)
     Links must have a suffix extension to be added to the list, for example '.csv'.
@@ -140,7 +142,7 @@ def get_envicloud_objects(url: str) -> list[tuple[str, str, int]] | None:
 
     parsed_url = parse_envicloud_url(url)
     if not parsed_url:
-        return None
+        return []
 
     endpoint_url, bucket, prefix = parsed_url
     client = create_s3_client_unsigned(endpoint_url, bucket)

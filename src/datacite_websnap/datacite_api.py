@@ -15,7 +15,7 @@ from .config import (
     DATACITE_PAGE_SIZE,
 )
 from .http_utils import get_url_json
-from .logger import CustomClickException, CustomEcho, CustomWarning
+from .logger import CustomClickException, custom_echo, custom_warning
 from .models import DoisResponse, SingleDoiResponse
 
 
@@ -150,7 +150,7 @@ def get_datacite_list_dois_xml(
 
     # Echo total number of returned DOIs
     total_records = resp.meta.total
-    CustomEcho(
+    custom_echo(
         f"Total number of DataCite DOIs returned for search query: {total_records}"
     )
 
@@ -162,12 +162,12 @@ def get_datacite_list_dois_xml(
         )
 
     # Echo DOIs per page
-    CustomEcho(f"Number of DOIs per page: {page_size}")
+    custom_echo(f"Number of DOIs per page: {page_size}")
 
     # Echo page being currently processed
     pages = 1
     total_pages = resp.meta.totalPages
-    CustomEcho(f"Currently processing page {pages}/{total_pages}...")
+    custom_echo(f"Currently processing page {pages}/{total_pages}...")
 
     # Extract DOIs and XML strings for first page
     xml_lst = []
@@ -179,7 +179,7 @@ def get_datacite_list_dois_xml(
     # Extract DOIs and XML strings for subsequent pages
     while True:
         if pages < total_pages:
-            CustomEcho(f"Currently processing page {pages + 1}/{total_pages}...")
+            custom_echo(f"Currently processing page {pages + 1}/{total_pages}...")
 
         # Get next link using cursor-based pagination
         next_link = resp.links.next
@@ -202,14 +202,14 @@ def get_datacite_list_dois_xml(
     # Warn if total fetched does not match total reported by DataCite
     total_fetched = len(xml_lst) + len(skipped_dois)
     if total_records != total_fetched:
-        CustomWarning(
+        custom_warning(
             f"Total number of records processed ({total_fetched}) does not match "
             f"the total number of records expected in 'meta' object: {total_records}"
         )
 
     # Warn for any DOIs that had no associated XML and were skipped
     for doi in skipped_dois:
-        CustomWarning(
+        custom_warning(
             f"DOI '{doi}' does not have an associated XML metadata record "
             f"and was skipped."
         )
@@ -299,7 +299,7 @@ def validate_doi_eth_standard(xml_decoded: bytes, doi: str) -> None:
             )
         )
         for warning in warnings:
-            CustomWarning(warning)
+            custom_warning(warning)
         click.echo("")
 
     if not is_record_valid:

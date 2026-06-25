@@ -36,7 +36,7 @@ def test_bulk_export_command_local_success(tmp_path):
         ),
         patch("datacite_websnap.cli.get_datacite_client"),
         patch("datacite_websnap.cli.write_local_file") as mock_write_file,
-        patch("datacite_websnap.cli.CustomEcho"),
+        patch("datacite_websnap.cli.custom_echo"),
         patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<hello>"),
         patch(
             "datacite_websnap.cli.format_xml_file_name", return_value="10.123_abc.xml"
@@ -146,8 +146,8 @@ def test_export_command_error_early_exit(tmp_path):
             return_value=mock_xml_list,
         ),
         patch("datacite_websnap.cli.get_datacite_client"),
-        patch("datacite_websnap.cli.CustomWarning") as mock_warning,
-        patch("datacite_websnap.cli.CustomEcho"),
+        patch("datacite_websnap.cli.custom_warning") as mock_warning,
+        patch("datacite_websnap.cli.custom_echo"),
         patch(
             "datacite_websnap.cli.decode_base64_xml",
             side_effect=CustomClickException("Decode failed"),
@@ -185,8 +185,8 @@ def test_bulk_export_command_error_continue(tmp_path):
             return_value=mock_xml_list,
         ),
         patch("datacite_websnap.cli.get_datacite_client"),
-        patch("datacite_websnap.cli.CustomWarning") as mock_warning,
-        patch("datacite_websnap.cli.CustomEcho"),
+        patch("datacite_websnap.cli.custom_warning") as mock_warning,
+        patch("datacite_websnap.cli.custom_echo"),
         patch(
             "datacite_websnap.cli.decode_base64_xml",
             side_effect=CustomClickException("Decode failed"),
@@ -228,7 +228,7 @@ def test_bulk_export_unsupported_destination():
         patch("datacite_websnap.cli.create_s3_client"),
         patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<hello>"),
         patch("datacite_websnap.cli.format_xml_file_name", return_value="file.xml"),
-        patch("datacite_websnap.cli.CustomEcho"),
+        patch("datacite_websnap.cli.custom_echo"),
     ):
         with pytest.raises(CustomClickException, match="Unsupported destination"):
             datacite_bulk_export.callback(

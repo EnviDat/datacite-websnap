@@ -4,6 +4,7 @@ Process and export DataCite XML metadata records.
 
 import base64
 import binascii
+import hashlib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -20,8 +21,12 @@ from botocore.exceptions import (
 )
 import boto3
 
-from .http_utils import get_url_content, get_url_content_length
-from .logger import CustomClickException, CustomEcho, CustomWarning
+from .http_utils import (
+    get_url_content,
+    get_url_content_length,
+    get_url_content_length_stream,
+)
+from .logger import CustomClickException, custom_echo, custom_warning
 from .config import TIMEOUT
 from .repositories.envidat import get_envicloud_objects
 
@@ -180,7 +185,9 @@ def s3_client_put_object(client: Any, body: bytes, bucket: str, key: str) -> Non
             f"{status_code} for key '{key}'"
         )
 
-    CustomEcho(f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}")
+    custom_echo(
+        f"Successfully exported to bucket '{bucket}' DataCite DOI record: {key}"
+    )
 
 
 def write_local_file(
@@ -204,7 +211,7 @@ def write_local_file(
             f.write(content_bytes)
 
         posix_file_path = file_path.as_posix()
-        CustomEcho(f"Wrote local file: {posix_file_path}")
+        custom_echo(f"Wrote local file: {posix_file_path}")
 
     except IOError as io_err:
         raise CustomClickException(f"IOError: {io_err}")
@@ -213,13 +220,61 @@ def write_local_file(
         raise CustomClickException(f"Unexpected error: {err}")
 
 
+def _stream_url_to_local_file(url: str, filename: str, directory_path: str) -> None:
+    """Stream URL content directly to a local file without buffering in memory."""
+    file_path = Path(directory_path) / filename
+    try:
+        with requests.get(url, stream=True, timeout=(10, 60)) as response:
+            response.raise_for_status()
+            with open(file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        custom_echo(f"Wrote local file: {file_path.as_posix()}")
+    except requests.exceptions.HTTPError as http_err:
+        if http_err.response is not None and http_err.response.status_code == 401:
+            custom_warning(f"401 Unauthorized for URL '{url}': {http_err}")
+        else:
+            raise CustomClickException(
+                f"HTTP error while calling URL '{url}': {http_err}"
+            )
+    except requests.exceptions.RequestException as err:
+        raise CustomClickException(f"Request failed for URL '{url}': {err}")
+
+
+def _extract_filename(url: str) -> str:
+    """Extract filename from url.
+    Returns parent part of path for urls that end in "/content".
+
+    Args:
+        url: url that should have filename extracted
+
+    Returns:
+        The extracted filename, or a 16-character SHA-1 hash of the
+        url if a filename cannot be determined.
+    """
+    path_obj = Path(urlparse(url).path)
+
+    if path_obj.name == "content":
+        # URL ends with "/content" -> the real filename is assumed to be one level up
+        filename = path_obj.parent.name
+    else:
+        # Normal case -> last path segment is the filename
+        filename = path_obj.name
+
+    if not filename:
+        custom_warning(f"Could not determine filename from URL: '{url}'")
+        filename = hashlib.sha1(url.encode()).hexdigest()[:16]
+
+    return filename
+
+
 def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -> None:
     """
-    Write a bytes object to a local file.
+    Write URL content to a local file.
     The content in the local file corresponds a data file resource
     passed as a URL in the DOI metadata.
 
-    Currently only supports writing EnviDat files (that are not in envicloud).
+    Currently only supports writing EnviDat and Materials Cloud data files.
 
     Args:
         url: URL that leads to the data content
@@ -227,14 +282,16 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
         doi_prefix: prefix of the DOI
     """
     match doi_prefix:
-        case "10.16904":  # EnviDat DOI prefix
+        # EnviDat DOI prefix
+        case "10.16904":
             if url.startswith("https://envicloud.wsl.ch/#/?bucket="):
-                CustomWarning(
+                custom_warning(
                     f"Failed to write '{url}' locally. CLI "
                     f"does not support writing local data files for files "
                     f"that are hosted at 'https://envicloud.wsl.ch'"
                 )
 
+            # content is assigned to None if the url is a restricted EnviDat data link
             elif content := get_url_content(url):
                 file_name = Path(urlparse(url).path).name
                 if file_name:
@@ -244,10 +301,20 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                         directory_path=doi_directory,
                     )
                 else:
-                    CustomWarning(f"Could not determine filename from URL: '{url}'")
+                    # Logs warning for EnviDat filenames that could not be extracted
+                    #  from url (rather than assigning a random string as filename)
+                    custom_warning(f"Could not determine filename from URL: '{url}'")
+
+        # Materials Cloud DOI prefix
+        case "10.24435":
+            _stream_url_to_local_file(
+                url=url,
+                filename=_extract_filename(url),
+                directory_path=doi_directory,
+            )
 
         case _:
-            CustomWarning(
+            custom_warning(
                 f"CLI does not support writing local data files for DOI "
                 f"prefix: {doi_prefix}. Failed to write file '{url}' locally."
             )
@@ -311,23 +378,26 @@ def stream_url_to_s3(
             if show_upload_progress:
                 click.echo()  # terminate progress line
 
-            CustomEcho(f"Successfully exported to bucket '{bucket}' data object: {key}")
+            custom_echo(
+                f"Successfully exported to bucket '{bucket}' data object: {key}"
+            )
 
     except requests.exceptions.Timeout:
-        CustomWarning(f"Request timed out fetching URL: '{url}'")
+        custom_warning(f"Request timed out fetching URL: '{url}'")
     except requests.exceptions.HTTPError as err:
-        CustomWarning(f"HTTP error fetching URL '{url}': {err}")
+        custom_warning(f"HTTP error fetching URL '{url}': {err}")
     except requests.exceptions.RequestException as err:
-        CustomWarning(f"Error fetching URL '{url}': {err}")
+        custom_warning(f"Error fetching URL '{url}': {err}")
     except (BotoCoreError, ClientError) as err:
-        CustomWarning(f"Unexpected error streaming '{url}' to S3: {err}")
+        custom_warning(f"Unexpected error streaming '{url}' to S3: {err}")
 
 
 def resolve_data_link(
     doi_prefix: str, url: str, doi_s3_dir: str
 ) -> list[tuple[str, str, int]]:
     """
-    Resolve a data link URL to upload ready (s3_key, download_url, size_bytes) tuples.
+    Resolve a data link URL to a list of upload ready
+      (s3_key, download_url, size_bytes) tuple(s).
     Returns an empty list if the prefix is unsupported or the URL cannot be resolved.
 
     Args:
@@ -347,14 +417,25 @@ def resolve_data_link(
                 ]
             else:
                 size = get_url_content_length(url)
-                file_name = Path(urlparse(url).path).name
-                if file_name:
-                    return [(f"{doi_s3_dir}/{file_name}", url, size)]
-                return []
+                filename = Path(urlparse(url).path).name
+                if filename:
+                    return [(f"{doi_s3_dir}/{filename}", url, size)]
+                else:
+                    custom_warning(
+                        f"Unable to extract filename from "
+                        f"EnviDat data link URL: '{url}'"
+                    )
+                    return []
+
+        case "10.24435":  # Materials Cloud DOI prefix
+            size = get_url_content_length_stream(url)
+            filename = _extract_filename(url)
+            return [(f"{doi_s3_dir}/{filename}", url, size)]
+
         case _:
-            CustomWarning(
-                f"CLI does not support exporting S3 data files for "
-                f"DOI prefix: {doi_prefix}."
+            custom_warning(
+                f"CLI does not support exporting to S3 storage data files for "
+                f"DOI prefix: {doi_prefix}"
             )
             return []
 
