@@ -1,5 +1,5 @@
 """
-EnviDat repository module for fetching and processing data from the EnviDat portal.
+Repository module for fetching and processing data from the EnviDat portal.
 """
 
 from pathlib import Path

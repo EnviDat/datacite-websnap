@@ -78,6 +78,11 @@ from .exporter import (
 )
 
 
+from .http_utils import get_url_json
+
+from .repositories.scicat import write_scicat_data_urls
+
+
 @click_extra.group(
     params=[],
     context_settings={
@@ -459,6 +464,7 @@ def _export_doi_s3(
     )
 
 
+# TODO remove url parameter after moving scicat to S3 only, update tests
 def _export_doi_local(
     doi_bare: str,
     doi_prefix: str,
@@ -466,6 +472,7 @@ def _export_doi_local(
     json_resp: dict,
     data_links: list[str],
     directory_path: str,
+    url: str,
 ) -> None:
     """
     Export DOI metadata records and data files to local machine.
@@ -478,6 +485,7 @@ def _export_doi_local(
         data_links: list of links to data files for DOI from DataCite API
         directory_path: path of the local directory that DataCite records will be
                         written in
+        url: DataCite DOI "url" value
     """
     xml_filename = format_xml_file_name(doi_bare)
     json_filename = format_json_file_name(xml_filename)
@@ -498,8 +506,18 @@ def _export_doi_local(
         filename=json_filename,
         directory_path=doi_directory,
     )
-    for url in data_links:
-        write_local_file_data_links(url, doi_directory, doi_prefix)
+
+    # TODO modify to write SciCat DOIs only to S3
+    # Handle PSI SciCat DOIs
+    if doi_prefix == "10.16907":
+        scicat_doi_json = get_url_json(
+            url=url, params=None, headers={"Accept": "application/ld+json"}
+        )
+        write_scicat_data_urls(scicat_doi_json)
+    # Handle all other DOI prefixes
+    else:
+        for url in data_links:
+            write_local_file_data_links(url, doi_directory, doi_prefix)
 
 
 @cli.command("doi-export")
@@ -557,7 +575,7 @@ def datacite_single_doi_export(
     custom_echo(f"Querying DataCite API for DOI: {doi_bare}")
 
     # Retrieve a DataCite DOI record
-    json_resp, xml_encoded, data_links = get_datacite_doi(api_url, doi_bare)
+    json_resp, xml_encoded, data_links, url = get_datacite_doi(api_url, doi_bare)
 
     # Check if DataCite DOI metadata record passes validation
     xml_decoded = decode_base64_xml(xml_encoded)
@@ -584,6 +602,7 @@ def datacite_single_doi_export(
                 json_resp=json_resp,
                 data_links=data_links,
                 directory_path=directory_path,
+                url=url,
             )
         case _:
             raise CustomClickException(f"Unsupported destination: {destination}")
