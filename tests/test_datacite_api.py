@@ -50,18 +50,35 @@ def test_get_datacite_doi_invalid_response_format():
 
 
 def test_get_datacite_doi_success():
-    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
+    raw = {
+        "data": {
+            "attributes": {
+                "doi": "10.16904/abc",
+                "xml": "base64xml",
+                "url": "https://example.com/10.16904/abc",
+            }
+        }
+    }
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
-        json_resp, xml, data_links = get_datacite_doi(
+        json_resp, xml, data_links, url = get_datacite_doi(
             "https://api.example.org", "10.16904/abc"
         )
         assert xml == "base64xml"
         assert data_links == []
         assert json_resp == raw
+        assert url == "https://example.com/10.16904/abc"
 
 
 def test_get_datacite_doi_none_xml_raises():
-    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": None}}}
+    raw = {
+        "data": {
+            "attributes": {
+                "doi": "10.16904/abc",
+                "xml": None,
+                "url": "https://example.com/10.16904/abc",
+            }
+        }
+    }
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
         with pytest.raises(
             CustomClickException, match="does not have an associated XML"
@@ -70,7 +87,15 @@ def test_get_datacite_doi_none_xml_raises():
 
 
 def test_get_datacite_doi_url_construction():
-    raw = {"data": {"attributes": {"doi": "10.16904/abc", "xml": "base64xml"}}}
+    raw = {
+        "data": {
+            "attributes": {
+                "doi": "10.16904/abc",
+                "xml": "base64xml",
+                "url": "https://example.com/10.16904/abc",
+            }
+        }
+    }
     with patch(
         "datacite_websnap.datacite_api.get_url_json", return_value=raw
     ) as mock_get:
@@ -128,6 +153,7 @@ def test_get_datacite_doi_data_links():
             "attributes": {
                 "doi": "10.16904/abc",
                 "xml": "base64xml",
+                "url": "https://example.com/10.16904/abc",
                 "relatedItems": [
                     {
                         "relatedItemType": "Other",
@@ -142,7 +168,9 @@ def test_get_datacite_doi_data_links():
         }
     }
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
-        _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
+        _, _, data_links, _ = get_datacite_doi(
+            "https://api.example.org", "10.16904/abc"
+        )
         assert data_links == ["https://example.com/data.csv"]
 
 
@@ -153,6 +181,7 @@ def test_get_datacite_doi_data_links_filtered():
             "attributes": {
                 "doi": "10.16904/abc",
                 "xml": "base64xml",
+                "url": "https://example.com/10.16904/abc",
                 "relatedItems": [
                     {
                         "relatedItemType": "JournalArticle",
@@ -167,7 +196,9 @@ def test_get_datacite_doi_data_links_filtered():
         }
     }
     with patch("datacite_websnap.datacite_api.get_url_json", return_value=raw):
-        _, _, data_links = get_datacite_doi("https://api.example.org", "10.16904/abc")
+        _, _, data_links, _ = get_datacite_doi(
+            "https://api.example.org", "10.16904/abc"
+        )
         assert data_links == []
 
 
@@ -175,8 +206,20 @@ def test_extract_doi_xml_valid():
     resp = DoisResponse.model_validate(
         {
             "data": [
-                {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-                {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+                {
+                    "attributes": {
+                        "doi": "10.123/abc",
+                        "xml": "<xml1>",
+                        "url": "https://example.com/10.123/abc",
+                    }
+                },
+                {
+                    "attributes": {
+                        "doi": "10.123/def",
+                        "xml": "<xml2>",
+                        "url": "https://example.com/10.123/def",
+                    }
+                },
             ],
             "meta": {"total": 2, "totalPages": 1},
             "links": {},
@@ -190,7 +233,14 @@ def test_extract_doi_xml_valid():
 def test_extract_doi_xml_missing_xml():
     resp = DoisResponse.model_validate(
         {
-            "data": [{"attributes": {"doi": "10.123/abc"}}],
+            "data": [
+                {
+                    "attributes": {
+                        "doi": "10.123/abc",
+                        "url": "https://example.com/10.123/abc",
+                    }
+                }
+            ],
             "meta": {"total": 1, "totalPages": 1},
             "links": {},
         }
@@ -216,8 +266,20 @@ def test_get_datacite_list_dois_xml_single_page():
         "meta": {"total": 2, "totalPages": 1},
         "links": {},
         "data": [
-            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+            {
+                "attributes": {
+                    "doi": "10.123/abc",
+                    "xml": "<xml1>",
+                    "url": "https://example.com/10.123/abc",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/def",
+                    "xml": "<xml2>",
+                    "url": "https://example.com/10.123/def",
+                }
+            },
         ],
     }
 
@@ -256,8 +318,20 @@ def test_get_datacite_list_dois_xml_multiple_pages():
         "meta": {"total": 4, "totalPages": 2},
         "links": {"next": "https://next.page"},
         "data": [
-            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+            {
+                "attributes": {
+                    "doi": "10.123/abc",
+                    "xml": "<xml1>",
+                    "url": "https://example.com/10.123/abc",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/def",
+                    "xml": "<xml2>",
+                    "url": "https://example.com/10.123/def",
+                }
+            },
         ],
     }
 
@@ -265,8 +339,20 @@ def test_get_datacite_list_dois_xml_multiple_pages():
         "meta": {"total": 4, "totalPages": 2},
         "links": {},
         "data": [
-            {"attributes": {"doi": "10.123/ghi", "xml": "<xml3>"}},
-            {"attributes": {"doi": "10.123/jkl", "xml": "<xml4>"}},
+            {
+                "attributes": {
+                    "doi": "10.123/ghi",
+                    "xml": "<xml3>",
+                    "url": "https://example.com/10.123/ghi",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/jkl",
+                    "xml": "<xml4>",
+                    "url": "https://example.com/10.123/jkl",
+                }
+            },
         ],
     }
 
@@ -300,8 +386,20 @@ def test_get_datacite_list_dois_xml_mismatched_total_records():
         "meta": {"total": 3, "totalPages": 1},
         "links": {},
         "data": [
-            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+            {
+                "attributes": {
+                    "doi": "10.123/abc",
+                    "xml": "<xml1>",
+                    "url": "https://example.com/10.123/abc",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/def",
+                    "xml": "<xml2>",
+                    "url": "https://example.com/10.123/def",
+                }
+            },
         ],
     }
 
@@ -322,9 +420,26 @@ def test_get_datacite_list_dois_xml_skips_null_xml_with_warning():
         "meta": {"total": 3, "totalPages": 1},
         "links": {},
         "data": [
-            {"attributes": {"doi": "10.123/abc", "xml": "<xml1>"}},
-            {"attributes": {"doi": "10.123/no-xml"}},
-            {"attributes": {"doi": "10.123/def", "xml": "<xml2>"}},
+            {
+                "attributes": {
+                    "doi": "10.123/abc",
+                    "xml": "<xml1>",
+                    "url": "https://example.com/10.123/abc",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/no-xml",
+                    "url": "https://example.com/10.123/no-xml",
+                }
+            },
+            {
+                "attributes": {
+                    "doi": "10.123/def",
+                    "xml": "<xml2>",
+                    "url": "https://example.com/10.123/def",
+                }
+            },
         ],
     }
 

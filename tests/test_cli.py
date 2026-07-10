@@ -259,6 +259,7 @@ def test_export_doi_local_writes_xml_and_json(tmp_path):
         json_resp={"key": "value"},
         data_links=[],
         directory_path=str(tmp_path),
+        url="https://example.com/10.123/test",
     )
     doi_dir = tmp_path / "10.123_test"
     assert (doi_dir / "10.123_test.xml").read_bytes() == b"<xml/>"
@@ -274,6 +275,7 @@ def test_export_doi_local_calls_data_links(mock_write_links, tmp_path):
         json_resp={},
         data_links=["https://example.com/file.csv"],
         directory_path=str(tmp_path),
+        url="https://example.com/10.123/test",
     )
     mock_write_links.assert_called_once()
     assert mock_write_links.call_args.args[0] == "https://example.com/file.csv"
@@ -474,7 +476,7 @@ def test_upload_data_links_s3_parallel_path_uploads_all(
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 def test_doi_export_command_local_success(
     mock_get_doi, mock_decode, mock_validate, mock_export, tmp_path
@@ -504,7 +506,7 @@ def test_doi_export_command_local_success(
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 def test_doi_export_command_s3_success(
     mock_get_doi, mock_decode, mock_validate, mock_s3, mock_export
@@ -538,7 +540,7 @@ def test_doi_export_command_invalid_doi():
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 @patch(
     "datacite_websnap.cli.validate_doi",
