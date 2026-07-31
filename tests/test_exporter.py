@@ -543,6 +543,24 @@ def test_stream_url_to_s3_s3_error(mock_get, mock_warning):
     assert "Unexpected error" in mock_warning.call_args.args[0]
 
 
+@patch("datacite_websnap.exporter.custom_warning")
+@patch("datacite_websnap.exporter.requests.get")
+def test_stream_url_to_s3_unexpected_exception(mock_get, mock_warning):
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Length": "100"}
+    mock_response.raw = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_get.return_value = mock_response
+
+    s3_client = MagicMock()
+    s3_client.upload_fileobj.side_effect = ValueError("something went wrong")
+
+    stream_url_to_s3("https://example.com/file.csv", "my-bucket", "key", s3_client)
+
+    mock_warning.assert_called_once()
+    assert "occurred during attempt to export" in mock_warning.call_args.args[0]
+
+
 # --- resolve_data_link ---
 
 
