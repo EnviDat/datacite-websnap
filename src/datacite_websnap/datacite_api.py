@@ -226,10 +226,10 @@ def _validate_single_doi_response(raw: dict) -> SingleDoiResponse:
         ) from err
 
 
-def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
+def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str], str]:
     """
-    Return a DataCite API DOI JSON response, "xml" value (in encoded format),
-    and list of links to data files.
+    Return a DataCite API DOI JSON response (as a Python object),
+     "xml" value (in encoded format), list of links to data files, and the "url" value.
 
     Raises error if DOI does not return a successful response from the
     DataCite API.
@@ -263,7 +263,9 @@ def get_datacite_doi(api_url: str, doi: str) -> tuple[Any, str, list[str]]:
         ):
             data_links.append(item.relatedItemIdentifier.relatedItemIdentifier)
 
-    return json_resp, xml_encoded, data_links
+    url = validated_resp.data.attributes.url
+
+    return json_resp, xml_encoded, data_links, url
 
 
 def validate_doi_eth_standard(xml_decoded: bytes, doi: str) -> None:

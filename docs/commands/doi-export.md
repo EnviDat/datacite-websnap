@@ -26,10 +26,13 @@ See [Common Options](common-options.md) for options shared with `bulk-export`.
 
 Supports exporting DOIs with the following prefixes.
 
-| Repository                                                         | DOI Prefix |
-|--------------------------------------------------------------------|------------|
-| [EnviDat](https://envidat.ch){target="_blank"}                     | `10.16904` |
-| [Materials Cloud](https://www.materialscloud.org){target="_blank"} | `10.24435` |
+| Repository                                                         | DOI Prefix  |
+|--------------------------------------------------------------------|-------------|
+| [EnviDat](https://envidat.ch){target="_blank"}                     | `10.16904`  |
+| [Materials Cloud](https://www.materialscloud.org){target="_blank"} | `10.24435`  |
+| [PSI SciCat](https://doi.psi.ch){target="_blank"}                  | `10.169071` |
+
+[Please see special instructions for PSI SciCat Usage.](#psi-scicat-doi-special-instructions)
 
 ## Validation
 
@@ -58,3 +61,20 @@ Objects include the formatted DOI as a prefix.
 | DOI                  | Output Data Object                                       |
 |----------------------|----------------------------------------------------------|
 | 10.16904/envidat.518 | 10.16904_envidat.518/bacteria-metagenomics-raw-data.xlsx |
+
+
+## PSI SciCat DOI Special Instructions
+
+!!! Warning
+    As of July 31, 2026, the following procedure is **required** to use this tool with 
+    any PSI SciCat DOI:
+      
+      1. Access the DOI using the [PSI SciCat website](https://doi.psi.ch){target="_blank"}
+      2. Select the dataset you want to download files from and click on it
+      3. Click the "Access Data" button and enter your email address
+      4. Wait for an email entitled "Your public job was submitted"
+      5. Wait for another email entitled "Your public job completed successfully"
+
+    After these steps have been taken then the PSI SciCat DOIs can be used with the `doi-export` command.
+    The data will be accessible for 7 days. After that time the procedure needs to be repeated. 
+ 

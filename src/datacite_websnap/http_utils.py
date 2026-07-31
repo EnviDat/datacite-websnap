@@ -13,6 +13,7 @@ from .logger import CustomClickException, custom_warning
 def get_url_json(
     url: str,
     params: dict | None = None,
+    headers: dict | None = None,
     timeout: int = TIMEOUT,
 ) -> Any:
     """
@@ -22,10 +23,11 @@ def get_url_json(
     Args:
         url: The URL to call return the JSON response from.
         params: An optional dictionary of query parameters to send to the URL.
+        headers: An optional dictionary of headers to send to the URL.
         timeout: Timeout of request in seconds.
     """
     try:
-        response = requests.get(url, timeout=timeout, params=params)
+        response = requests.get(url, timeout=timeout, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
 

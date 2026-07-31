@@ -259,6 +259,7 @@ def test_export_doi_local_writes_xml_and_json(tmp_path):
         json_resp={"key": "value"},
         data_links=[],
         directory_path=str(tmp_path),
+        url="https://example.com/10.123/test",
     )
     doi_dir = tmp_path / "10.123_test"
     assert (doi_dir / "10.123_test.xml").read_bytes() == b"<xml/>"
@@ -274,9 +275,60 @@ def test_export_doi_local_calls_data_links(mock_write_links, tmp_path):
         json_resp={},
         data_links=["https://example.com/file.csv"],
         directory_path=str(tmp_path),
+        url="https://example.com/10.123/test",
     )
     mock_write_links.assert_called_once()
     assert mock_write_links.call_args.args[0] == "https://example.com/file.csv"
+
+
+@patch("datacite_websnap.cli.write_local_file_data_links")
+@patch("datacite_websnap.cli.write_local_scicat_data_urls")
+@patch("datacite_websnap.cli.get_url_json")
+def test_export_doi_local_scicat_writes_scicat_urls(
+    mock_get_url_json, mock_write_scicat, mock_write_links, tmp_path
+):
+    mock_get_url_json.return_value = {"distribution": []}
+
+    _export_doi_local(
+        doi_bare="10.16907/test",
+        doi_prefix="10.16907",
+        xml_decoded=b"<xml/>",
+        json_resp={},
+        data_links=["https://ignored.example.com/original.csv"],
+        directory_path=str(tmp_path),
+        url="https://doi.psi.ch/detail/10.16907%2Ftest",
+    )
+
+    doi_dir = tmp_path / "10.16907_test"
+
+    mock_get_url_json.assert_called_once_with(
+        url="https://doi.psi.ch/detail/10.16907%2Ftest",
+        params=None,
+        headers={"Accept": "application/ld+json"},
+    )
+    mock_write_scicat.assert_called_once_with(
+        {"distribution": []}, str(doi_dir), "10.16907"
+    )
+    mock_write_links.assert_not_called()
+
+
+@patch("datacite_websnap.cli.write_local_scicat_data_urls")
+@patch("datacite_websnap.cli.get_url_json")
+def test_export_doi_local_non_scicat_does_not_fetch_scicat_json(
+    mock_get_url_json, mock_write_scicat, tmp_path
+):
+    _export_doi_local(
+        doi_bare="10.123/test",
+        doi_prefix="10.123",
+        xml_decoded=b"<xml/>",
+        json_resp={},
+        data_links=[],
+        directory_path=str(tmp_path),
+        url="https://example.com/10.123/test",
+    )
+
+    mock_get_url_json.assert_not_called()
+    mock_write_scicat.assert_not_called()
 
 
 # --- _export_doi_s3 ---
@@ -296,6 +348,7 @@ def test_export_doi_s3_no_existing_metadata(mock_exists, mock_put, mock_upload):
         s3_client=mock_s3,
         bucket="my-bucket",
         key_prefix="prefix",
+        url="https://example.com/doi",
     )
     assert mock_put.call_count == 2
     keys = [c.kwargs["key"] for c in mock_put.call_args_list]
@@ -323,6 +376,7 @@ def test_export_doi_s3_existing_metadata_overwrite_yes(
                 s3_client=mock_s3,
                 bucket="my-bucket",
                 key_prefix=None,
+                url="https://example.com/doi",
             )
     assert mock_put.call_count == 2
 
@@ -343,6 +397,7 @@ def test_export_doi_s3_existing_metadata_overwrite_no(
             s3_client=MagicMock(),
             bucket="my-bucket",
             key_prefix=None,
+            url="https://example.com/doi",
         )
     mock_put.assert_not_called()
     mock_upload.assert_called_once()
@@ -352,10 +407,67 @@ def test_export_doi_s3_existing_metadata_overwrite_no(
 
 
 @patch("datacite_websnap.cli.resolve_data_link", return_value=[])
+@patch("datacite_websnap.cli.extract_scicat_data_urls")
+@patch("datacite_websnap.cli.get_url_json")
+def test_upload_data_links_s3_scicat_overrides_data_links(
+    mock_get_url_json, mock_extract, mock_resolve
+):
+    mock_get_url_json.return_value = {"distribution": []}
+    mock_extract.return_value = ["https://scicat.example.com/file.h5"]
+
+    _upload_data_links_s3(
+        "10.16907/test",
+        "10.16907",
+        ["https://ignored.example.com/original.csv"],
+        "dir",
+        MagicMock(),
+        "bucket",
+        "https://doi.psi.ch/detail/10.16907%2Ftest",
+    )
+
+    mock_get_url_json.assert_called_once_with(
+        url="https://doi.psi.ch/detail/10.16907%2Ftest",
+        params=None,
+        headers={"Accept": "application/ld+json"},
+    )
+    mock_extract.assert_called_once_with({"distribution": []})
+    mock_resolve.assert_called_once_with(
+        "10.16907", "https://scicat.example.com/file.h5", "dir"
+    )
+
+
+@patch("datacite_websnap.cli.resolve_data_link", return_value=[])
+@patch("datacite_websnap.cli.extract_scicat_data_urls")
+@patch("datacite_websnap.cli.get_url_json")
+def test_upload_data_links_s3_non_scicat_does_not_fetch_scicat_json(
+    mock_get_url_json, mock_extract, mock_resolve
+):
+    _upload_data_links_s3(
+        "10.123/test",
+        "10.123",
+        ["https://example.com/f.csv"],
+        "dir",
+        MagicMock(),
+        "bucket",
+        "https://example.com/doi",
+    )
+
+    mock_get_url_json.assert_not_called()
+    mock_extract.assert_not_called()
+    mock_resolve.assert_called_once_with("10.123", "https://example.com/f.csv", "dir")
+
+
+@patch("datacite_websnap.cli.resolve_data_link", return_value=[])
 def test_upload_data_links_s3_no_resolved_returns_early(mock_resolve):
     mock_s3 = MagicMock()
     _upload_data_links_s3(
-        "10.123/test", "10.123", ["https://example.com/f.csv"], "dir", mock_s3, "bucket"
+        "10.123/test",
+        "10.123",
+        ["https://example.com/f.csv"],
+        "dir",
+        mock_s3,
+        "bucket",
+        "https://example.com/doi",
     )
     mock_resolve.assert_called_once()
 
@@ -377,6 +489,7 @@ def test_upload_data_links_s3_new_data_confirm_yes(
             "dir",
             MagicMock(),
             "bucket",
+            "https://example.com/doi",
         )
     mock_upload.assert_called_once()
 
@@ -398,6 +511,7 @@ def test_upload_data_links_s3_new_data_confirm_no(
             "dir",
             MagicMock(),
             "bucket",
+            "https://example.com/doi",
         )
     mock_upload.assert_not_called()
 
@@ -419,6 +533,7 @@ def test_upload_data_links_s3_existing_data_overwrite_yes(
             "dir",
             MagicMock(),
             "bucket",
+            "https://example.com/doi",
         )
     mock_upload.assert_called_once()
 
@@ -440,6 +555,7 @@ def test_upload_data_links_s3_existing_data_overwrite_no(
             "dir",
             MagicMock(),
             "bucket",
+            "https://example.com/doi",
         )
     mock_upload.assert_not_called()
 
@@ -462,6 +578,7 @@ def test_upload_data_links_s3_parallel_path_uploads_all(
             "dir",
             MagicMock(),
             "bucket",
+            "https://example.com/doi",
         )
     assert mock_upload.call_count == 11
 
@@ -474,7 +591,7 @@ def test_upload_data_links_s3_parallel_path_uploads_all(
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 def test_doi_export_command_local_success(
     mock_get_doi, mock_decode, mock_validate, mock_export, tmp_path
@@ -504,7 +621,7 @@ def test_doi_export_command_local_success(
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 def test_doi_export_command_s3_success(
     mock_get_doi, mock_decode, mock_validate, mock_s3, mock_export
@@ -538,7 +655,7 @@ def test_doi_export_command_invalid_doi():
 @patch("datacite_websnap.cli.decode_base64_xml", return_value=b"<xml/>")
 @patch(
     "datacite_websnap.cli.get_datacite_doi",
-    return_value=({"key": "val"}, "base64xml", []),
+    return_value=({"key": "val"}, "base64xml", [], "https://example.com/doi"),
 )
 @patch(
     "datacite_websnap.cli.validate_doi",

@@ -305,8 +305,8 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                     #  from url (rather than assigning a random string as filename)
                     custom_warning(f"Could not determine filename from URL: '{url}'")
 
-        # Materials Cloud DOI prefix
-        case "10.24435":
+        # Materials Cloud and PSI SciCat DOI prefixes
+        case "10.24435" | "10.16907":
             _stream_url_to_local_file(
                 url=url,
                 filename=_extract_filename(url),
@@ -390,6 +390,10 @@ def stream_url_to_s3(
         custom_warning(f"Error fetching URL '{url}': {err}")
     except (BotoCoreError, ClientError) as err:
         custom_warning(f"Unexpected error streaming '{url}' to S3: {err}")
+    except Exception as err:
+        custom_warning(
+            f"Unexpected error occurred during attempt to export '{url}' to S3: {err}"
+        )
 
 
 def resolve_data_link(
@@ -427,7 +431,8 @@ def resolve_data_link(
                     )
                     return []
 
-        case "10.24435":  # Materials Cloud DOI prefix
+        # Materials Cloud and PSI SciCat DOI prefixes
+        case "10.24435" | "10.16907":
             size = get_url_content_length_stream(url)
             filename = _extract_filename(url)
             return [(f"{doi_s3_dir}/{filename}", url, size)]

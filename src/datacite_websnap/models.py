@@ -1,4 +1,4 @@
-"""Pydantic models for DataCite API responses."""
+"""Pydantic models for API responses."""
 
 from pydantic import BaseModel
 
@@ -17,6 +17,7 @@ class RelatedItem(BaseModel):
 class DoiAttributes(BaseModel):
     doi: str
     xml: str | None = None
+    url: str
     relatedItems: list[RelatedItem] | None = None
 
 
@@ -41,3 +42,13 @@ class DoisResponse(BaseModel):
 
 class SingleDoiResponse(BaseModel):
     data: DoiObject
+
+
+class SciCatDistributionObject(BaseModel):
+    contentUrl: str
+    name: str | None = None
+    expires: str | None = None
+
+
+class SciCatDoiResponse(BaseModel):
+    distribution: list[SciCatDistributionObject]
