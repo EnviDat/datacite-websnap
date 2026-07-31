@@ -80,7 +80,7 @@ from .exporter import (
 
 from .http_utils import get_url_json
 
-from .repositories.scicat import write_local_scicat_data_urls
+from .repositories.scicat import write_local_scicat_data_urls, extract_scicat_data_urls
 
 
 @click_extra.group(
@@ -328,6 +328,7 @@ def _upload_data_links_s3(
     doi_s3_dir: str,
     s3_client: Any,
     bucket: str,
+    url: str,
 ) -> None:
     """
     Export DOI data files to S3 storage.
@@ -341,10 +342,20 @@ def _upload_data_links_s3(
         s3_client: validated Boto3 S3 client created using a shared AWS credentials file
         bucket: name of S3 bucket that DataCite records (as S3 objects) will be written
                 in, must have access to bucket with configured S3 credentials
+        url: DataCite DOI "url" value
     """
     resolved = []
-    for url in data_links:
-        resolved.extend(resolve_data_link(doi_prefix, url, doi_s3_dir))
+
+    # Override input data_links for PSI SciCat DOIs
+    # because they require extra processing
+    if doi_prefix == "10.16907":
+        scicat_doi_json = get_url_json(
+            url=url, params=None, headers={"Accept": "application/ld+json"}
+        )
+        data_links = extract_scicat_data_urls(scicat_doi_json)
+
+    for link in data_links:
+        resolved.extend(resolve_data_link(doi_prefix, link, doi_s3_dir))
 
     if not resolved:
         return
@@ -403,6 +414,7 @@ def _export_doi_s3(
     s3_client: Any,
     bucket: str,
     key_prefix: str | None,
+    url: str,
 ) -> None:
     """
     Export DOI metadata records and data files to S3 storage.
@@ -418,6 +430,7 @@ def _export_doi_s3(
                 in, must have access to bucket with configured S3 credentials
         key_prefix: name of a key prefix for objects in S3 bucket, if omitted then
                     objects are written in S3 bucket without a prefix
+        url: DataCite DOI "url" value
     """
     doi_stem = format_doi_stem(doi_bare)
     doi_s3_dir = f"{key_prefix}/{doi_stem}" if key_prefix else doi_stem
@@ -460,7 +473,7 @@ def _export_doi_s3(
         )
 
     _upload_data_links_s3(
-        doi_bare, doi_prefix, data_links, doi_s3_dir, s3_client, bucket
+        doi_bare, doi_prefix, data_links, doi_s3_dir, s3_client, bucket, url
     )
 
 
@@ -591,6 +604,7 @@ def datacite_single_doi_export(
                 s3_client=s3_client,
                 bucket=bucket,
                 key_prefix=key_prefix,
+                url=url,
             )
         case "local":
             _export_doi_local(
