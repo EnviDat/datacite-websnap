@@ -1,5 +1,15 @@
 # CHANGELOG
 
+### 3.2.0 (2026-07-31)
+### Feat
+- support writing PSI SciCat data files to local machine
+- support writing PSI SciCat data files to S3 cloud storage
+### Docs
+- update supported DOI prefixes
+- add PSI SciCat usage instructions
+### Tests
+- add tests for new PSI SciCat data processing functions
+
 
 ## 3.1.0 (2026-06-25)
 ### Feat
