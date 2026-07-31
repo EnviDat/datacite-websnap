@@ -47,6 +47,7 @@ class SingleDoiResponse(BaseModel):
 class SciCatDistributionObject(BaseModel):
     contentUrl: str
     name: str | None = None
+    expires: str | None = None
 
 
 class SciCatDoiResponse(BaseModel):

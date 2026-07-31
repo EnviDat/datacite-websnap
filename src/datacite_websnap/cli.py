@@ -80,7 +80,7 @@ from .exporter import (
 
 from .http_utils import get_url_json
 
-from .repositories.scicat import write_scicat_data_urls
+from .repositories.scicat import write_local_scicat_data_urls
 
 
 @click_extra.group(
@@ -464,7 +464,6 @@ def _export_doi_s3(
     )
 
 
-# TODO remove url parameter after moving scicat to S3 only, update tests
 def _export_doi_local(
     doi_bare: str,
     doi_prefix: str,
@@ -507,17 +506,16 @@ def _export_doi_local(
         directory_path=doi_directory,
     )
 
-    # TODO modify to write SciCat DOIs only to S3
     # Handle PSI SciCat DOIs
     if doi_prefix == "10.16907":
         scicat_doi_json = get_url_json(
             url=url, params=None, headers={"Accept": "application/ld+json"}
         )
-        write_scicat_data_urls(scicat_doi_json)
+        write_local_scicat_data_urls(scicat_doi_json, doi_directory, doi_prefix)
     # Handle all other DOI prefixes
     else:
-        for url in data_links:
-            write_local_file_data_links(url, doi_directory, doi_prefix)
+        for link in data_links:
+            write_local_file_data_links(link, doi_directory, doi_prefix)
 
 
 @cli.command("doi-export")

@@ -305,8 +305,8 @@ def write_local_file_data_links(url: str, doi_directory: str, doi_prefix: str) -
                     #  from url (rather than assigning a random string as filename)
                     custom_warning(f"Could not determine filename from URL: '{url}'")
 
-        # Materials Cloud DOI prefix
-        case "10.24435":
+        # Materials Cloud and PSI SciCat DOI prefixes
+        case "10.24435" | "10.16907":
             _stream_url_to_local_file(
                 url=url,
                 filename=_extract_filename(url),
